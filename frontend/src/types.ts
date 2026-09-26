@@ -106,8 +106,13 @@ export interface CoordinationPair {
   /** The shared stretch of the two build windows, when there is one. */
   window_start: string | null
   window_end: string | null
+  /** Each project's build window [start, end] as scored; null when undated. */
+  build_a?: [string, string] | null
+  build_b?: [string, string] | null
   /** km of shared corridor when both projects are routed lines. */
   shared_km?: number | null
+  /** Closest points of the two shapes, [lat, lng] each: the segment `miles` measures. */
+  link?: [number, number][] | null
   scores: ScoreFactors
   impact?: Impact | null
   brief: CoordinationBrief | null

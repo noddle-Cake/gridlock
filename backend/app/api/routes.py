@@ -176,11 +176,15 @@ async def get_overlaps(
     request: Request,
     radius: str | None = Query(default=None),
     bands: str | None = Query(default=None, description="Comma-separated distance bands"),
+    utility: list[str] | None = Query(
+        default=None, description="Keep only pairs between these utilities (repeatable)"
+    ),
 ) -> OverlapsResponse:
     radius_v = matching.parse_radius(radius)
     bands_v = matching.parse_bands(bands)
+    utilities = matching.parse_utilities(utility)
     async with _state(request).pool.acquire() as conn:
-        pairs = await matching.overlaps(conn, radius_v, bands=bands_v)
+        pairs = await matching.overlaps(conn, radius_v, bands=bands_v, utilities=utilities)
     return OverlapsResponse(radius=radius_v, pairs=pairs)
 
 
@@ -258,6 +262,9 @@ async def export(
     format: str = Query(default="csv"),
     radius: str | None = Query(default=None),
     bands: str | None = Query(default=None, description="Comma-separated distance bands"),
+    utility: list[str] | None = Query(
+        default=None, description="Keep only pairs between these utilities (repeatable)"
+    ),
 ) -> Response:
     fmt = format.lower()
     if fmt not in ("csv", "pdf"):
@@ -265,8 +272,9 @@ async def export(
                                     fields=["format"])
     radius_v = matching.parse_radius(radius)
     bands_v = matching.parse_bands(bands)
+    utilities = matching.parse_utilities(utility)
     async with _state(request).pool.acquire() as conn:
-        pairs = await matching.overlaps(conn, radius_v, bands=bands_v)
+        pairs = await matching.overlaps(conn, radius_v, bands=bands_v, utilities=utilities)
     records = export_service.to_records(pairs)
     if fmt == "csv":
         return Response(

@@ -20,7 +20,13 @@ class PowerGridTiles extends L.GridLayer {
     super({
       attribution: POWER_ATTRIBUTION,
       minZoom: POWER_MIN_ZOOM,
+      // Without a maxZoom GridLayer computes each zoom level's z-index as NaN, so a stretched
+      // parent level kept during loading isn't stacked under the sharp current one.
+      maxZoom: 24,
       maxNativeZoom: POWER_MAX_NATIVE_ZOOM,
+      // Flying to a pair crosses several zoom levels; fetch and decode tiles only for the
+      // level it lands on, not every one it passes.
+      updateWhenZooming: false,
     })
     // Cancel downloads for tiles that scrolled away before they arrived.
     this.on('tileunload', (e: L.TileEvent) => this.requests.get(e.tile)?.abort())

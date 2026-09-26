@@ -86,11 +86,17 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
   })
 
   it('opens on DESC ↔ Georgia Power when both are loaded', async () => {
-    const desc = project({ id: 7, utility: 'Dominion Energy South Carolina', name: 'Jasper – Okatie' })
+    // Low confidence, so both would be listed in Review if it ignored the focus.
+    const desc = project({
+      id: 7,
+      utility: 'Dominion Energy South Carolina',
+      name: 'Jasper – Okatie',
+      confidence: 0.5,
+    })
     const gpc = project({ id: 8, utility: 'Georgia Power', name: 'McIntosh reactors' })
     fetchMock.mockImplementation((url: string) =>
       url.startsWith('/api/projects')
-        ? jsonResponse([project(), desc, gpc])
+        ? jsonResponse([project({ confidence: 0.4 }), desc, gpc])
         : url.startsWith('/api/overlaps')
           ? jsonResponse({ radius: 25, pad: 365, max_overlap_days: 365, pairs: [pair()] })
           : jsonResponse({ type: 'FeatureCollection', features: [] }),
@@ -99,5 +105,23 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     expect(await screen.findByText('DESC ↔ Georgia Power')).toBeInTheDocument()
     // The Keystone/Chesapeake fixture pair is hidden by the focus.
     expect(screen.queryByRole('button', { name: /Hanover breakers/ })).toBeNull()
+
+    // Only the two utilities' pairs are asked for, from the very first request.
+    await vi.waitFor(() => expect(overlapCalls().length).toBeGreaterThan(0))
+    for (const url of overlapCalls()) {
+      expect(new URL(url, 'http://x').searchParams.getAll('utility')).toEqual([
+        'Dominion Energy South Carolina',
+        'Georgia Power',
+      ])
+    }
+    expect(screen.getByRole('link', { name: 'Export CSV' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('utility=Georgia+Power'),
+    )
+
+    // Review follows the focus too: the Keystone project is out of scope.
+    await userEvent.click(screen.getByRole('button', { name: /Review/ }))
+    expect(screen.queryByText('Hanover breakers')).toBeNull()
+    expect(screen.getByText('Jasper – Okatie')).toBeInTheDocument()
   })
 })

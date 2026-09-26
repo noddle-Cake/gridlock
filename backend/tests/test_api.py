@@ -153,6 +153,9 @@ def test_overlaps_defaults_and_scores(api_client):
     assert pair["overlap_ratio"] == pytest.approx(61 / 183, abs=1e-4)
     assert pair["scores"]["overlap"] == pytest.approx(61 / 183, abs=1e-4)
     assert pair["time_gap_days"] == 92  # Jun 30 -> Sep 30 in-service
+    # Each project's own build window, as scored.
+    assert pair["build_a"] == ["2026-04-01", "2026-06-30"]
+    assert pair["build_b"] == ["2026-05-01", "2026-09-30"]
     assert set(pair["scores"]) >= {"distance", "overlap", "type_similarity",
                                    "voltage_similarity", "composite", "indeterminate_factors"}
     assert pair["brief"] is None
@@ -177,6 +180,9 @@ def test_distant_schedules_still_flagged(api_client):
     assert gap["overlap_days"] == 0 and gap["window_start"] is None
     assert gap["overlap_ratio"] == 0 and gap["scores"]["overlap"] == 0
     assert pairs["1-3"]["time_gap_days"] is None and pairs["1-3"]["overlap_ratio"] is None
+    # An in-service date alone builds for the 12 months before it; undated has no window.
+    assert gap["build_b"] == ["2033-12-31", "2034-12-31"]
+    assert pairs["1-3"]["build_b"] is None
     assert "overlap" in pairs["1-3"]["scores"]["indeterminate_factors"]
 
 
@@ -223,6 +229,45 @@ def test_overlaps_unknown_band(api_client):
     r = api_client.get("/overlaps?bands=8,100")
     assert r.status_code == 422
     assert r.json()["error"]["fields"] == ["bands"]
+
+
+def test_overlaps_utility_filter(api_client):
+    """`utility` keeps pairs whose two projects are both among the named utilities."""
+    third = repo.NewProject(utility="PPL", name="York tap", lat=39.7, lng=-76.9, confidence=0.9)
+    seed([*two_nearby(), third])
+
+    def ids(query: str = "") -> list[str]:
+        return sorted(p["id"] for p in api_client.get(f"/overlaps?{query}").json()["pairs"])
+
+    assert ids() == ["1-2", "1-3", "2-3"]
+    # Trimmed and case-insensitive, like the utility comparison in matching.
+    assert ids("utility=met-ed&utility=%20BGE%20") == ["1-2"]
+    assert ids("utility=Met-Ed&utility=PPL") == ["1-3"]
+    assert ids("utility=Met-Ed") == []  # one utility can't pair with itself
+    assert ids("utility=") == ids()  # blank = no filter
+    csv = api_client.get("/export?format=csv&utility=Met-Ed&utility=PPL").text
+    assert [line.split(",")[0] for line in csv.strip().splitlines()[1:]] == ["1-3"]
+
+
+def test_pair_link_is_the_closest_points(api_client):
+    """`link` is the segment `miles` measures: point to point, or onto a routed line."""
+    # A route passing through the Met-Ed point touches it: both ends of the link coincide.
+    crossing = repo.NewProject(utility="PPL", name="Line", confidence=0.9, lat=39.80,
+                               lng=-76.90, route=[(39.80, -77.10), (39.80, -76.90)])
+    seed([*two_nearby(), crossing])
+    pairs = {p["id"]: p for p in api_client.get("/overlaps").json()["pairs"]}
+    assert pairs["1-2"]["link"] == [[39.80, -76.98], [39.58, -77.00]]
+
+    touching = pairs["1-3"]
+    assert touching["miles"] == pytest.approx(0, abs=0.01)  # great circle vs parallel: metres
+    a, b = touching["link"]
+    assert a == pytest.approx(b) and a == pytest.approx([39.80, -76.98])
+
+
+def test_large_responses_are_compressed(api_client):
+    seed(two_nearby())
+    r = api_client.get("/overlaps", headers={"Accept-Encoding": "gzip"})
+    assert r.headers.get("content-encoding") == "gzip"
 
 
 # ---------------------------------------------------------------- PATCH /projects/{id}

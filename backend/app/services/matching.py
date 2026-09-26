@@ -134,16 +134,28 @@ def _build_pair(
         time_gap_days=t.in_service_gap_days if t else None,
         window_start=shared.start if shared else None,
         window_end=shared.end if shared else None,
-        shared_km=shared_km, scores=scores,
+        build_a=(wa.start, wa.end) if wa else None,
+        build_b=(wb.start, wb.end) if wb else None,
+        shared_km=shared_km, link=row.link, scores=scores,
         impact=estimate(tier=pair_tier, a=a, b=b, shared_km=shared_km,
                         windows_overlap=shared is not None),
     )
 
 
+def parse_utilities(raw: list[str] | None) -> list[str] | None:
+    """Repeated `utility` params -> the utilities to keep, or None (no filter) when absent
+    or all blank."""
+    names = [u.strip() for u in raw or [] if u.strip()]
+    return names or None
+
+
 async def overlaps(
     conn: asyncpg.Connection, radius: float, *, bands: set[str] | None = None,
+    utilities: list[str] | None = None,
 ) -> list[CoordinationPairDTO]:
-    rows = await repo.candidate_pairs(conn, radius)
+    """Every qualifying pair, ranked. `utilities` keeps only pairs between those utilities,
+    filtered in SQL so a two-utility view doesn't build thousands of pairs it would drop."""
+    rows = await repo.candidate_pairs(conn, radius, utilities=utilities)
     if bands is not None:
         rows = [r for r in rows if distance_band(r.miles) in bands]
     projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))

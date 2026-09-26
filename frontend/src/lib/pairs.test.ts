@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
 import { pair, project } from '../test/fixtures'
-import { bestPairFor, filterPairs, pairsInView, scoreBand, sortPairs } from './pairs'
+import {
+  bestPairFor,
+  filterPairs,
+  filterProjects,
+  pairEnds,
+  pairScope,
+  pairsInView,
+  scoreBand,
+  sortPairs,
+} from './pairs'
 
 const near = pair()
 const far = pair({
@@ -13,6 +22,44 @@ const far = pair({
   overlap_ratio: 0.9,
   window_start: '2025-01-01',
   scores: { ...near.scores, composite: 0.8 },
+})
+
+describe('pairEnds', () => {
+  it('spans the closest points when the API sends them, else the two markers', () => {
+    expect(pairEnds(near)).toEqual([
+      [39.8, -76.98],
+      [39.58, -77.0],
+    ])
+    const link: [number, number][] = [
+      [39.7, -76.99],
+      [39.7, -76.99],
+    ]
+    expect(pairEnds(pair({ link }))).toEqual(link)
+  })
+})
+
+describe('utility scope', () => {
+  const all = ['A', 'B', 'C']
+
+  it('asks for every pair unless some utilities are hidden', () => {
+    expect(pairScope(all, new Set())).toBeUndefined()
+    expect(pairScope(all, new Set(['C']))).toEqual(['A', 'B'])
+    expect(pairScope(all, new Set(all))).toEqual([]) // nothing shown: nothing to fetch
+  })
+
+  it('falls back to every pair when too many utilities are shown to list', () => {
+    const many = Array.from({ length: 100 }, (_, i) => `U${i}`)
+    expect(pairScope(many, new Set(['U0']))).toBeUndefined()
+  })
+
+  it('scopes review projects by utility and search text', () => {
+    const projects = [near.project_a, near.project_b, far.project_a]
+    const hidden = new Set(['Gulf Power'])
+    expect(filterProjects(projects, { query: '', hiddenUtilities: hidden })).toHaveLength(2)
+    expect(filterProjects(projects, { query: 'westminster', hiddenUtilities: hidden })).toEqual([
+      near.project_b,
+    ])
+  })
 })
 
 describe('compareRank', () => {

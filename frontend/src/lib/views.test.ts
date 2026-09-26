@@ -88,6 +88,17 @@ describe('format helpers', () => {
     expect(colors.Big).toBeDefined()
     expect(new Set(Object.values(colors)).size).toBe(PALETTE.length)
   })
+
+  it('gives the utilities on screen the leading, most distinct slots', () => {
+    // Alphabetically among the busiest, the challenge pair would get slots 1 and 3 (two
+    // oranges); shown first they get blue and orange.
+    const names = ['AEP', 'AEP', 'Dominion Energy South Carolina', 'Duke', 'Georgia Power', 'Duke']
+    const colors = utilityColors(names, ['Georgia Power', 'Dominion Energy South Carolina'])
+    expect(colors['Dominion Energy South Carolina']).toBe(PALETTE[0])
+    expect(colors['Georgia Power']).toBe(PALETTE[1])
+    expect(colors.AEP).toBeDefined()
+    expect(new Set(Object.values(colors)).size).toBe(Object.keys(colors).length)
+  })
 })
 
 describe('project color encodings', () => {

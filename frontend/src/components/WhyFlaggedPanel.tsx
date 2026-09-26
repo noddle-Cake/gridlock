@@ -11,9 +11,74 @@ import {
   rangeLabel,
   usdRange,
 } from '../lib/format'
+import { type Span, windowScale } from '../lib/buildWindows'
 import { scoreBand } from '../lib/pairs'
 import type { CoordinationBrief, CoordinationPair, Impact, PairProject } from '../types'
 import { SourceLink } from './SourceLink'
+
+/**
+ * Both projects' build windows on one time axis, with the stretch both are building hatched:
+ * the timeline-overlap signal drawn, not just stated.
+ */
+function BuildWindows({
+  pair,
+  colorOf,
+}: {
+  pair: CoordinationPair
+  colorOf: (p: PairProject) => string
+}) {
+  const scale = windowScale([pair.build_a, pair.build_b])
+  if (!scale) return null
+  const shared: Span | null =
+    pair.window_start && pair.window_end ? [pair.window_start, pair.window_end] : null
+  const rows = [
+    { p: pair.project_a, span: pair.build_a },
+    { p: pair.project_b, span: pair.build_b },
+  ]
+  const at = (span: Span) => {
+    const { left, width } = scale.place(span)
+    return { left: `${left}%`, width: `${width}%` }
+  }
+  return (
+    <section className="build-windows" aria-label="Build windows">
+      <h3 className="section-title">Build windows</h3>
+      <div className="bw-chart">
+        <div className="bw-labels">
+          {rows.map(({ p }) => (
+            <span key={p.id} title={p.name ?? undefined}>
+              {p.utility}
+            </span>
+          ))}
+        </div>
+        <div className="bw-tracks">
+          {scale.years.map((y) => (
+            <span key={y.year} className="bw-tick" style={{ left: `${y.at}%` }} aria-hidden="true">
+              <span>{y.year}</span>
+            </span>
+          ))}
+          {shared ? (
+            <span className="bw-shared" style={at(shared)} data-testid="bw-shared">
+              <span className="sr-only">Both building</span>
+            </span>
+          ) : null}
+          {rows.map(({ p, span }) => (
+            <div key={p.id} className="bw-track">
+              {span ? (
+                <span
+                  className="bw-bar"
+                  style={{ ...at(span), background: colorOf(p) }}
+                  title={`${p.name ?? 'Unnamed'}: ${dayLabel(span[0])} – ${dayLabel(span[1])}`}
+                />
+              ) : (
+                <em className="bw-unknown">schedule unknown</em>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
 
 interface Props {
   pair: CoordinationPair | null
@@ -178,9 +243,11 @@ export function WhyFlaggedPanel({ pair, colorOf, onGenerateBrief }: Props) {
           <span className="fact-label">both building</span>
         </div>
       </div>
+      <BuildWindows pair={pair} colorOf={colorOf} />
       <p className="fact-note">
-        Build time shared = days both projects are building ÷ days either one is. Where a plan
-        gives only an in-service date, construction is assumed to take the 12 months before it.
+        Build time shared = days both projects are building (hatched) ÷ days either one is. Where
+        a plan gives only an in-service date, construction is assumed to take the 12 months
+        before it.
       </p>
 
       {pair.impact ? <ImpactSection impact={pair.impact} /> : null}

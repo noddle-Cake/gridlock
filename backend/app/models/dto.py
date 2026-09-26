@@ -121,7 +121,14 @@ class CoordinationPairDTO(BaseModel):
     time_gap_days: int | None = None  # days between in-service dates; None when undated
     window_start: date | None = None  # the shared build window, when there is one
     window_end: date | None = None
+    # Each project's build window [start, end] as scored (services/timing.py: a plan with only
+    # an in-service date builds for the 12 months before it); None when undated.
+    build_a: tuple[date, date] | None = None
+    build_b: tuple[date, date] | None = None
     shared_km: float | None = None  # km of shared corridor when both are routed lines
+    # The closest points of the two shapes as [[lat, lng], [lat, lng]]: what `miles`
+    # measures. Equal points mean the projects touch.
+    link: list[tuple[float, float]] | None = None
     scores: ScoreFactorsDTO
     impact: ImpactDTO | None = None
     brief: CoordinationBriefDTO | None = None

@@ -72,6 +72,8 @@ class CandidateRow:
     # Both projects routed: km of the shorter overlap of each line with a 1.6 km corridor
     # around the other (a right-of-way the two could share). None when not both are lines.
     shared_km: float | None = None
+    # Closest point of each shape as (lat, lng): the segment `miles` measures.
+    link: list[tuple[float, float]] | None = None
 
 
 @dataclass
@@ -297,6 +299,7 @@ async def update_project(
 _SHAPE = "COALESCE({t}.route::geography, {t}.geom::geography)"
 _PAIR_COLUMNS = """
        ST_Distance({shape_a}, {shape_b}) / {mpm} AS miles,
+       ST_AsGeoJSON(ST_ShortestLine({shape_a}::geometry, {shape_b}::geometry), 5) AS link,
        CASE WHEN a.route IS NOT NULL AND b.route IS NOT NULL
             THEN CASE WHEN ST_DWithin(a.route, b.route, 1600)
                       THEN LEAST(
@@ -327,22 +330,38 @@ ORDER BY miles
 
 
 def _row(r: asyncpg.Record) -> CandidateRow:
+    link = None
+    if r["link"]:
+        link = [(lat, lng) for lng, lat in json.loads(r["link"])["coordinates"]]
     return CandidateRow(a_id=r["a_id"], b_id=r["b_id"], miles=float(r["miles"]),
-                        shared_km=None if r["shared_km"] is None else float(r["shared_km"]))
+                        shared_km=None if r["shared_km"] is None else float(r["shared_km"]),
+                        link=link)
 
 
 async def candidate_pairs(
     conn: asyncpg.Connection, radius_miles: float,
     *, project_id: int | None = None, pair: tuple[int, int] | None = None,
+    utilities: list[str] | None = None,
 ) -> list[CandidateRow]:
+    """`utilities` (compared trimmed and case-insensitively) keeps only pairs whose two
+    projects both belong to one of them; None keeps every pair."""
     args: list[Any] = [radius_miles * METERS_PER_MILE]
+
+    def arg(value: Any) -> str:
+        args.append(value)
+        return f"${len(args)}"
+
     extra = ""
     if project_id is not None:
-        args.append(project_id)
-        extra = "AND (a.id = $2 OR b.id = $2)"
+        p = arg(project_id)
+        extra = f"AND (a.id = {p} OR b.id = {p})"
     elif pair is not None:
-        args.extend(sorted(pair))
-        extra = "AND a.id = $2 AND b.id = $3"
+        lo, hi = sorted(pair)
+        extra = f"AND a.id = {arg(lo)} AND b.id = {arg(hi)}"
+    if utilities is not None:
+        u = arg(sorted({x.strip().lower() for x in utilities}))
+        extra += (f" AND lower(trim(a.utility)) = ANY({u}::text[])"
+                  f" AND lower(trim(b.utility)) = ANY({u}::text[])")
     rows = await conn.fetch(_CANDIDATE_SQL.replace("{extra}", extra), *args)
     return [_row(r) for r in rows]
 
