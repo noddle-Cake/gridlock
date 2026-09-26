@@ -34,14 +34,19 @@ export function gapLabel(days: number): string {
   return `${(days / 365.25).toFixed(1)} years`
 }
 
-/** One-line timing summary for a pair: shared window, or how far apart the schedules are. */
+/** One-line timing summary: how much of the build time is shared, or how far apart it is. */
 export function timingLabel(p: {
-  overlap_days: number
+  overlap_ratio: number | null
   time_gap_days: number | null
 }): string {
-  if (p.time_gap_days == null) return 'schedule unknown'
-  if (p.overlap_days > 0) return `${p.overlap_days} d build-window overlap`
+  if (p.overlap_ratio == null || p.time_gap_days == null) return 'schedule unknown'
+  if (p.overlap_ratio > 0) return `${overlapPct(p.overlap_ratio)} build-time overlap`
   return `in service ${gapLabel(p.time_gap_days)} apart`
+}
+
+/** Like pct(), but never rounds a real overlap down to "0%". */
+export function overlapPct(ratio: number): string {
+  return ratio > 0 && ratio < 0.005 ? '<1%' : pct(ratio)
 }
 
 export function rangeLabel(

@@ -2,14 +2,10 @@ import { ALL_BANDS, bandSummary, DISTANCE_BANDS, type BandId } from '../lib/dist
 import { DEFAULT_CONFIDENCE_THRESHOLD } from '../lib/review'
 import { FilterMenu } from './FilterMenu'
 
-export const DEFAULT_PAD = 365
-
 interface Props {
   bands: BandId[]
-  pad: number
   confidenceThreshold: number
   onBands: (v: BandId[]) => void
-  onPad: (v: number) => void
   onConfidenceThreshold: (v: number) => void
 }
 
@@ -46,25 +42,6 @@ export function ThresholdControls(props: Props) {
             </label>
           ))}
         </fieldset>
-      </FilterMenu>
-      <FilterMenu label={<>Build window ±{props.pad} d</>} active={props.pad !== DEFAULT_PAD}>
-        <label className="slider">
-          <span className="slider-label">
-            Build window <output>±{props.pad} days</output>
-          </span>
-          <input
-            type="range"
-            min={0}
-            max={1095}
-            step={15}
-            value={props.pad}
-            aria-label="Build window (days either side of in-service)"
-            onChange={(e) => props.onPad(Number(e.target.value))}
-          />
-          <span className="hint">
-            Pairs whose build windows overlap rank higher. Timing never hides a nearby pair.
-          </span>
-        </label>
       </FilterMenu>
       <FilterMenu
         label={<>Review &lt; {props.confidenceThreshold.toFixed(2)}</>}

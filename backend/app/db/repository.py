@@ -58,13 +58,6 @@ class CandidateRow:
     a_id: int
     b_id: int
     miles: float
-    # Days the two padded build windows share; 0 when they don't meet or a date is unknown.
-    overlap_days: int
-    # Days between the two unpadded schedules (0 when they overlap); None when either
-    # project has no date. For single in-service dates this is |date_a - date_b|.
-    time_gap_days: int | None
-    window_start: date | None  # shared padded window; None when there isn't one
-    window_end: date | None
 
 
 @dataclass
@@ -76,7 +69,6 @@ class StoredBrief:
     miles: float
     overlap_days: int
     radius: float
-    pad: int
     stale: bool
     generated_at: datetime
     extra: dict[str, Any] = field(default_factory=dict)
@@ -256,57 +248,33 @@ async def update_project(
 # ---------------------------------------------------------------- matching
 
 _CANDIDATE_SQL = """
-WITH p AS (
-  SELECT id, lower(trim(utility)) AS u, geom,
-         COALESCE(start_date, end_date) AS s,
-         COALESCE(end_date, start_date) AS e
-  FROM projects
-  WHERE geom IS NOT NULL                                   -- Req 6.8
-)
-SELECT a.id AS a_id, b.id AS b_id,
-       ST_Distance(a.geom, b.geom) / {mpm} AS miles,
-       CASE WHEN a.s IS NOT NULL AND b.s IS NOT NULL
-            THEN GREATEST(a.s - b.e, b.s - a.e, 0) END AS time_gap_days,
-       GREATEST(a.s, b.s) - $2::int AS window_start,
-       LEAST(a.e, b.e) + $2::int AS window_end
-FROM p a
-JOIN p b ON a.id < b.id AND a.u <> b.u                     -- Req 6.2: different utilities
-WHERE ST_DWithin(a.geom, b.geom, $1)                       -- Req 6.3
+SELECT a.id AS a_id, b.id AS b_id, ST_Distance(a.geom, b.geom) / {mpm} AS miles
+FROM projects a
+JOIN projects b ON a.id < b.id                               -- Req 6.2: different utilities
+  AND lower(trim(a.utility)) <> lower(trim(b.utility))
+WHERE a.geom IS NOT NULL AND b.geom IS NOT NULL              -- Req 6.8
+  AND ST_DWithin(a.geom, b.geom, $1)                         -- Req 6.3
   {extra}
 ORDER BY miles
 """.replace("{mpm}", str(METERS_PER_MILE))
-# Geography is the primary signal: timing never excludes a pair, it only ranks it. Undated
-# projects still match on distance (their timing is unknown, not zero).
-
-
-def _candidate_from_record(r: asyncpg.Record) -> CandidateRow:
-    start, end = r["window_start"], r["window_end"]
-    # GREATEST/LEAST skip NULLs, so an undated side would borrow the other's window.
-    if r["time_gap_days"] is None or start is None or end is None or start > end:
-        start = end = None
-    return CandidateRow(
-        a_id=r["a_id"], b_id=r["b_id"], miles=float(r["miles"]),
-        # Inclusive day count shared by the two padded ranges (Req 6.10).
-        overlap_days=0 if start is None else (end - start).days + 1,
-        time_gap_days=r["time_gap_days"],
-        window_start=start, window_end=end,
-    )
+# Geography alone decides whether two projects pair up; timing only ranks the pair
+# (services/timing.py). Undated projects still match on distance.
 
 
 async def candidate_pairs(
-    conn: asyncpg.Connection, radius_miles: float, pad_days: int,
+    conn: asyncpg.Connection, radius_miles: float,
     *, project_id: int | None = None, pair: tuple[int, int] | None = None,
 ) -> list[CandidateRow]:
-    args: list[Any] = [radius_miles * METERS_PER_MILE, pad_days]
+    args: list[Any] = [radius_miles * METERS_PER_MILE]
     extra = ""
     if project_id is not None:
         args.append(project_id)
-        extra = "AND (a.id = $3 OR b.id = $3)"
+        extra = "AND (a.id = $2 OR b.id = $2)"
     elif pair is not None:
         args.extend(sorted(pair))
-        extra = "AND a.id = $3 AND b.id = $4"
+        extra = "AND a.id = $2 AND b.id = $3"
     rows = await conn.fetch(_CANDIDATE_SQL.replace("{extra}", extra), *args)
-    return [_candidate_from_record(r) for r in rows]
+    return [CandidateRow(a_id=r["a_id"], b_id=r["b_id"], miles=float(r["miles"])) for r in rows]
 
 
 # ---------------------------------------------------------------- briefs
@@ -318,16 +286,16 @@ def _brief_from_record(r: asyncpg.Record) -> StoredBrief:
 
 async def upsert_brief(
     conn: asyncpg.Connection, *, pair_id: str, a_id: int, b_id: int, text: str, miles: float,
-    overlap_days: int, radius: float, pad: int,
+    overlap_days: int, radius: float,
 ) -> StoredBrief:
     r = await conn.fetchrow(
-        """INSERT INTO briefs (pair_id, a_id, b_id, text, miles, overlap_days, radius, pad)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        """INSERT INTO briefs (pair_id, a_id, b_id, text, miles, overlap_days, radius)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
            ON CONFLICT (pair_id) DO UPDATE SET text = EXCLUDED.text, miles = EXCLUDED.miles,
              overlap_days = EXCLUDED.overlap_days, radius = EXCLUDED.radius,
-             pad = EXCLUDED.pad, stale = false, generated_at = now()
+             stale = false, generated_at = now()
            RETURNING *""",
-        pair_id, a_id, b_id, clean(text), miles, overlap_days, radius, pad,
+        pair_id, a_id, b_id, clean(text), miles, overlap_days, radius,
     )
     return _brief_from_record(r)
 

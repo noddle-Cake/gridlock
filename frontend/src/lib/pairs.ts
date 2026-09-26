@@ -5,7 +5,7 @@ export type SortKey = 'score' | 'distance' | 'overlap' | 'start'
 export const SORT_LABELS: Record<SortKey, string> = {
   score: 'Highest score',
   distance: 'Closest first',
-  overlap: 'Closest in time',
+  overlap: 'Most time overlap',
   start: 'Soonest window',
 }
 
@@ -66,11 +66,12 @@ export function sortPairs(pairs: CoordinationPair[], key: SortKey): Coordination
     case 'distance':
       return out.sort((a, b) => a.miles - b.miles)
     case 'overlap':
-      // Undated pairs go last.
+      // Most shared build time first; then, among non-overlapping pairs, nearest in-service
+      // dates. Undated pairs go last.
       return out.sort(
         (a, b) =>
-          (a.time_gap_days ?? Infinity) - (b.time_gap_days ?? Infinity) ||
-          b.overlap_days - a.overlap_days,
+          (b.overlap_ratio ?? -1) - (a.overlap_ratio ?? -1) ||
+          (a.time_gap_days ?? Infinity) - (b.time_gap_days ?? Infinity),
       )
     case 'start':
       // Pairs without a shared window go last.

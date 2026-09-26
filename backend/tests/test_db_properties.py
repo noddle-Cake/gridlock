@@ -11,7 +11,7 @@ from hypothesis import strategies as st
 
 from app.db import repository as repo
 from app.models.enums import DatePrecision, ProjectType
-from app.services import matching
+from app.services import matching, timing
 from tests.conftest import requires_db, run_db
 
 pytestmark = requires_db
@@ -42,12 +42,6 @@ def new_projects(draw, utilities=UTILITIES):
     )
 
 
-def _span(p) -> tuple[date, date] | None:
-    s = p.start_date or p.end_date
-    e = p.end_date or p.start_date
-    return None if s is None else (s, e)
-
-
 def _haversine_miles(a, b) -> float:
     r = 3958.7613
     p1, p2 = math.radians(a.lat), math.radians(b.lat)
@@ -67,40 +61,40 @@ def _qualifies(a, b, radius: float, slack: float) -> bool:
 
 project_sets = st.lists(new_projects(), min_size=0, max_size=12)
 radii = st.floats(0, 60)
-pads = st.integers(0, 120)
 
 
 # Feature: gridmerge, Property 1: Valid pair membership
-@given(project_sets, radii, pads)
-def test_valid_pair_membership(projects, radius, pad):
+@given(project_sets, radii)
+def test_valid_pair_membership(projects, radius):
     async def body(conn):
         ids = await repo.insert_projects(conn, projects)
-        return ids, await repo.candidate_pairs(conn, radius, pad)
+        return ids, await matching.overlaps(conn, radius)
 
-    ids, rows = run_db(body)
+    ids, pairs = run_db(body)
     by_id = dict(zip(ids, projects, strict=True))
     found = set()
-    for r in rows:
-        a, b = by_id[r.a_id], by_id[r.b_id]
-        assert r.a_id < r.b_id  # distinct ids, each unordered pair once
+    for pair in pairs:
+        ia, ib = pair.project_a.id, pair.project_b.id
+        a, b = by_id[ia], by_id[ib]
+        assert ia < ib  # distinct ids, each unordered pair once
         assert a.utility.strip().lower() != b.utility.strip().lower()
         assert a.lat is not None and b.lat is not None
-        assert 0 <= r.miles <= radius + 1e-6
-        sa, sb = _span(a), _span(b)
-        if sa is None or sb is None:
+        assert 0 <= pair.miles <= radius + 1e-3
+        wa = timing.build_window(a.start_date, a.end_date)
+        wb = timing.build_window(b.start_date, b.end_date)
+        if wa is None or wb is None:
             # Undated: timing unknown, never a reason to drop the pair.
-            assert r.time_gap_days is None and r.overlap_days == 0
-            assert r.window_start is None and r.window_end is None
+            assert pair.overlap_ratio is None and pair.time_gap_days is None
+            assert pair.overlap_days == 0 and pair.window_start is None
+            assert "overlap" in pair.scores.indeterminate_factors
         else:
-            assert r.time_gap_days == max((sa[0] - sb[1]).days, (sb[0] - sa[1]).days, 0)
-            p = timedelta(days=pad)
-            lo, hi = max(sa[0], sb[0]) - p, min(sa[1], sb[1]) + p
-            if lo <= hi:
-                assert r.overlap_days == (hi - lo).days + 1 >= 1
-                assert (r.window_start, r.window_end) == (lo, hi)
-            else:
-                assert r.overlap_days == 0 and r.window_start is None and r.window_end is None
-        found.add((r.a_id, r.b_id))
+            # Timing comes from the stored dates alone.
+            t = timing.compare(wa, wb)
+            assert pair.overlap_ratio == round(t.ratio, 4)
+            assert pair.overlap_days == t.overlap_days
+            assert pair.time_gap_days == t.in_service_gap_days
+            assert pair.window_start == (t.shared.start if t.shared else None)
+        found.add((ia, ib))
 
     # Completeness (sanity): pairs clearly inside the radius are never missed.
     for (ia, a), (ib, b) in itertools.combinations(sorted(by_id.items()), 2):
@@ -109,26 +103,27 @@ def test_valid_pair_membership(projects, radius, pad):
 
 
 # Feature: gridmerge, Property 2: Matching symmetry and well-formed distance
-@given(project_sets, radii, pads)
-def test_matching_symmetry(projects, radius, pad):
+@given(project_sets, radii)
+def test_matching_symmetry(projects, radius):
     def pairs_for(order):
         async def body(conn):
             ids = await repo.insert_projects(conn, [projects[i] for i in order])
             logical = dict(zip(ids, order, strict=True))
-            rows = await repo.candidate_pairs(conn, radius, pad)
+            pairs = await matching.overlaps(conn, radius)
             return {
-                frozenset((logical[r.a_id], logical[r.b_id])): (r.miles, r.overlap_days)
-                for r in rows
+                frozenset((logical[p.project_a.id], logical[p.project_b.id])):
+                    (p.miles, p.overlap_days, p.overlap_ratio)
+                for p in pairs
             }
         return body
 
     forward = run_db(pairs_for(list(range(len(projects)))))
     backward = run_db(pairs_for(list(reversed(range(len(projects))))))
     assert forward.keys() == backward.keys()
-    for key, (miles, days) in forward.items():
+    for key, (miles, days, ratio) in forward.items():
         assert miles >= 0
-        assert math.isclose(miles, backward[key][0], abs_tol=1e-6)
-        assert days == backward[key][1]
+        assert math.isclose(miles, backward[key][0], abs_tol=1e-3)
+        assert (days, ratio) == backward[key][1:]
 
 
 # Feature: gridmerge, Property 13: Persistence round-trip
@@ -180,18 +175,17 @@ edits = st.fixed_dictionaries({}, optional={
 @given(st.lists(new_projects(), min_size=2, max_size=10), st.data(), edits)
 def test_edit_round_trip_and_rematch(projects, data, edit):
     target_index = data.draw(st.integers(0, len(projects) - 1))
-    radius, pad = 25.0, 30
+    radius = 25.0
 
     async def body(conn):
         ids = await repo.insert_projects(conn, projects)
         target = ids[target_index]
         # Every currently flagged pair gets a brief (the stored Coordination_Pairs).
-        before = await repo.candidate_pairs(conn, radius, pad)
-        for r in before:
+        before = await matching.overlaps(conn, radius)
+        for p in before:
             await repo.upsert_brief(
-                conn, pair_id=matching.pair_id(r.a_id, r.b_id), a_id=r.a_id, b_id=r.b_id,
-                text="brief", miles=r.miles, overlap_days=r.overlap_days, radius=radius,
-                pad=pad,
+                conn, pair_id=p.id, a_id=p.project_a.id, b_id=p.project_b.id,
+                text="brief", miles=p.miles, overlap_days=p.overlap_days, radius=radius,
             )
         changes: dict = {}
         if "lat" in edit:
@@ -204,7 +198,9 @@ def test_edit_round_trip_and_rematch(projects, data, edit):
             changes["name"] = edit["name"]
         updated = await repo.update_project(conn, target, changes)
         result = await matching.rematch_project(conn, target)
-        after = {(r.a_id, r.b_id): r for r in await repo.candidate_pairs(conn, radius, pad)}
+        after = {
+            (p.project_a.id, p.project_b.id): p for p in await matching.overlaps(conn, radius)
+        }
         briefs = {b.pair_id: b for b in await repo.briefs_for_project(conn, target)}
         return target, before, updated, result, after, briefs
 
@@ -222,15 +218,16 @@ def test_edit_round_trip_and_rematch(projects, data, edit):
     assert {(p.project_a.id, p.project_b.id) for p in result.pairs} == {
         k for k in after if target in k
     }
-    for r in before:
-        if target not in (r.a_id, r.b_id):
+    for p in before:
+        key = (p.project_a.id, p.project_b.id)
+        if target not in key:
             continue
-        pid = matching.pair_id(r.a_id, r.b_id)
-        if (r.a_id, r.b_id) in after:
+        pid = p.id
+        if key in after:
             # Still qualifies: kept, with facts matching the post-edit values.
-            now = after[(r.a_id, r.b_id)]
+            now = after[key]
             assert pid in briefs and pid not in result.invalidated
-            assert math.isclose(briefs[pid].miles, now.miles, abs_tol=1e-6)
+            assert math.isclose(briefs[pid].miles, now.miles, abs_tol=1e-3)
             assert briefs[pid].overlap_days == now.overlap_days
         else:
             # No longer qualifies: invalidated (removed).
@@ -254,4 +251,4 @@ def test_cross_utility_coverage(utilities):
 
 async def _insert_and_match(conn, projects):
     await repo.insert_projects(conn, projects)
-    return await repo.candidate_pairs(conn, 1.0, 0)
+    return await repo.candidate_pairs(conn, 1.0)

@@ -5,7 +5,7 @@ import { FilterMenu } from './components/FilterMenu'
 import { MapView } from './components/MapView'
 import { PairList } from './components/PairList'
 import { ReviewTable } from './components/ReviewTable'
-import { DEFAULT_PAD, ThresholdControls } from './components/ThresholdControls'
+import { ThresholdControls } from './components/ThresholdControls'
 import { UploadPanel } from './components/UploadPanel'
 import { UtilityFilter } from './components/UtilityFilter'
 import { WhyFlaggedPanel } from './components/WhyFlaggedPanel'
@@ -30,7 +30,6 @@ export default function App() {
   const [projects, setProjects] = useState<Project[]>([])
   const [pairs, setPairs] = useState<CoordinationPair[]>([])
   const [bands, setBands] = useState<BandId[]>(ALL_BANDS)
-  const [pad, setPad] = useState(DEFAULT_PAD)
   const [confidenceThreshold, setConfidenceThreshold] = useState(DEFAULT_CONFIDENCE_THRESHOLD)
   const [selectedId, setSelectedId] = useState<string | null>(pairFromHash)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
@@ -71,7 +70,7 @@ export default function App() {
     const timer = setTimeout(() => {
       setLoadingPairs(true)
       api
-        .overlaps(MAX_RADIUS_MILES, pad, bands)
+        .overlaps(MAX_RADIUS_MILES, bands)
         .then((res) => {
           if (seq !== requestSeq.current) return // a newer control value won
           setPairs(res.pairs)
@@ -81,7 +80,7 @@ export default function App() {
         .finally(() => seq === requestSeq.current && setLoadingPairs(false))
     }, REQUERY_DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [bands, pad, version])
+  }, [bands, version])
 
   // One color per company across planned projects and existing-line owners, so a
   // utility reads the same on both layers.
@@ -163,7 +162,7 @@ export default function App() {
   }, [selectedId])
 
   async function generateBrief(pair: CoordinationPair) {
-    const brief = await api.brief(pair.id, MAX_RADIUS_MILES, pad)
+    const brief = await api.brief(pair.id, MAX_RADIUS_MILES)
     setPairs((prev) => prev.map((p) => (p.id === pair.id ? { ...p, brief } : p)))
     return brief
   }
@@ -204,10 +203,10 @@ export default function App() {
           </button>
         </nav>
         <div className="exports">
-          <a href={api.exportUrl('csv', MAX_RADIUS_MILES, pad, bands)} download>
+          <a href={api.exportUrl('csv', MAX_RADIUS_MILES, bands)} download>
             Export CSV
           </a>
-          <a href={api.exportUrl('pdf', MAX_RADIUS_MILES, pad, bands)} download>
+          <a href={api.exportUrl('pdf', MAX_RADIUS_MILES, bands)} download>
             Export PDF
           </a>
         </div>
@@ -230,10 +229,8 @@ export default function App() {
         <div className="chips">
           <ThresholdControls
             bands={bands}
-            pad={pad}
             confidenceThreshold={confidenceThreshold}
             onBands={setBands}
-            onPad={setPad}
             onConfidenceThreshold={setConfidenceThreshold}
           />
           <UtilityFilter

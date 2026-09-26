@@ -143,12 +143,16 @@ def test_utility_count_boundaries(api_client):
 def test_overlaps_defaults_and_scores(api_client):
     seed(two_nearby())
     body = api_client.get("/overlaps").json()
-    assert body["radius"] == 25 and body["pad"] == 365
+    assert body["radius"] == 25 and "pad" not in body
     (pair,) = body["pairs"]
     assert pair["id"] == "1-2"
     assert 14 < pair["miles"] < 17
-    assert pair["time_gap_days"] == 0
-    assert pair["overlap_days"] == (date(2027, 6, 30) - date(2025, 5, 1)).days + 1
+    # Apr 1-Jun 30 vs May 1-Sep 30: 61 shared days of 183 either is building.
+    assert (pair["window_start"], pair["window_end"]) == ("2026-05-01", "2026-06-30")
+    assert pair["overlap_days"] == 61
+    assert pair["overlap_ratio"] == pytest.approx(61 / 183, abs=1e-4)
+    assert pair["scores"]["overlap"] == pytest.approx(61 / 183, abs=1e-4)
+    assert pair["time_gap_days"] == 92  # Jun 30 -> Sep 30 in-service
     assert set(pair["scores"]) >= {"distance", "overlap", "type_similarity",
                                    "voltage_similarity", "composite", "indeterminate_factors"}
     assert pair["brief"] is None
@@ -163,24 +167,27 @@ def test_distant_schedules_still_flagged(api_client):
     undated = repo.NewProject(utility="PPL", name="Undated", lat=39.7, lng=-77.0,
                               confidence=0.9)
     seed([near, far, undated])
-    pairs = {p["id"]: p for p in api_client.get("/overlaps?pad=30").json()["pairs"]}
+    pairs = {p["id"]: p for p in api_client.get("/overlaps").json()["pairs"]}
     assert set(pairs) == {"1-2", "1-3", "2-3"}
     gap = pairs["1-2"]
     assert gap["time_gap_days"] == (date(2034, 12, 31) - date(2026, 6, 30)).days
     assert gap["overlap_days"] == 0 and gap["window_start"] is None
-    assert gap["scores"]["overlap"] == 0
-    assert pairs["1-3"]["time_gap_days"] is None
+    assert gap["overlap_ratio"] == 0 and gap["scores"]["overlap"] == 0
+    assert pairs["1-3"]["time_gap_days"] is None and pairs["1-3"]["overlap_ratio"] is None
     assert "overlap" in pairs["1-3"]["scores"]["indeterminate_factors"]
 
 
-@pytest.mark.parametrize(
-    ("query", "fields"),
-    [("radius=-1", ["radius"]), ("pad=abc", ["pad"]), ("radius=x&pad=-3", ["radius", "pad"])],
-)
-def test_overlaps_invalid_params(api_client, query, fields):
+def test_padding_no_longer_changes_scores(api_client):
+    seed(two_nearby())
+    plain = api_client.get("/overlaps").json()["pairs"]
+    assert api_client.get("/overlaps?pad=900").json()["pairs"] == plain  # ignored if sent
+
+
+@pytest.mark.parametrize("query", ["radius=-1", "radius=abc", "radius=inf"])
+def test_overlaps_invalid_params(api_client, query):
     r = api_client.get(f"/overlaps?{query}")
     assert r.status_code == 422
-    assert r.json()["error"]["fields"] == fields
+    assert r.json()["error"]["fields"] == ["radius"]
 
 
 @pytest.mark.parametrize(
@@ -329,7 +336,8 @@ def test_export_csv_and_pdf(api_client):
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
     lines = r.text.strip().splitlines()
     assert lines[0].startswith("pair_id,utility_a,project_a")
-    assert "Met-Ed" in lines[1] and "BGE" in lines[1] and "2025-05-01" in lines[1]
+    assert "Met-Ed" in lines[1] and "BGE" in lines[1]
+    assert ",2026-05-01,2026-06-30,61,33," in lines[1]  # shared window, days, overlap %
     r = api_client.get("/export?format=pdf")
     assert r.status_code == 200 and r.content.startswith(b"%PDF")
     assert api_client.get("/export?format=docx").status_code == 422

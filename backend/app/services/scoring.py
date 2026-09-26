@@ -6,12 +6,13 @@ import math
 
 from app.models.dto import ScoreFactorsDTO
 
-# Convex-combination weights: non-negative and summing to 1 (Req 7.5).
+# Convex-combination weights: non-negative and summing to 1 (Req 7.5). Distance is the
+# primary signal and timing a strong secondary one (challenge spec).
 WEIGHTS: dict[str, float] = {
-    "distance": 0.4,
-    "overlap": 0.3,
-    "type_similarity": 0.15,
-    "voltage_similarity": 0.15,
+    "distance": 0.6,
+    "overlap": 0.25,
+    "type_similarity": 0.075,
+    "voltage_similarity": 0.075,
 }
 # Voltage difference (kV) at which voltage-similarity reaches 0.
 V_SCALE = 500.0
@@ -32,13 +33,9 @@ def distance_score(miles: float, radius: float) -> float:
     return _clamp(1.0 - miles / radius)
 
 
-def overlap_score(overlap_days: float, max_overlap: float) -> float:
-    """0.0 when overlap <= 0, rising linearly to 1.0 at/beyond `max_overlap` (Req 7.2)."""
-    if overlap_days <= 0:
-        return 0.0
-    if max_overlap <= 0:
-        return 1.0
-    return _clamp(overlap_days / max_overlap)
+def overlap_score(ratio: float) -> float:
+    """The build windows' shared share of their combined span (services/timing.py), 0-1."""
+    return _clamp(ratio)
 
 
 def type_similarity(type_a: str, type_b: str) -> float:
@@ -59,13 +56,12 @@ def composite_score(factors: dict[str, float]) -> float:
 def score_pair(
     *,
     miles: float | None,
-    overlap_days: float | None,
+    overlap_ratio: float | None,
     type_a: str | None,
     type_b: str | None,
     voltage_a: float | None,
     voltage_b: float | None,
     radius: float,
-    max_overlap: float,
 ) -> ScoreFactorsDTO:
     """Compute every factor; missing/invalid inputs zero the factor and flag it (Req 7.6)."""
     indeterminate: list[str] = []
@@ -77,8 +73,8 @@ def score_pair(
         factors["distance"] = 0.0
         indeterminate.append("distance")
 
-    if _valid_number(overlap_days) and _valid_number(max_overlap):
-        factors["overlap"] = overlap_score(overlap_days, max_overlap)
+    if _valid_number(overlap_ratio):
+        factors["overlap"] = overlap_score(overlap_ratio)
     else:
         factors["overlap"] = 0.0
         indeterminate.append("overlap")

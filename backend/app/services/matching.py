@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.errors import InvalidParameterError
 from app.db import repository as repo
 from app.models.dto import CoordinationPairDTO, ProjectDTO
+from app.services import timing
 from app.services.scoring import score_pair
 
 
@@ -29,36 +30,22 @@ def parse_pair_id(value: str) -> tuple[int, int] | None:
     return a, b
 
 
-def parse_thresholds(radius: str | None, pad: str | None) -> tuple[float, int]:
-    """Validate query params; report every invalid one in a single error (Req 6.5-6.7)."""
-    settings = get_settings()
-    invalid: list[str] = []
-    reasons: list[str] = []
-
-    def number(name: str, raw: str | None, default: float) -> float:
-        if raw is None or raw.strip() == "":
-            return default
-        try:
-            value = float(raw)
-        except ValueError:
-            invalid.append(name)
-            reasons.append(f"{name} must be numeric (got {raw!r})")
-            return default
+def parse_radius(radius: str | None) -> float:
+    """Validate the radius query param (Req 6.5-6.7)."""
+    if radius is None or radius.strip() == "":
+        return get_settings().default_radius_miles
+    try:
+        value = float(radius)
+    except ValueError:
+        reason = f"radius must be numeric (got {radius!r})"
+    else:
         if not math.isfinite(value):
-            invalid.append(name)
-            reasons.append(f"{name} must be a finite number (got {raw!r})")
-            return default
-        if value < 0:
-            invalid.append(name)
-            reasons.append(f"{name} must not be negative (got {raw!r})")
-            return default
-        return value
-
-    radius_v = number("radius", radius, settings.default_radius_miles)
-    pad_v = number("pad", pad, settings.default_pad_days)
-    if invalid:
-        raise InvalidParameterError("; ".join(reasons), fields=invalid, field=invalid[0])
-    return radius_v, int(round(pad_v))
+            reason = f"radius must be a finite number (got {radius!r})"
+        elif value < 0:
+            reason = f"radius must not be negative (got {radius!r})"
+        else:
+            return value
+    raise InvalidParameterError(reason, fields=["radius"], field="radius")
 
 
 # Distance bands the UI filters on, keyed by upper bound in km. They never overlap: each pair
@@ -94,35 +81,42 @@ def parse_bands(raw: str | None) -> set[str] | None:
     return bands
 
 
+def _window(p: ProjectDTO) -> timing.Window | None:
+    return timing.build_window(p.start_date, p.end_date, p.start_precision, p.end_precision)
+
+
 def _build_pair(
-    row: repo.CandidateRow, projects: dict[int, ProjectDTO], radius: float, max_overlap: int
+    row: repo.CandidateRow, projects: dict[int, ProjectDTO], radius: float
 ) -> CoordinationPairDTO:
     a, b = projects[row.a_id], projects[row.b_id]
+    wa, wb = _window(a), _window(b)
+    # Undated projects: timing is unknown (factor flagged indeterminate), not "no overlap".
+    t = timing.compare(wa, wb) if wa and wb else None
     scores = score_pair(
-        # Undated projects: timing is unknown (factor flagged indeterminate), not "no overlap".
-        miles=row.miles, overlap_days=None if row.time_gap_days is None else row.overlap_days,
+        miles=row.miles, overlap_ratio=t.ratio if t else None,
         type_a=a.type.value if a.type else None, type_b=b.type.value if b.type else None,
-        voltage_a=a.voltage_kv, voltage_b=b.voltage_kv,
-        radius=radius, max_overlap=max_overlap,
+        voltage_a=a.voltage_kv, voltage_b=b.voltage_kv, radius=radius,
     )
+    shared = t.shared if t else None
     return CoordinationPairDTO(
-        id=pair_id(a.id, b.id), project_a=a, project_b=b,
-        miles=round(row.miles, 3), overlap_days=row.overlap_days,
-        time_gap_days=row.time_gap_days, window_start=row.window_start,
-        window_end=row.window_end, scores=scores,
+        id=pair_id(a.id, b.id), project_a=a, project_b=b, miles=round(row.miles, 3),
+        overlap_days=t.overlap_days if t else 0,
+        overlap_ratio=round(t.ratio, 4) if t else None,
+        time_gap_days=t.in_service_gap_days if t else None,
+        window_start=shared.start if shared else None,
+        window_end=shared.end if shared else None,
+        scores=scores,
     )
 
 
 async def overlaps(
-    conn: asyncpg.Connection, radius: float, pad: int, *, max_overlap: int | None = None,
-    bands: set[str] | None = None,
+    conn: asyncpg.Connection, radius: float, *, bands: set[str] | None = None,
 ) -> list[CoordinationPairDTO]:
-    max_overlap = max_overlap or get_settings().max_overlap_days
-    rows = await repo.candidate_pairs(conn, radius, pad)
+    rows = await repo.candidate_pairs(conn, radius)
     if bands is not None:
         rows = [r for r in rows if distance_band(r.miles) in bands]
     projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
-    pairs = [_build_pair(r, projects, radius, max_overlap) for r in rows]
+    pairs = [_build_pair(r, projects, radius) for r in rows]
     briefs = await repo.briefs_for_pairs(conn, [p.id for p in pairs])
     for p in pairs:
         if p.id in briefs:
@@ -132,13 +126,13 @@ async def overlaps(
 
 
 async def find_pair(
-    conn: asyncpg.Connection, a_id: int, b_id: int, radius: float, pad: int
+    conn: asyncpg.Connection, a_id: int, b_id: int, radius: float
 ) -> CoordinationPairDTO | None:
-    rows = await repo.candidate_pairs(conn, radius, pad, pair=(a_id, b_id))
+    rows = await repo.candidate_pairs(conn, radius, pair=(a_id, b_id))
     if not rows:
         return None
     projects = await repo.get_projects(conn, [a_id, b_id])
-    return _build_pair(rows[0], projects, radius, get_settings().max_overlap_days)
+    return _build_pair(rows[0], projects, radius)
 
 
 @dataclass
@@ -151,32 +145,24 @@ class RematchResult:
 async def rematch_project(conn: asyncpg.Connection, project_id: int) -> RematchResult:
     """Re-run matching for one edited project and fix up its stored pairs (Req 13.4).
 
-    Pairs that carry a stored brief are re-checked under the thresholds they were
-    flagged with: no longer qualifying -> invalidated (removed); still qualifying
-    -> facts refreshed, and the brief marked stale if the facts changed.
+    Pairs that carry a stored brief are re-checked under the radius they were flagged
+    with: no longer qualifying -> invalidated (removed); still qualifying -> facts
+    refreshed, and the brief marked stale if the facts changed.
     """
-    settings = get_settings()
-    rows = await repo.candidate_pairs(
-        conn, settings.default_radius_miles, settings.default_pad_days, project_id=project_id
-    )
+    radius = get_settings().default_radius_miles
+    rows = await repo.candidate_pairs(conn, radius, project_id=project_id)
     projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
-    pairs = [
-        _build_pair(r, projects, settings.default_radius_miles, settings.max_overlap_days)
-        for r in rows
-    ]
+    pairs = [_build_pair(r, projects, radius) for r in rows]
 
     invalidated: list[str] = []
     updated: list[str] = []
     for brief in await repo.briefs_for_project(conn, project_id):
-        still = await repo.candidate_pairs(
-            conn, brief.radius, brief.pad, pair=(brief.a_id, brief.b_id)
-        )
-        if not still:
+        still = await find_pair(conn, brief.a_id, brief.b_id, brief.radius)
+        if still is None:
             await repo.delete_brief(conn, brief.pair_id)
             invalidated.append(brief.pair_id)
             continue
-        row = still[0]
-        if abs(row.miles - brief.miles) > 1e-6 or row.overlap_days != brief.overlap_days:
-            await repo.refresh_brief_facts(conn, brief.pair_id, row.miles, row.overlap_days)
+        if abs(still.miles - brief.miles) > 1e-3 or still.overlap_days != brief.overlap_days:
+            await repo.refresh_brief_facts(conn, brief.pair_id, still.miles, still.overlap_days)
             updated.append(brief.pair_id)
     return RematchResult(pairs=pairs, invalidated=invalidated, updated=updated)

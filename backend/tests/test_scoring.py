@@ -26,6 +26,11 @@ def test_weights_are_convex():
     assert math.isclose(sum(WEIGHTS.values()), 1.0)
 
 
+def test_distance_is_primary_and_timing_secondary():
+    assert WEIGHTS["distance"] > WEIGHTS["overlap"] > WEIGHTS["type_similarity"]
+    assert WEIGHTS["type_similarity"] == WEIGHTS["voltage_similarity"]
+
+
 # Feature: gridmerge, Property 3: Distance score is bounded and monotonically non-increasing
 @given(nonneg, nonneg, pos)
 def test_distance_score(d1, d2, radius):
@@ -39,16 +44,11 @@ def test_distance_score(d1, d2, radius):
 
 
 # Feature: gridmerge, Property 4: Overlap score is bounded and monotonically non-decreasing
-@given(st.integers(-5000, 5000), st.integers(-5000, 5000), st.integers(1, 3650))
-def test_overlap_score(d1, d2, max_overlap):
-    d1, d2 = sorted((d1, d2))
-    s1, s2 = overlap_score(d1, max_overlap), overlap_score(d2, max_overlap)
-    assert 0.0 <= s1 <= 1.0 and 0.0 <= s2 <= 1.0
-    assert s1 <= s2
-    if d1 <= 0:
-        assert s1 == 0.0
-    if d2 >= max_overlap:
-        assert s2 == 1.0
+@given(unit, unit)
+def test_overlap_score(r1, r2):
+    r1, r2 = sorted((r1, r2))
+    assert overlap_score(r1) == r1 and overlap_score(r2) == r2
+    assert overlap_score(-0.5) == 0.0 and overlap_score(1.5) == 1.0
 
 
 # Feature: gridmerge, Property 5: Type-similarity is exact and symmetric
@@ -84,7 +84,7 @@ def test_composite(f1, f2, f3, f4, bump, delta):
 # Feature: gridmerge, Property 8: Missing factor inputs are zeroed and flagged indeterminate
 @given(
     miles=st.one_of(st.none(), st.just(float("nan")), nonneg),
-    overlap=st.one_of(st.none(), st.integers(-100, 1000)),
+    overlap=st.one_of(st.none(), unit),
     type_a=st.one_of(st.none(), st.just(""), types),
     type_b=st.one_of(st.none(), st.just(""), types),
     va=st.one_of(st.none(), st.just(-5.0), volts),
@@ -93,8 +93,8 @@ def test_composite(f1, f2, f3, f4, bump, delta):
 )
 def test_indeterminate_factors(miles, overlap, type_a, type_b, va, vb, radius):
     s = score_pair(
-        miles=miles, overlap_days=overlap, type_a=type_a, type_b=type_b,
-        voltage_a=va, voltage_b=vb, radius=radius, max_overlap=365,
+        miles=miles, overlap_ratio=overlap, type_a=type_a, type_b=type_b,
+        voltage_a=va, voltage_b=vb, radius=radius,
     )
     expect_missing = {
         "distance": miles is None or (isinstance(miles, float) and math.isnan(miles)),
@@ -116,8 +116,8 @@ def test_indeterminate_factors(miles, overlap, type_a, type_b, va, vb, radius):
 @given(nonneg, pos)
 def test_score_pair_uses_distance_score(miles, radius):
     assume(miles <= radius)
-    s = score_pair(miles=miles, overlap_days=10, type_a="substation", type_b="substation",
-                   voltage_a=138, voltage_b=138, radius=radius, max_overlap=365)
+    s = score_pair(miles=miles, overlap_ratio=0.5, type_a="substation", type_b="substation",
+                   voltage_a=138, voltage_b=138, radius=radius)
     assert s.distance == distance_score(miles, radius)
     assert s.type_similarity == 1.0 and s.voltage_similarity == 1.0
     assert s.indeterminate_factors == []

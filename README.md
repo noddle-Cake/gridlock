@@ -82,9 +82,9 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | GET | `/plans`, `/plans/{id}` | ingestion status (`processing` / `complete` / `failed`) |
 | GET | `/projects` | all stored projects |
 | PATCH | `/projects/{id}` | review/edit; geom/date edits immediately re-match that project |
-| GET | `/overlaps?radius=&pad=` | scored coordination pairs (defaults 25 mi / ±365-day build window) |
-| POST | `/overlaps/{id}/brief?radius=&pad=` | generate a brief (30 s budget) |
-| GET | `/export?format=csv\|pdf` | briefs export (stretch) |
+| GET | `/overlaps?radius=&bands=` | scored coordination pairs (default 25 mi; `bands` e.g. `touching,1.6,8,25,40`) |
+| POST | `/overlaps/{id}/brief?radius=` | generate a brief (30 s budget) |
+| GET | `/export?format=csv\|pdf&radius=&bands=` | briefs export (stretch) |
 | GET | `/lines?bbox=&min_kv=&owner=` | existing transmission lines (HIFLD) as GeoJSON; `owner` may repeat |
 | GET | `/lines/owners` | owner roster: line count, km, voltage range, raw HIFLD spellings |
 
@@ -211,12 +211,16 @@ backups.
   the primary signal, timeline overlap as a strong secondary signal"), a pair is flagged on
   distance alone. This replaces Req 6.4, which also required the padded date ranges to
   overlap. Under that rule the default ±30 days found 0 of the 6 overlaps in Sperry's
-  reference table (their time gaps are 152–3,074 days). Each pair reports
-  `time_gap_days`, the days between the two schedules (0 when they overlap, `null` when
-  either is undated), and `pad` only sets the build window used for `overlap_days` and the
-  timing score.
-- **Overlap days** are the inclusive day count of the intersection of the two *padded*
-  ranges (Req 6.10), or 0 when they don't meet. Both ranges are padded.
+  reference table (their time gaps are 152–3,074 days).
+- **Timing is scored from each project's build window, with no date padding**
+  (`app/services/timing.py`). A plan's start–end range is used as given; a project with
+  only an in-service date is assumed to build for the 12 months before its in-service
+  period (a year-only "2026" builds Jan 2025–Dec 2026). The time factor is
+  `overlap_ratio` = days both are building ÷ days either is (intersection over union), so
+  two "in service 2026" projects score 1.0 and no UI setting can inflate it. Each pair
+  also reports `overlap_days` (the shared stretch, `window_start`–`window_end`) and
+  `time_gap_days` (days between the in-service dates, as in Sperry's overlap table).
+  Weights: distance 0.60, timing 0.25, type 0.075, voltage 0.075.
 - **Pair identity** is `"{a_id}-{b_id}"` with `a_id < b_id`, joined on
   `lower(trim(utility))` inequality, so "Met-Ed" and "met-ed " are the same utility.
 - **Projects missing both dates** still match on distance; their timing factor is

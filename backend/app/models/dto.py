@@ -87,9 +87,11 @@ class CoordinationPairDTO(BaseModel):
     project_a: ProjectDTO
     project_b: ProjectDTO
     miles: float
-    overlap_days: int  # days the padded build windows share (0 = none or unknown)
-    time_gap_days: int | None = None  # days between the schedules; None when undated
-    window_start: date | None = None
+    overlap_days: int  # days both build windows share (0 = none or unknown)
+    # Shared days / days either project is building (0-1); None when either is undated.
+    overlap_ratio: float | None = None
+    time_gap_days: int | None = None  # days between in-service dates; None when undated
+    window_start: date | None = None  # the shared build window, when there is one
     window_end: date | None = None
     scores: ScoreFactorsDTO
     brief: CoordinationBriefDTO | None = None
@@ -97,8 +99,6 @@ class CoordinationPairDTO(BaseModel):
 
 class OverlapsResponse(BaseModel):
     radius: float
-    pad: int
-    max_overlap_days: int
     pairs: list[CoordinationPairDTO]
 
 

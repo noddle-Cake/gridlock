@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { ApiError } from '../api'
 import { milesToKm } from '../lib/distanceBands'
-import { FACTOR_LABELS, dayLabel, gapLabel, pct, rangeLabel } from '../lib/format'
+import { FACTOR_LABELS, dayLabel, gapLabel, overlapPct, pct, rangeLabel } from '../lib/format'
 import { scoreBand } from '../lib/pairs'
 import type { CoordinationBrief, CoordinationPair, Project } from '../types'
 import { SourceLink } from './SourceLink'
@@ -103,22 +103,32 @@ export function WhyFlaggedPanel({ pair, colors, onGenerateBrief }: Props) {
           <span className="fact-label">km apart</span>
         </div>
         <div className="fact">
+          <span className="fact-value" data-testid="overlap-pct">
+            {pair.overlap_ratio == null ? '—' : overlapPct(pair.overlap_ratio)}
+          </span>
+          <span className="fact-label">build time shared</span>
+        </div>
+        <div className="fact">
           <span className="fact-value" data-testid="time-gap">
             {pair.time_gap_days == null ? '—' : gapLabel(pair.time_gap_days)}
           </span>
-          <span className="fact-label">between schedules</span>
+          <span className="fact-label">between in-service dates</span>
         </div>
         <div className="fact fact-wide">
           <span className="fact-value small" data-testid="overlap-days">
             {pair.window_start && pair.window_end
               ? `${dayLabel(pair.window_start)} – ${dayLabel(pair.window_end)} (${pair.overlap_days} d)`
-              : pair.time_gap_days == null
+              : pair.overlap_ratio == null
                 ? 'Schedule unknown'
                 : 'None'}
           </span>
-          <span className="fact-label">shared build window</span>
+          <span className="fact-label">both building</span>
         </div>
       </div>
+      <p className="fact-note">
+        Build time shared = days both projects are building ÷ days either one is. Where a plan
+        gives only an in-service date, construction is assumed to take the 12 months before it.
+      </p>
 
       <h3 className="section-title">Projects</h3>
       <div className="side-by-side">
