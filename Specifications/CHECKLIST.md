@@ -1,6 +1,7 @@
 # Gridlock challenge: completion checklist
 
-Audit of `master` at `bc3a068` (PR #11) against the Sperry Tech challenge, dated 2026-09-26.
+Audit of `master` at `bc3a068` (PR #11) against the Sperry Tech challenge, 2026-09-26. Work on
+branch `worktree-spec-checklist` is marked **fixed in this branch**.
 
 **Requirement sources**
 - `Sperry-Tech-Challenge/ShellHacks_Challenge_Gridlock.docx`: the challenge brief.
@@ -9,13 +10,17 @@ Audit of `master` at `bc3a068` (PR #11) against the Sperry Tech challenge, dated
 - `Sperry-Tech-Challenge/Projects_Overlaps.xlsx`: Sperry's answer key, 5 DESC + 5 GPC projects with 6 overlaps.
 - `.kiro/specs/gridmerge/`: the team's own requirements and tasks.
 
-**How this was checked**
-- Backend: `pytest` against PostGIS, **194 passed**.
-- Frontend: `vitest`, **68 passed**.
-- Live run: the app ran on a fresh database with every committed source loaded (EIA-860M, SERTP, 44 DESC and 138 Georgia Power projects), and the UI was reviewed in Chrome.
+**How it was checked**
 
-Legend: `[x]` done and verified · `[ ]` open · **P0** fix before demo · **P1** should fix · **P2** nice to have.
-Items fixed on branch `worktree-spec-checklist` are marked *(fixed in this branch)*.
+| | Before (`bc3a068`) | After (this branch) |
+|---|---|---|
+| Backend `pytest` (PostGIS) | 194 passed | 206 passed, `ruff` clean |
+| Frontend `vitest` | 68 passed | 77 passed, `tsc` + `oxlint` clean |
+| Live run | every committed source loaded, UI reviewed in Chrome | same, re-checked after each fix |
+| DESC ↔ GPC pairs | 57, of which 5 false | 62, no known false ones, 11 new from Riverport Tap |
+| Default view payload (`/overlaps`) | 11.5 MB of JSON, all 4,524 pairs nationwide | 8 KB gzipped, only the 62 pairs shown |
+
+Legend: `[x]` done · `[~]` partly done · `[ ]` open · **P0** before demo · **P1** should · **P2** nice to have.
 
 ---
 
@@ -23,98 +28,102 @@ Items fixed on branch `worktree-spec-checklist` are marked *(fixed in this branc
 
 | # | Requirement | Status | Evidence |
 |---|---|---|---|
-| R1 | Ingest public future-construction data from at least 2 utilities | [x] | DESC SCRTP PDF (44 projects) and Georgia Power 2025 IRP Vol 3, Table 2 (138 projects), parsed with pdfplumber and cited per page. SERTP, EIA-860M and Florida TYSPs are also loaded. |
-| R2 | Geographic overlap: flag pairs within 40 km (25 mi), measured between closest points | [x] | `ST_DWithin` over route-or-point shapes (`repository.py`). Planned lines with both ends located are routed, so a crossing measures 0 km. |
-| R3 | Rank by distance tier: touching → must coordinate, <1.6 km → share land, <8 km → share site logistics, <40 km → share crews | [x] | `matching.TIERS`, `rank_key`. Each card shows its tier label. |
-| R4 | Timeline overlap as a strong secondary signal, used together with geography | [x] | Build-window IoU (`timing.py`) is 30% of the composite. `time_gap_days` matches Sperry's "time gap (day)" column. |
-| R5 | **Required:** interactive UI showing both utilities' planned projects, highlighting overlaps | [x] | Leaflet map with pan, zoom, hover and click. Paired markers are emphasised and connected. Opens focused on DESC ↔ Georgia Power. The issues in section 3 still hurt this. |
-| R6 | **Required:** ranked list of the top coordination opportunities | [x] | Pair list sorted by tier, then composite, then distance. Also sortable by distance, time overlap and start date. |
-| R7 | Expect most of the dataset NOT to overlap; find the real matches | [x] | 57 DESC ↔ GPC pairs out of 182 × 181 combinations. |
-| R8 | Sperry's reference overlaps (OVL_1–OVL_6) are all flagged | [x] | OVL_1 is touching at the shared Thurmond substation. OVL_2 and OVL_3 are 4.9 km, OVL_4 is 11.0 km, OVL_5 and OVL_6 are 13.6 km. `tests/test_desc_gpc.py` guards this. |
-| R9 | Only public, non-CEII data | [x] | See `source_docs/README.md`. The GPC file is the public-disclosure version, with cost columns redacted. |
-| R10 | Guide Part 2: confirm each location against the filing; flag unconfirmed ones as lower-confidence | [~] | Approximate or unplaced projects get lower confidence, and each placement is recorded in the excerpt. **Some false matches are still accepted** (item C1). |
+| R1 | Ingest public future-construction data from at least 2 utilities | [x] | DESC SCRTP PDF (44 projects) and Georgia Power 2025 IRP Vol 3, Table 2 (138 projects), parsed deterministically and cited per page. SERTP, EIA-860M and Florida TYSPs are also loaded. |
+| R2 | Geographic overlap within 40 km (25 mi), closest points | [x] | `ST_DWithin` over route-or-point shapes. Each pair now also returns the closest-point `link`, which the map draws. |
+| R3 | Rank by Sperry's distance tiers | [x] | `matching.TIERS`/`rank_key`; each card shows its tier label. |
+| R4 | Timeline overlap as a strong secondary signal | [x] | Build-window IoU is 30% of the composite, plus `time_gap_days`. The pair panel now **draws** both build windows with the shared stretch hatched. |
+| R5 | **Required:** interactive UI showing both utilities' projects, highlighting overlaps | [x] | Opens on DESC ↔ GPC, now coloured blue and orange (before: both orange), with paired markers emphasised and closest-point connectors. |
+| R6 | **Required:** ranked list of top coordination opportunities | [x] | Ranked pair list with tier, score, timing, value and sort options. |
+| R7 | Find the real matches, since most of the data does not overlap | [x] | 62 DESC ↔ GPC pairs; false matches removed (C1). |
+| R8 | Sperry's reference overlaps OVL_1–OVL_6 all flagged | [x] | `tests/test_desc_gpc.py`. OVL_1 is touching; OVL_2 and OVL_3 are 4.9 km; OVL_4 is 11.0 km; OVL_5 and OVL_6 are 13.6 km. The README demo walkthrough maps each one. |
+| R9 | Public, non-CEII data only | [x] | `source_docs/README.md` |
+| R10 | Guide Part 2: confirm each location against the filing; flag unconfirmed ones as lower-confidence | [x] | Sourced overrides (C1) and a description re-read (C2). Unconfirmed projects keep `approximate` and confidence 0.8. |
 
-### Core-quality gaps (the "find the real matches" part)
+### Core-quality items
 
-- [ ] **C1 · P0 · False placements create false DESC ↔ GPC pairs.** 5 of 57 pairs are wrong. Georgia Power substations in metro Atlanta match same-named places near the SC border:
-  - `BUZZARD ROOST` matches Buzzard Roost Dam Substation in SC (Lake Greenwood).
-  - `ADAMSVILLE` is placed at the McDuffie County, GA centre, near Augusta.
-  - `HAMMOND` is placed at the Anderson County, SC centre, though it is Plant Hammond in Floyd County, GA.
-  - Also wrong but far from DESC: `GRADY` goes to Grady County and `ATKINSON` to Atkinson County; both are in Atlanta.
-
-  Curated rows can only *add* candidates, never veto a wrong one, so this needs sourced overrides that take precedence. *(fixed in this branch)*
-- [ ] **C2 · P1 · 11 DESC and 37 GPC projects are unplaced and can never match.** Cross-border candidates that matter most:
-  - DESC `Riverport Tap` (Jasper County, SC, across from Savannah).
-  - GPC `Purrysburg` (SC side).
-  - DESC `Wateree – Killian` (OSM has a Wateree Substation, but a same-name tie across states leaves it unresolved).
-  - DESC `Summerville` ×2 (single-name, several same-named places).
-- [ ] **C3 · P2 · The two spec versions disagree on method.** The docx says center-to-center under 25 mi; `Useful instructions` says closest points under 40 km. The app uses closest points under 40 km, which is the stricter, newer wording, and reports `time_gap_days` like the reference table. The README should say so explicitly.
+- [x] **C1 · P0 · False placements created 5 false DESC ↔ GPC pairs.** *(fixed in this branch)*
+  - Added `backend/app/data/place_overrides.csv`: per-planning-entity pins, county centres or blocks, each with its reason. They win over the OSM and place lookups.
+  - Fixed Georgia Power's Adamsville, Buzzard Roost (blocked from Santee Cooper's SC dam), Factory Shoals, Jack McDonough, Atkinson, Hammond and Grady.
+  - Guarded by `test_metro_atlanta_substations_are_not_placed_by_the_sc_border`.
+  - Follow-up (P2): SERTP's own rows (e.g. GTC's Adamsville – Buzzard Roost) keep the old placements until `load_public_sources sertp` is re-run with override rows for those owners.
+- [~] **C2 · P1 · Unplaced projects can never match.** *(mostly fixed in this branch)*
+  - DESC unplaced went from **11 to 2**, via:
+    - Overrides for Wateree, Killian, Edenwood, Summerville, Union Pier, Coit and Gills Creek.
+    - Placing a project on the line its description names: "Riverport Tap: Construct Okatie – Riverport 230 kV", Dawson, Goose Creek Reservoir.
+  - GPC unplaced went from 37 to 36. Still open:
+    - [ ] DESC Scout and Williams St (the descriptions name several sites).
+    - [ ] GPC Purrysburg (SC side, across from McIntosh), which neither OSM nor Sperry could place.
+    - [ ] GPC "Cc -" customer-connection projects (Hyundai Metaplant, QTS, Microsoft; locations are public news, but not in the filing).
+    - [ ] Titles like "Little Ogeechee 230 - 115Kv: Relay Modernization" split on the dash inside the voltage (endpoint becomes "Little Ogeechee 230").
+- [x] **C3 · P2 · The spec versions disagree** (25 mi center-to-center vs 40 km closest points). The README "Overlap definition" note now records the choice. *(fixed in this branch)*
 
 ---
 
 ## 2. Bonus
 
-- [x] **B1 · Rough cost / impact estimate for flagged opportunities** (`services/impact.py`). Tier-based sharing items, ROW acres for routed pairs, DESC's published costs, and an "if schedules aligned" figure. Shown in the pair panel and on every card, and exported as `value_*_usd`.
-- [ ] **B2 · P2 · Portfolio roll-up.** Total rough value across the focused utility pair, so there is a single headline number for the demo.
-- [ ] **B3 · P1 · Coordination brief without Gemini.** "Generate brief" returns a 502 with no `GEMINI_API_KEY`. A deterministic template brief would keep the demo working offline. *(fixed in this branch)*
-- [x] B4 · CSV / PDF export (Kiro 14.1).
-- [x] B5 · 3+ utilities (Kiro 15). Nationwide EIA plus SERTP across 978 companies.
-- [x] B6 · Existing-grid reference layers (HIFLD snapshot and OpenInfraMap power tiles), which the challenge calls an optional base layer.
+- [x] **B1 · Rough cost / impact estimate** for every flagged pair (`services/impact.py`), with assumptions. Shown in the panel and on cards, and exported. Also included in template briefs.
+- [ ] **B2 · P2 · Portfolio roll-up:** one headline total for the focused utility pair.
+- [x] **B3 · P1 · Coordination brief without Gemini.** With no key, "Generate brief" gave a 502. It now drafts a facts-only brief (distance, timing, tier opportunity, value), stored with `source = "template"` and labelled in the UI. A configured model that fails still returns 502/504. Also fixed: briefs for pairs with no shared window lost their proposal sentence (the facts check wanted in-service years). *(fixed in this branch)*
+- [x] B4 · CSV/PDF export (Kiro 14.1). It now follows the utility focus.
+- [x] B5 · 3+ utilities (Kiro 15).
+- [x] B6 · Existing-grid reference layers (HIFLD and OpenInfraMap).
 - [x] B7 · CI/CD to AWS Lightsail with health-checked rollback (Kiro 17.1).
-- [ ] B8 · P2 · Custom domain with TLS (Kiro 17.2), and a deployment smoke test asserting HTTPS (17.3).
-- [ ] B9 · P2 · Golden-set extraction accuracy harness (Kiro 10.3).
-- [ ] B10 · P2 · Export property tests (Kiro 14.2) and line-geometry example tests (16.2).
-- [ ] B11 · P2 · Snap straight planned-line routes to the HIFLD corridor they rebuild (README "Not yet done").
+- [x] B8 · Line geometry (Kiro 16.1/16.2): routes, closest-point distance and a test. *(Kiro tasks updated in this branch)*
+- [ ] B9 · P2 · Custom domain with TLS (Kiro 17.2), and an HTTPS smoke test (17.3).
+- [ ] B10 · P2 · Golden-set extraction accuracy harness (Kiro 10.3).
+- [ ] B11 · P2 · Export property tests (Kiro 14.2).
+- [ ] B12 · P2 · Snap straight planned-line routes to the HIFLD corridor they rebuild.
 
 ---
 
 ## 3. UI issues (live review)
 
-- [ ] **U1 · P0 · The two utilities can't be told apart.**
-  - The default "Color by: Type" paints DESC and Georgia Power the same orange (both mostly transmission lines).
-  - Switching to "Company" gives DESC `#eb6834` and Georgia Power `#eda100`: two oranges, because palette slots are assigned alphabetically across all 978 companies.
-  - Fix: default to Company, and give the shown utilities the first, most distinct slots. *(fixed in this branch)*
-- [ ] **U2 · P1 · The legend card covers the SC side of the map** at the default framing, where DESC's Columbia-area projects sit. *(fixed in this branch)*
-- [ ] **U3 · P1 · Pair connectors are drawn center-to-center, but distance is measured closest-point.** Example: Hooks–Thurmond ↔ Evans–Thurmond is "0.0 km apart" yet shows a ~6 km connector. Fix: draw the shortest line, and mark the touch point for 0 km pairs. *(fixed in this branch)*
-- [ ] **U4 · P1 · Timeline overlap is never shown visually.** The pair panel lists dates, but the two build windows and their shared stretch are not drawn. `TimelineView.tsx` exists but isn't mounted anywhere. *(fixed in this branch: build-window bars in the pair panel)*
-- [ ] **U5 · P1 · The Review tab ignores the utility focus and search box.**
-  - It lists e.g. Associated Electric Cooperative while "DESC ↔ Georgia Power" is selected.
-  - The "Review 158" badge counts projects nationwide.
+- [x] **U1 · P0 · The two utilities couldn't be told apart.** The default is now "Color by: Company", and the utilities on screen take the leading palette slots: DESC blue, Georgia Power orange (before: two oranges). *(fixed in this branch)*
+- [x] **U2 · P1 · The legend card covered the SC side of the map.** Fitting and flying now pad the right edge by the legend stack's width, capped at 40% of the map. *(fixed in this branch)*
+- [x] **U3 · P1 · Connectors were drawn center-to-center.** They now run between the closest points, and touching pairs get a ring at the touch point. The Hooks–Thurmond ↔ Evans–Thurmond pair used to show a 6 km line for "0.0 km". *(fixed in this branch)*
+- [x] **U4 · P1 · Timeline overlap was never drawn.** Added a build-window strip in the pair panel. *(fixed in this branch)*
+- [x] **U5 · P1 · The Review tab ignored the utility focus and search.** Its badge went from 158 nationwide to 48 in focus. *(fixed in this branch)*
+- [x] **U6 · P1 · Export ignored the utility focus** (4,524 pairs instead of those on screen). *(fixed in this branch)*
+- [x] U7 · P2 · The power-grid layer blurred after flying to a pair.
+  - The layer had no `maxZoom`, so Leaflet gave each zoom level a z-index of `NaN`. It also fetched tiles for every zoom level a fly passed through. Both are fixed.
+  - A stretched parent tile can still linger in a *hidden* tab (fade frames paused), which is what the automated review saw.
 
   *(fixed in this branch)*
-- [ ] **U6 · P1 · Export CSV / PDF ignores the utility focus.** It downloads all 4,524 pairs nationwide instead of the 57 on screen. *(fixed in this branch)*
-- [ ] U7 · P2 · After flying to a pair, the power-grid layer is blurry for ~3 s. It shows stretched low-zoom tiles and fetches tiles at every intermediate zoom of the animation. *(fixed in this branch)*
-- [ ] U8 · P2 · "← Back to list" keeps the detail view's scroll offset, so the list reopens part-way down.
-- [ ] U9 · P2 · Near-duplicate cards. DESC lists Stevens Creek – Hooks twice (2024 and 2025 phases) and GPC lists Evans – Thurmond #5/#6 and Evans – Thomson twice, so one site shows up to 6 cards at 11.0 km. Group by site, or collapse same-name pairs.
-- [ ] U10 · P2 · The Georgia Power source link opens the PSC docket search page, so the page anchor (`#page=189`) is lost. Link the PDF itself, e.g. the committed copy.
-- [ ] U11 · P2 · Switching Review → Radar remounts the whole map (about 2.7k markers and all pairs), and the renderer stalls briefly. Keep the map mounted and hide it instead.
+- [x] U8 · P2 · "← Back to list" kept the detail's scroll offset. The list now returns to where it was, and pairs open at the top. *(fixed in this branch)*
+- [ ] U9 · P2 · Near-duplicate cards: one site can show up to 6 cards at 11.0 km (DESC Stevens Creek – Hooks 2024/2025 phases × GPC Evans – Thurmond #5/#6 and Evans – Thomson). Group by site.
+- [ ] U10 · P2 · The Georgia Power source link opens the PSC docket page, so `#page=` is lost. Serve or link the committed PDF instead.
+- [ ] U11 · P2 · Review → Radar remounts the whole map, and the renderer stalls briefly. Keep it mounted and hide it instead.
+- [ ] U12 · P2 · Changing `#pair=` in an open tab (a pasted link) doesn't open the pair; only a page load does. Listen for `hashchange`.
 
 ---
 
 ## 4. Inefficiencies
 
-- [ ] **E1 · P0 · `/overlaps` sends 11.5 MB of JSON (4,524 pairs nationwide) on every band change, while the default view shows 57.**
-  - There is no server-side utility filter.
-  - The app itself doesn't compress; only Caddy in production does.
-  - Fix: a `utility=` filter applied in SQL, plus GZip in the app. *(fixed in this branch)*
-- [ ] E2 · P1 · `/projects` is 2.2 MB, much of it `raw_excerpt`, which only the Review table uses.
-- [ ] E3 · P2 · Every pair embeds both full `ProjectDTO`s. Referencing project ids and joining client-side with `/projects` would roughly halve the payload again.
-- [ ] E4 · P2 · Overlaps are recomputed on every request (0.6–1.0 s nationwide). Cache per `(radius, bands, utilities)` and invalidate on edit or ingest.
-- [x] E5 · Planned-project inserts are batched, and the post-edit re-match is one query (PR #9).
+- [x] **E1 · P0 · `/overlaps` sent 11.5 MB on every band change to show 57 pairs.**
+  - Added a `utility=` filter applied in SQL. The app waits for the utility focus before its first query and asks only for the shown utilities.
+  - Added gzip in the app (`COMPRESS_RESPONSES`; off in the deploy stack, where Caddy serves zstd).
+  - Result: 8 KB for the default view. The nationwide view is 828 KB gzipped.
+
+  *(fixed in this branch)*
+- [x] E2 · P1 · `/projects` is 2.2 MB raw, but now 219 KB gzipped. *(mitigated in this branch)* Splitting out `raw_excerpt` remains a P2 option.
+- [ ] E3 · P2 · Every pair embeds both full projects; referencing ids would shrink the nationwide payload further.
+- [ ] E4 · P2 · Overlaps are recomputed on every request (0.6–1.0 s nationwide); cache per `(radius, bands, utilities)`.
+- [x] E5 · Batched inserts and a one-query re-match after edits (PR #9).
 
 ---
 
-## 5. Docs drift
+## 5. Docs
 
-- [ ] D1 · README says weights 0.60 / 0.25 / 0.075 / 0.075; the code (`scoring.WEIGHTS`) uses 0.55 / 0.30. *(fixed in this branch)*
-- [ ] D2 · README says 120 backend and 27 frontend tests; the suites now run 194 and 68. *(fixed in this branch)*
-- [ ] D3 · `.kiro/specs/gridmerge/tasks.md` still shows 16.1 (routes) and 17.1 (Lightsail deploy) as open; both are implemented. *(fixed in this branch)*
-- [ ] D4 · P2 · A short demo script in the README: open on DESC ↔ GPC, walk the 6 reference overlaps, show one value estimate.
+- [x] D1 · README scoring weights now match the code (0.55 / 0.30 / 0.075 / 0.075). *(fixed in this branch)*
+- [x] D2 · README test counts (206 backend, 77 frontend). *(fixed in this branch)*
+- [x] D3 · Kiro `tasks.md`: 16.1, 16.2 and 17.1 marked done. *(fixed in this branch)*
+- [x] D4 · README demo walkthrough: the six reference overlaps, the pair panel, and Riverport. *(fixed in this branch)*
+- [ ] D5 · P2 · Setup note: the local `backend/.venv` predates `pdfplumber` in `requirements.txt`. Re-run `pip install -r requirements-dev.txt` before `load_public_sources`.
 
 ---
 
-## 6. Order of work
+## 6. Suggested next steps
 
-1. U1 colours · E1 payload · C1 false placements (P0)
-2. U3 connector · U4 build windows · U5 review scope · U6 export scope · U2 legend · B3 offline brief (P1)
-3. C2 more placements · U7–U11 · E2–E4 · docs (P1–P2)
+1. C2 leftovers (Purrysburg, the "Cc -" customer projects, the "230 - 115Kv" title split), then re-run the SERTP load with override rows for GTC and Southern Company (C1 follow-up).
+2. U9 group near-duplicate cards · B2 portfolio roll-up: most visible for a demo.
+3. E3/E4 if the nationwide view matters; U10–U12 polish; B9–B12 stretch.
