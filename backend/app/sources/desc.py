@@ -28,10 +28,10 @@ from datetime import date
 from pathlib import Path
 
 UTILITY = "Dominion Energy South Carolina"
-# TODO: the public URL is not verified yet; this names the file in the Sperry challenge kit.
+# Published by SCRTP (South Carolina Regional Transmission Planning), where DESC posts its
+# planned project lists; the same file is in the Sperry challenge kit.
 SOURCE_URL = (
-    "sperry-challenge-kit:Project Listings/Dominion Energy/"
-    "2024-2028-2million-and-above-project-descriptions.pdf"
+    "https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf"
 )
 # Planned lines can end in Georgia (Stevens Creek hydro in Martinez, GA; Thurmond Dam).
 STATES = ["SC", "GA"]

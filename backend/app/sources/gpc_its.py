@@ -29,10 +29,9 @@ from pathlib import Path
 from app.sources.sertp import SertpEntry
 
 UTILITY = "Georgia Power"
-# TODO: the public PSC URL is not verified yet; this names the file in the Sperry challenge kit.
-SOURCE_URL = (
-    "sperry-challenge-kit:Project Listings/Georgia Power/2025 IRP Volume 3 PUBLIC DISCLOSURE.pdf"
-)
+# Georgia PSC Docket #56002 (Georgia Power 2025 IRP), linked from georgiapower.com's IRP
+# page; Volume 3 is one of its filings and is the file in the Sperry challenge kit.
+SOURCE_URL = "https://psc.ga.gov/search/facts-docket/?docketId=56002"
 PAGES = range(177, 191)  # 1-based PDF pages holding Table 2
 GPC_SPONSORS = {"GPC", "SAV"}
 # Georgia plus the SC side of the Savannah River (Purrysburg, Thurmond Dam).
