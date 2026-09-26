@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -73,6 +73,19 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     await userEvent.click(screen.getByRole('button', { name: /Back to list/ }))
     expect(screen.queryByRole('region', { name: 'Why flagged' })).toBeNull()
     expect(screen.getByRole('region', { name: 'Potential coordination opportunities' })).toBeInTheDocument()
+  })
+
+  it('opens a pair at its top and returns to the same place in the list', async () => {
+    render(<App />)
+    const card = await screen.findByRole('button', { name: /Hanover breakers/ })
+    const panel = screen.getByRole('complementary', { name: 'Pairs' })
+    panel.scrollTop = 120
+    fireEvent.scroll(panel)
+    await userEvent.click(card)
+    expect(panel.scrollTop).toBe(0)
+    panel.scrollTop = 400 // read far down the detail
+    await userEvent.click(screen.getByRole('button', { name: /Back to list/ }))
+    expect(panel.scrollTop).toBe(120)
   })
 
   it('filters the list by search text', async () => {

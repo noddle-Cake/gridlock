@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  type UIEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 
 import { ApiError, api } from './api'
 import { FilterMenu } from './components/FilterMenu'
@@ -195,6 +203,18 @@ export default function App() {
 
   const selectPair = useCallback((p: CoordinationPair) => setSelectedId(p.id), [])
 
+  // The list and the pair detail share one scrolling panel. A pair opens at its top, and
+  // "Back to list" returns to where the list was instead of the detail's scroll offset.
+  const panelRef = useRef<HTMLElement>(null)
+  const listScroll = useRef(0)
+  useLayoutEffect(() => {
+    const el = panelRef.current
+    if (el) el.scrollTop = selectedId ? 0 : listScroll.current
+  }, [selectedId])
+  const onPanelScroll = useCallback((e: UIEvent<HTMLElement>) => {
+    if (!selectedRef.current) listScroll.current = e.currentTarget.scrollTop
+  }, [])
+
   const index = selectedPair ? listPairs.findIndex((p) => p.id === selectedPair.id) : -1
   function step(d: number) {
     const next = listPairs[index + d]
@@ -332,7 +352,7 @@ export default function App() {
               onBoundsChange={onBoundsChange}
             />
           </div>
-          <aside className="panel" aria-label="Pairs">
+          <aside className="panel" aria-label="Pairs" ref={panelRef} onScroll={onPanelScroll}>
             {selectedPair ? (
               <div className="detail">
                 <nav className="detail-nav" aria-label="Pair navigation">
