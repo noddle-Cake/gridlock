@@ -17,6 +17,8 @@ class ProjectDTO(BaseModel):
     location_ref: str | None = None
     lat: float | None = None
     lng: float | None = None
+    # Straight route between the endpoint substations as [lat, lng] points; None = a point.
+    route: list[tuple[float, float]] | None = None
     start_date: date | None = None
     end_date: date | None = None
     start_precision: DatePrecision | None = None

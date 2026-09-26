@@ -43,6 +43,14 @@ CREATE TABLE IF NOT EXISTS projects (
 );
 
 CREATE INDEX IF NOT EXISTS projects_geom_gix ON projects USING GIST (geom);
+
+-- A planned line's route: a straight segment between its two endpoint substations (the
+-- filings don't publish routes). geom stays the midpoint marker. Matching measures between
+-- the closest points of route-or-point shapes, so a 60 km line passing 5 km from the other
+-- utility's substation counts at 5 km, and crossing lines are 0 km apart.
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS route geography(LineString, 4326);
+CREATE INDEX IF NOT EXISTS projects_shape_gix
+  ON projects USING GIST ((COALESCE(route::geography, geom::geography)));
 CREATE INDEX IF NOT EXISTS projects_dates_ix ON projects (start_date, end_date);
 
 -- Coordination briefs, keyed by the stable pair id "a_id-b_id" (a_id < b_id).

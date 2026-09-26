@@ -58,6 +58,18 @@ def _float(value: str) -> float | None:
     return float(value) if value.strip() else None
 
 
+def parse_route(value: str | None) -> list[tuple[float, float]] | None:
+    """'33.56 -82.05;33.66 -82.19' -> [(33.56, -82.05), (33.66, -82.19)]."""
+    if not value or not value.strip():
+        return None
+    points = [tuple(float(x) for x in part.split()) for part in value.split(";")]
+    return [(lat, lng) for lat, lng in points] if len(points) >= 2 else None
+
+
+def format_route(route: list[tuple[float, float]] | None) -> str:
+    return ";".join(f"{lat} {lng}" for lat, lng in route) if route else ""
+
+
 def read_export(path: Path) -> list[repo.NewProject]:
     """A citation CSV written by `load_public_sources.write_export` -> project rows."""
     projects = []
@@ -71,6 +83,7 @@ def read_export(path: Path) -> list[repo.NewProject]:
                 type=ProjectType(row["type"]) if row["type"] else None,
                 voltage_kv=_float(row["voltage_kv"]), location_ref=row["location_ref"],
                 lat=_float(row["lat"]), lng=_float(row["lng"]),
+                route=parse_route(row.get("route")),
                 start_date=when, end_date=when, start_precision=precision,
                 end_precision=precision, confidence=float(row["confidence"]),
                 source_url=row["source_url"], source_page=int(row["source_page"]),

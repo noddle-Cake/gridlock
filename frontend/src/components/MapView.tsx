@@ -191,14 +191,17 @@ export function MapView({
   // Keyed on coordinates, not the pair object, so a data refresh doesn't re-trigger the fly.
   const a = selectedPair?.project_a
   const b = selectedPair?.project_b
+  const routeKey = JSON.stringify([a?.route ?? null, b?.route ?? null])
   const pairBounds = useMemo<LatLngBoundsExpression | null>(() => {
     if (a?.lat == null || a.lng == null || b?.lat == null || b.lng == null) return null
     return [
       [a.lat, a.lng],
       [b.lat, b.lng],
+      ...(a.route ?? []),
+      ...(b.route ?? []),
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [a?.lat, a?.lng, b?.lat, b?.lng])
+  }, [a?.lat, a?.lng, b?.lat, b?.lng, routeKey])
 
   // Draw unselected, then paired, then selected so highlighted markers sit on top.
   const ordered = [...placed].sort((a, b) => rank(a) - rank(b))
@@ -239,6 +242,35 @@ export function MapView({
             />
           ) : null}
         </Pane>
+        {/* Planned lines: a straight segment between the endpoint substations. */}
+        {ordered
+          .filter((p) => p.route && p.route.length >= 2)
+          .map((p) => {
+            const highlighted = selectedIds.has(p.id) || hoveredIds.has(p.id)
+            return (
+              <Polyline
+                key={`route-${p.id}`}
+                positions={p.route!}
+                pathOptions={{
+                  color: colors[p.utility] ?? '#555',
+                  weight: highlighted ? 6 : pairedIds.has(p.id) ? 4 : 2.5,
+                  opacity: highlighted ? 1 : pairedIds.has(p.id) ? 0.85 : 0.5,
+                  lineCap: 'round',
+                }}
+                eventHandlers={{
+                  click: () => onSelectProject(p),
+                  mouseover: () => onHoverProject?.(p),
+                  mouseout: () => onHoverProject?.(null),
+                }}
+              >
+                <Tooltip sticky>
+                  <strong>{p.name || 'Unnamed project'}</strong>
+                  <br />
+                  {p.utility} · planned line (straight between endpoints)
+                </Tooltip>
+              </Polyline>
+            )
+          })}
         {pairs.map((pair) => {
           const { project_a: a, project_b: b } = pair
           if (a.lat == null || b.lat == null) return null
@@ -344,6 +376,10 @@ export function MapView({
             </span>
             <span className="legend-item">
               <span className="swatch swatch-approx" /> approximate location
+            </span>
+            <span className="legend-item">
+              <span className="swatch swatch-line" style={{ background: 'var(--ink-2)' }} />{' '}
+              planned line (straight between endpoints)
             </span>
           </div>
           {layers.grid ? (

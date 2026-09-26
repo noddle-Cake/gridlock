@@ -235,7 +235,9 @@ backups.
 ## Not yet done
 
 - Golden-set extraction accuracy harness (task 10.3) — needs a hand-labeled corpus.
-- Matching on transmission-line geometry (stretch 16): the HIFLD layer supplies real routes
-  with `sub_1`/`sub_2` endpoints, but planned line projects are still stored as points.
+- Real routes for planned lines (stretch 16): a planned line whose two endpoints match
+  exact OSM substations is stored as a straight `route` between them, and matching measures
+  closest points between routes and points (a line crossing another is 0 km, "touching").
+  Snapping those segments to the HIFLD corridor they rebuild is not done yet.
 - Custom domain (stretch 17).
 - Export property tests (14.2); only example tests exist.

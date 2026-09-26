@@ -15,6 +15,8 @@ export interface Project {
   location_ref: string | null
   lat: number | null
   lng: number | null
+  /** Planned line: straight route between its endpoint substations, as [lat, lng] points. */
+  route?: [number, number][] | null
   start_date: string | null
   end_date: string | null
   start_precision: DatePrecision | null

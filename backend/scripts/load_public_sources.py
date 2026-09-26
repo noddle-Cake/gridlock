@@ -35,7 +35,7 @@ DOCS = ROOT / "source_docs"
 EXTRACTED = DOCS / "extracted"
 
 EXPORT_COLUMNS = [
-    "utility", "state", "name", "type", "voltage_kv", "in_service", "lat", "lng",
+    "utility", "state", "name", "type", "voltage_kv", "in_service", "lat", "lng", "route",
     "approximate", "requires_review", "confidence", "location_ref", "source_file",
     "source_url", "source_page", "raw_excerpt",
 ]
@@ -53,7 +53,8 @@ def write_export(path: Path, projects: list[repo.NewProject], source_file: str) 
                 "utility": p.utility, "state": p.state or "", "name": p.name,
                 "type": p.type.value if p.type else "", "voltage_kv": p.voltage_kv or "",
                 "in_service": in_service, "lat": p.lat if p.lat is not None else "",
-                "lng": p.lng if p.lng is not None else "", "approximate": p.approximate,
+                "lng": p.lng if p.lng is not None else "",
+                "route": snapshot.format_route(p.route), "approximate": p.approximate,
                 "requires_review": p.requires_review, "confidence": p.confidence,
                 "location_ref": p.location_ref, "source_file": source_file,
                 "source_url": p.source_url, "source_page": p.source_page,
@@ -112,6 +113,7 @@ def sertp_projects(path: Path, areas: set[str] | None, *, offline: bool) -> list
                 f" ({'/'.join(e.states)})",
                 lat=where.lat, lng=where.lng, approximate=where.approximate,
                 requires_review=where.requires_review,
+                route=where.ends if e.kind == "transmission line" else None,
                 start_date=year, end_date=year, start_precision=DatePrecision.YEAR,
                 end_precision=DatePrecision.YEAR, confidence=confidence,
                 source_url=sertp.SOURCE_URL, source_page=e.page,

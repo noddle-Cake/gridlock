@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -17,6 +18,7 @@ METERS_PER_MILE = 1609.344
 _PROJECT_COLUMNS = """
     id, plan_id::text AS plan_id, utility, state, name, type, voltage_kv, location_ref,
     ST_Y(geom::geometry) AS lat, ST_X(geom::geometry) AS lng,
+    ST_AsGeoJSON(route) AS route,
     start_date, end_date, start_precision, end_precision, confidence, source_url,
     source_page, raw_excerpt, reviewed, approximate, requires_review
 """
@@ -51,6 +53,14 @@ class NewProject:
     approximate: bool = False
     requires_review: bool = False
     plan_id: str | None = None
+    # Straight route through the endpoint substations, as (lat, lng) points; None = a point.
+    route: list[tuple[float, float]] | None = None
+
+
+def route_wkt(route: list[tuple[float, float]] | None) -> str | None:
+    if not route or len(route) < 2:
+        return None
+    return "LINESTRING(" + ", ".join(f"{lng} {lat}" for lat, lng in route) + ")"
 
 
 @dataclass
@@ -101,7 +111,10 @@ def round_voltage(v: float | None) -> int | None:
 
 
 def _project_from_record(r: asyncpg.Record) -> ProjectDTO:
-    return ProjectDTO(**dict(r))
+    row = dict(r)
+    if row.get("route"):
+        row["route"] = [(lat, lng) for lng, lat in json.loads(row["route"])["coordinates"]]
+    return ProjectDTO(**row)
 
 
 # ---------------------------------------------------------------- plans
@@ -171,11 +184,13 @@ async def insert_projects(conn: asyncpg.Connection, projects: list[NewProject]) 
             """INSERT INTO projects (
                  plan_id, utility, state, name, type, voltage_kv, location_ref, geom,
                  start_date, end_date, start_precision, end_precision, confidence,
-                 source_url, source_page, raw_excerpt, reviewed, approximate, requires_review)
+                 source_url, source_page, raw_excerpt, reviewed, approximate, requires_review,
+                 route)
                VALUES ($1::uuid, $2, $3, $4, $5, $6, $7,
                  CASE WHEN $8::float8 IS NULL OR $9::float8 IS NULL THEN NULL
                       ELSE ST_SetSRID(ST_MakePoint($9, $8), 4326)::geography END,
-                 $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                 $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+                 ST_GeogFromText('SRID=4326;' || $21::text))
                RETURNING id""",
             p.plan_id, clean(p.utility).strip(), clean(p.state), clean(p.name),
             p.type.value if p.type else None, round_voltage(p.voltage_kv), clean(p.location_ref),
@@ -183,7 +198,7 @@ async def insert_projects(conn: asyncpg.Connection, projects: list[NewProject]) 
             p.start_precision.value if p.start_precision else None,
             p.end_precision.value if p.end_precision else None,
             p.confidence, clean(p.source_url), p.source_page, clean(p.raw_excerpt), p.reviewed,
-            p.approximate, p.requires_review,
+            p.approximate, p.requires_review, route_wkt(p.route),
         )
         ids.append(pid)
     return ids
@@ -211,7 +226,8 @@ async def list_projects(conn: asyncpg.Connection) -> list[ProjectDTO]:
 async def update_project(
     conn: asyncpg.Connection, project_id: int, changes: dict[str, Any]
 ) -> ProjectDTO | None:
-    """Apply a pre-validated change set. `lat`/`lng` (together) rewrite geom."""
+    """Apply a pre-validated change set. `lat`/`lng` (together) rewrite geom and drop the
+    route: a hand-placed point replaces the located endpoints."""
     sets: list[str] = []
     args: list[Any] = [project_id]
 
@@ -235,6 +251,7 @@ async def update_project(
 
     if "lat" in changes:
         lat, lng = changes["lat"], changes["lng"]
+        sets.append("route = NULL")
         if lat is None:
             sets.append("geom = NULL")
         else:
@@ -256,27 +273,29 @@ async def update_project(
 # ---------------------------------------------------------------- matching
 
 _CANDIDATE_SQL = """
-WITH p AS (
-  SELECT id, lower(trim(utility)) AS u, geom,
-         COALESCE(start_date, end_date) AS s,
-         COALESCE(end_date, start_date) AS e
-  FROM projects
-  WHERE geom IS NOT NULL                                   -- Req 6.8
-)
 SELECT a.id AS a_id, b.id AS b_id,
-       ST_Distance(a.geom, b.geom) / {mpm} AS miles,
+       ST_Distance({shape_a}, {shape_b}) / {mpm} AS miles,
        CASE WHEN a.s IS NOT NULL AND b.s IS NOT NULL
             THEN GREATEST(a.s - b.e, b.s - a.e, 0) END AS time_gap_days,
        GREATEST(a.s, b.s) - $2::int AS window_start,
        LEAST(a.e, b.e) + $2::int AS window_end
-FROM p a
-JOIN p b ON a.id < b.id AND a.u <> b.u                     -- Req 6.2: different utilities
-WHERE ST_DWithin(a.geom, b.geom, $1)                       -- Req 6.3
+FROM projects pa
+CROSS JOIN LATERAL (SELECT pa.id, COALESCE(pa.start_date, pa.end_date) AS s,
+                           COALESCE(pa.end_date, pa.start_date) AS e) a
+JOIN projects pb ON pa.id < pb.id
+  AND lower(trim(pa.utility)) <> lower(trim(pb.utility))   -- Req 6.2: different utilities
+CROSS JOIN LATERAL (SELECT pb.id, COALESCE(pb.start_date, pb.end_date) AS s,
+                           COALESCE(pb.end_date, pb.start_date) AS e) b
+WHERE ST_DWithin({shape_a}, {shape_b}, $1)                 -- Req 6.3; NULL shape -> Req 6.8
   {extra}
 ORDER BY miles
-""".replace("{mpm}", str(METERS_PER_MILE))
+""".replace("{mpm}", str(METERS_PER_MILE)).replace(
+    "{shape_a}", "COALESCE(pa.route::geography, pa.geom::geography)").replace(
+    "{shape_b}", "COALESCE(pb.route::geography, pb.geom::geography)")
 # Geography is the primary signal: timing never excludes a pair, it only ranks it. Undated
-# projects still match on distance (their timing is unknown, not zero).
+# projects still match on distance (their timing is unknown, not zero). Shapes are the
+# route when there is one, else the point; the join is written against the table (not a
+# CTE) so projects_shape_gix serves ST_DWithin.
 
 
 def _candidate_from_record(r: asyncpg.Record) -> CandidateRow:
