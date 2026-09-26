@@ -17,6 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app ./app
 COPY backend/scripts ./scripts
 COPY sample_data /srv/sample_data
+COPY source_docs/extracted /srv/source_docs/extracted
 COPY --from=web /web/dist /srv/frontend/dist
 
 EXPOSE 8000

@@ -27,15 +27,12 @@ from app.core.config import get_settings
 from app.db import repository as repo
 from app.db.pool import apply_schema, create_pool
 from app.models.enums import DatePrecision, ProjectType
-from app.sources import eia860m, sertp
+from app.sources import eia860m, sertp, snapshot
 from app.sources.locate import PlaceCache, locate
-from app.sources.store import replace_source
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCS = ROOT / "source_docs"
 EXTRACTED = DOCS / "extracted"
-EIA_FILE = DOCS / "eia860m_august_generator2026.xlsx"
-SERTP_FILE = DOCS / "sertp_2026_preliminary_expansion_plan.pdf"
 
 EXPORT_COLUMNS = [
     "utility", "state", "name", "type", "voltage_kv", "in_service", "lat", "lng",
@@ -128,32 +125,16 @@ def sertp_projects(path: Path, areas: set[str] | None, *, offline: bool) -> list
     return out
 
 
-def _pages(projects: list[repo.NewProject]) -> str | None:
-    pages = sorted({p.source_page for p in projects if p.source_page})
-    if not pages:
-        return None
-    runs, start, prev = [], pages[0], pages[0]
-    for n in pages[1:] + [None]:
-        if n != (prev or 0) + 1:
-            runs.append(f"{start}-{prev}" if prev > start else str(start))
-            start = n
-        prev = n if n is not None else prev
-    return ",".join(runs)
-
-
 # ---------------------------------------------------------------- main
 
 
-async def load(label: str, url: str, file: Path, fmt: str, projects, page_range=None) -> None:
+async def load(source: snapshot.Source, projects: list[repo.NewProject]) -> None:
     pool = await create_pool(get_settings().database_url)
     try:
         await apply_schema(pool)
         async with pool.acquire() as conn:
-            plan_id = await replace_source(
-                conn, label=label, source_url=url, filename=file.name, detected_format=fmt,
-                projects=projects, page_range=page_range,
-            )
-        print(f"loaded {len(projects)} projects as plan {plan_id} ({label})")
+            plan_id = await snapshot.save(conn, source, projects)
+        print(f"loaded {len(projects)} projects as plan {plan_id} ({source.label})")
     finally:
         await pool.close()
 
@@ -161,8 +142,8 @@ async def load(label: str, url: str, file: Path, fmt: str, projects, page_range=
 def main() -> None:
     ap = argparse.ArgumentParser(description="Load EIA-860M / SERTP public data.")
     ap.add_argument("source", choices=["eia860m", "sertp", "all"])
-    ap.add_argument("--eia-file", type=Path, default=EIA_FILE)
-    ap.add_argument("--sertp-file", type=Path, default=SERTP_FILE)
+    ap.add_argument("--eia-file", type=Path, default=DOCS / snapshot.EIA860M.filename)
+    ap.add_argument("--sertp-file", type=Path, default=DOCS / snapshot.SERTP.filename)
     ap.add_argument("--states", nargs="+", default=eia860m.DEFAULT_STATES,
                     help="EIA-860M plant states (ALL = nationwide)")
     ap.add_argument("--areas", nargs="+", help=f"SERTP areas, default all: {list(sertp.AREAS)}")
@@ -173,19 +154,16 @@ def main() -> None:
     if args.source in ("eia860m", "all"):
         states = None if [s.upper() for s in args.states] == ["ALL"] else args.states
         projects = eia_projects(args.eia_file, states)
-        write_export(EXTRACTED / "eia860m_planned_generators.csv", projects, args.eia_file.name)
+        write_export(EXTRACTED / snapshot.EIA860M.export, projects, args.eia_file.name)
         if not args.dry_run:
-            asyncio.run(load("EIA-860M planned generators (Aug 2026)", eia860m.SOURCE_URL,
-                             args.eia_file, "xlsx", projects))
+            asyncio.run(load(snapshot.EIA860M, projects))
 
     if args.source in ("sertp", "all"):
         areas = {a.upper() for a in args.areas} if args.areas else None
         projects = sertp_projects(args.sertp_file, areas, offline=args.offline)
-        write_export(EXTRACTED / "sertp_2026_preliminary_projects.csv", projects,
-                     args.sertp_file.name)
+        write_export(EXTRACTED / snapshot.SERTP.export, projects, args.sertp_file.name)
         if not args.dry_run:
-            asyncio.run(load("SERTP 2026 preliminary expansion plan", sertp.SOURCE_URL,
-                             args.sertp_file, "pdf", projects, _pages(projects)))
+            asyncio.run(load(snapshot.SERTP, projects))
 
 
 if __name__ == "__main__":

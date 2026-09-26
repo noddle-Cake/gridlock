@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+
 import pytest
 
 from app.services.owners import canonical_utility
@@ -10,6 +12,7 @@ from app.sources import substations
 from app.sources.eia860m import PlannedPlant
 from app.sources.sertp import parse_page_text
 from app.sources.substations import Substation, name_key
+from tests.conftest import DB_AVAILABLE, TEST_DATABASE_URL, run_db
 
 PAGE = """In-Service 2027
 Year:
@@ -172,3 +175,41 @@ def test_endpoint_cleanup(name, endpoints):
 ])
 def test_place_name_strips_equipment_words(name, place):
     assert locate_mod.place_name(name) == place
+
+
+def test_committed_snapshots_read_back_with_citations():
+    from app.sources import snapshot
+
+    eia = snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.EIA860M.export)
+    grid = snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.SERTP.export)
+    assert len(eia) == 194 and len(grid) == 426
+    assert all(p.source_url and p.source_page and p.raw_excerpt for p in eia + grid)
+    assert all(p.lat is not None for p in eia)
+    assert all((p.lat is None) == p.requires_review for p in grid)
+    assert snapshot.page_range(grid) == "1-115"
+
+
+@pytest.mark.skipif(not DB_AVAILABLE, reason="no Postgres+PostGIS test database")
+def test_startup_snapshot_load_is_idempotent(tmp_path):
+    import asyncpg
+
+    from app.sources import snapshot
+
+    # Two small snapshots so the test stays fast.
+    for source in snapshot.SOURCES:
+        with (snapshot.EXTRACTED_DIR / source.export).open(newline="") as f:
+            rows = list(csv.reader(f))[:4]  # header + 3 projects (excerpts span lines)
+        with (tmp_path / source.export).open("w", newline="") as f:
+            csv.writer(f, lineterminator="\n").writerows(rows)
+
+    async def body(conn):
+        pool = await asyncpg.create_pool(TEST_DATABASE_URL, min_size=1, max_size=2)
+        try:
+            await snapshot.load_snapshots_if_missing(pool, tmp_path)
+            await snapshot.load_snapshots_if_missing(pool, tmp_path)  # no duplicates
+        finally:
+            await pool.close()
+        return (await conn.fetchval("SELECT count(*) FROM plans"),
+                await conn.fetchval("SELECT count(*) FROM projects"))
+
+    assert run_db(body) == (2, 6)

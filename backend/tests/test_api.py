@@ -203,7 +203,9 @@ def test_patch_geom_edit_invalidates_brief(api_client):
 invalid_values = st.sampled_from([
     {"voltage_kv": 0}, {"voltage_kv": 5000}, {"voltage_kv": "high"},
     {"confidence": 1.5}, {"confidence": -0.1}, {"type": "battery"},
-    {"lat": 95, "lng": 0}, {"lat": 10}, {"start_date": "not-a-date"},
+    # A lone coordinate is invalid; lng (not lat) so it never completes {"lat": 95, ...}
+    # into a valid pair when merged.
+    {"lat": 95, "lng": 0}, {"lng": 10}, {"start_date": "not-a-date"},
     {"source_page": 0}, {"raw_excerpt": "x" * 2001}, {"bogus_field": 1},
     {"utility": ""}, {"reviewed": None}, {"start_date": "2030-01-01", "end_date": "2029-01-01"},
 ])

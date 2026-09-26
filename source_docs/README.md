@@ -48,6 +48,9 @@ cd backend
 .venv/bin/python -m scripts.load_public_sources eia860m --states ALL         # nationwide
 .venv/bin/python -m scripts.load_public_sources all --dry-run                # CSVs only
 
+# Deployed (AWS Lightsail): nothing to run. extracted/*.csv ship in the image and the
+# app inserts them at startup when their plans are missing (AUTOLOAD_PUBLIC_SOURCES).
+
 # Florida PDFs through the Gemini upload path (needs GEMINI_API_KEY and a running app)
 bash ../source_docs/ingest.sh
 ```

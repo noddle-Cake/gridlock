@@ -140,6 +140,11 @@ scripts.load_public_sources all`):
 
 The raw originals of every source are committed in `source_docs/`, and each run writes a
 per-project citation table (file, page/sheet, excerpt) to `source_docs/extracted/`.
+Those two CSVs ship in the Docker image, and on startup the app inserts any source whose
+plan is missing, so the AWS Lightsail deploy gets all 620 projects with no manual step
+(`AUTOLOAD_PUBLIC_SOURCES=false` turns it off). To refresh: re-run the loader, commit
+the CSVs, deploy, then re-run the loader against the instance's database (or delete the
+two plans) so the new snapshot replaces the old one.
 Matches are labelled *potential coordination opportunities*: SERTP's listed projects are
 not a commitment to build.
 
