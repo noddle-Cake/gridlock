@@ -120,7 +120,15 @@ export interface CoordinationPair {
   brief: CoordinationBrief | null
 }
 
-export interface OverlapsResponse {
+/** The timing rules every returned pair met (backend matching.Rules). */
+export interface MatchRules {
+  /** ISO date: both projects are in service on or after it (earlier work is finished). */
+  planning_from: string
+  /** Days both projects must be building at once. */
+  min_overlap_days: number
+}
+
+export interface OverlapsResponse extends MatchRules {
   radius: number
   pairs: CoordinationPair[]
 }

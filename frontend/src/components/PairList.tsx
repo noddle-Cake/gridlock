@@ -1,12 +1,22 @@
 import { useState } from 'react'
 
 import { milesToKm, TIERS } from '../lib/distanceBands'
-import { OTHER_COLOR, pct, rangeLabel, timingLabel, usdRange } from '../lib/format'
+import {
+  OTHER_COLOR,
+  bothBuildingLabel,
+  durationLabel,
+  overlapPct,
+  pct,
+  rulesLabel,
+  usdRange,
+} from '../lib/format'
 import { SORT_LABELS, type SortKey, scoreBand } from '../lib/pairs'
-import type { CoordinationPair, PairProject } from '../types'
+import type { CoordinationPair, MatchRules, PairProject } from '../types'
 
 interface Props {
   pairs: CoordinationPair[]
+  /** The timing rules every pair met, stated above the list. */
+  rules?: MatchRules | null
   /** Pairs before the map-view limit, to say how many are hidden off-screen. */
   totalCount?: number
   selectedId: string | null
@@ -46,6 +56,7 @@ function ProjectLine({ p, color }: { p: PairProject; color: string }) {
 
 export function PairList({
   pairs,
+  rules = null,
   totalCount = pairs.length,
   selectedId,
   hoveredId = null,
@@ -105,6 +116,11 @@ export function PairList({
           ) : null}
         </div>
       </header>
+      {rules ? (
+        <p className="rules" data-testid="match-rules">
+          {rulesLabel(rules.planning_from, rules.min_overlap_days)}
+        </p>
+      ) : null}
       <p className="disclaimer">
         Built on public filings. Planned projects are not commitments to build.
       </p>
@@ -112,7 +128,8 @@ export function PairList({
         <p className="empty">
           {offscreen > 0
             ? 'Nothing in this part of the map. Zoom out or turn off “Only pairs in map view”.'
-            : 'No project pairs at these thresholds. Try ticking more distance bands.'}
+            : 'No projects here are close in both place and time. Try more distance bands or ' +
+              'more utilities.'}
         </p>
       ) : null}
       <ol className="cards">
@@ -141,7 +158,8 @@ export function PairList({
                   </span>
                   <span className="card-stats">
                     <strong>{milesToKm(pair.miles).toFixed(1)} km</strong> apart ·{' '}
-                    {timingLabel(pair)}
+                    <strong className="together">{durationLabel(pair.overlap_days)}</strong>{' '}
+                    building together
                   </span>
                   {pair.brief ? (
                     <span className={`badge ${pair.brief.stale ? 'badge-warn' : 'badge-ok'}`}>
@@ -164,10 +182,11 @@ export function PairList({
                 <ProjectLine p={a} color={colorOf(a)} />
                 <ProjectLine p={b} color={colorOf(b)} />
                 <span className="card-foot">
-                  <span>
-                    {pair.window_start
-                      ? `Shared window ${rangeLabel(pair.window_start, pair.window_end, 'month', 'month')}`
-                      : 'No shared build window'}
+                  <span className="both-building">
+                    {bothBuildingLabel(pair)}
+                    {pair.overlap_ratio != null
+                      ? ` · ${overlapPct(pair.overlap_ratio)} of their build time`
+                      : ''}
                   </span>
                   {approximate ? <span className="badge badge-approx">approx. location</span> : null}
                 </span>

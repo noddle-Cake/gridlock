@@ -16,7 +16,6 @@ import { ReviewTable } from './components/ReviewTable'
 import { ThresholdControls } from './components/ThresholdControls'
 import { UploadPanel } from './components/UploadPanel'
 import { UtilityFilter } from './components/UtilityFilter'
-import { focusHidden } from './lib/focus'
 import { WhyFlaggedPanel } from './components/WhyFlaggedPanel'
 import { ALL_BANDS, MAX_RADIUS_MILES, type BandId } from './lib/distanceBands'
 import { PALETTE, utilityColors } from './lib/format'
@@ -33,7 +32,14 @@ import {
 } from './lib/pairs'
 import { DEFAULT_CONFIDENCE_THRESHOLD, needsReview } from './lib/review'
 import { useColorScheme } from './lib/useColorScheme'
-import type { CoordinationPair, LineCollection, PairProject, Project, ProjectPatch } from './types'
+import type {
+  CoordinationPair,
+  LineCollection,
+  MatchRules,
+  PairProject,
+  Project,
+  ProjectPatch,
+} from './types'
 
 const REQUERY_DEBOUNCE_MS = 150
 
@@ -44,6 +50,7 @@ export default function App() {
   // The first project load decides the utility focus, which scopes the pair query.
   const [projectsLoaded, setProjectsLoaded] = useState(false)
   const [pairs, setPairs] = useState<CoordinationPair[]>([])
+  const [rules, setRules] = useState<MatchRules | null>(null)
   const [bands, setBands] = useState<BandId[]>(ALL_BANDS)
   const [confidenceThreshold, setConfidenceThreshold] = useState(DEFAULT_CONFIDENCE_THRESHOLD)
   const [selectedId, setSelectedId] = useState<string | null>(pairFromHash)
@@ -63,22 +70,16 @@ export default function App() {
   const [colorBy, setColorBy] = useState<ColorBy>('utility')
   const scheme = useColorScheme()
   const requestSeq = useRef(0)
-  const focused = useRef(false)
 
   const refresh = useCallback(() => setVersion((v) => v + 1), [])
 
   useEffect(() => {
+    // Opens on every loaded utility (the Southeast). "Only Dominion SC ↔ Georgia Power" is
+    // in the utility menu; opening on it showed an empty list once matches had to overlap in
+    // time, as none of their future work does.
     api
       .projects()
-      .then((loaded) => {
-        setProjects(loaded)
-        // Open on the challenge's DESC <-> Georgia Power comparison when both are loaded;
-        // after that the planner's own utility choices stand.
-        if (focused.current || loaded.length === 0) return
-        focused.current = true
-        const hidden = focusHidden([...new Set(loaded.map((p) => p.utility))])
-        if (hidden) setHiddenUtilities(hidden)
-      })
+      .then(setProjects)
       .catch((e) => setError(describe(e)))
       .finally(() => setProjectsLoaded(true))
   }, [version])
@@ -118,6 +119,7 @@ export default function App() {
         .then((res) => {
           if (seq !== requestSeq.current) return // a newer control value won
           setPairs(res.pairs)
+          setRules({ planning_from: res.planning_from, min_overlap_days: res.min_overlap_days })
           setError(null)
         })
         .catch((e) => seq === requestSeq.current && setError(describe(e)))
@@ -393,6 +395,7 @@ export default function App() {
             ) : (
               <PairList
                 pairs={listPairs}
+                rules={rules}
                 totalCount={shownPairs.length}
                 selectedId={selectedId}
                 hoveredId={hoveredId}

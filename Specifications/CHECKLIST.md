@@ -14,13 +14,50 @@ branch `worktree-spec-checklist` is marked **fixed in this branch**.
 
 | | Before (`bc3a068`) | After (this branch) |
 |---|---|---|
-| Backend `pytest` (PostGIS) | 194 passed | 206 passed, `ruff` clean |
-| Frontend `vitest` | 68 passed | 77 passed, `tsc` + `oxlint` clean |
+| Backend `pytest` (PostGIS) | 194 passed | 216 passed, `ruff` clean |
+| Frontend `vitest` | 68 passed | 79 passed, `tsc` + `oxlint` clean |
 | Live run | every committed source loaded, UI reviewed in Chrome | same, re-checked after each fix |
-| DESC ↔ GPC pairs | 57, of which 5 false | 62, no known false ones, 11 new from Riverport Tap |
-| Default view payload (`/overlaps`) | 11.5 MB of JSON, all 4,524 pairs nationwide | 8 KB gzipped, only the 62 pairs shown |
+| Sources | nationwide EIA-860M, all of SERTP, DESC, Georgia Power (2,075 projects) | the Southeast (SC, GA) plus Florida: DESC, Georgia Power, SERTP's SC/GA/FL rows, FRCC Form 13, Tallahassee, EIA-860M in SC/GA/FL (474 projects) |
+| What counts as a match | within 40 km, any timing | within 40 km **and** future work **and** building at the same time for 30+ days |
+| Matches | 4,524 nationwide; DESC ↔ GPC 57, 5 of them false | 580 in the region; DESC ↔ GPC 0 (see section 0) |
 
 Legend: `[x]` done · `[~]` partly done · `[ ]` open · **P0** before demo · **P1** should · **P2** nice to have.
+
+---
+
+## 0. Latest revamp: Southeast + Florida sources, future work that builds at the same time
+
+Requested after the first pass: Southeast sources only (Dominion SC, Georgia, then Florida
+companies); matches must be close in time and overlap; past projects (done) excluded.
+
+- [x] **V1 · Sources limited to the region (SC, GA, FL).** *(this branch)*
+  - Added `app/sources/region.py`.
+  - EIA-860M is cut to SC/GA/FL plants: 1,649 → 78.
+  - SERTP keeps projects located in the region: 426 → 189.
+  - DESC and Georgia Power are unchanged.
+- [x] **V2 · Florida companies added, deterministically.** *(this branch)*
+  - `app/sources/florida.py` reads FRCC Form 13 (Duke Energy Florida, FPL, Tampa Electric, Lakeland, Seminole, PowerSouth: 23 lines) and Tallahassee's Table 4.2 (2 lines), with no LLM.
+  - False placements corrected with sources: DEF's Sweetwater, Turnpike and Lonesome Camp had matched FPL's Miami and St. Lucie substations, and Lakeland's Hamilton had matched Hamilton County on the Georgia line.
+- [x] **V3 · Future work only.** *(this branch)*
+  - A match needs both projects in service on or after `PLANNING_FROM` (default today).
+  - `/projects`, the map and Review hide finished projects (`?include_past=true` shows them).
+- [x] **V4 · Timing required.** *(this branch)*
+  - A match needs both projects building at the same time for at least `MIN_OVERLAP_DAYS` (30).
+  - Pairs years apart (e.g. 8.4 years) or undated are no longer matches.
+  - The same test applies to `/overlaps`, `/export`, briefs (404 for a non-match) and the post-edit re-check.
+- [x] **V5 · Clear timing in the UI.** *(this branch)*
+  - A green banner states the rules.
+  - Every card shows "N months building together" and "Both building Jun 2026 – Dec 2027 · X% of their build time".
+  - Map connectors say the same; the pair panel draws both build windows.
+- [x] **V6 · Default view.** *(this branch)* The app opens on every loaded (Southeast) utility. "Only Dominion SC ↔ Georgia Power" stays in the utility menu.
+- **Consequences:**
+  - **Dominion SC ↔ Georgia Power has 0 matches.** DESC's public list is a 2024–2028 budget, and 28 of its 44 projects are already in service. Every future Georgia Power project near DESC's future work is due 2033–2034, so none builds at the same time.
+  - **Sperry's six reference overlaps are no longer matches** (R8). They are still found within range, which the acceptance test checks.
+- [ ] **V7 · P1 · Decision: Georgia ITS partners pairing with each other.**
+  - About 400 of the 580 matches are GTC ↔ Southern Company / Georgia Power / MEAG: the same jointly planned Georgia ITS lines listed by each owner (e.g. "Avery – Hopewell 115 kV Reconductor" appears under both Georgia Power and GTC).
+  - Treating the ITS partners as one planning entity (`owners.PLANNING_ENTITY`) would leave the cross-utility matches: SC ↔ GA, GA ↔ FL, and Florida utilities with each other.
+- [ ] V8 · P2 · EIA-860M developer projects pair with their own phases (SR Bacon II ↔ SR Bacon III, Placid Solar ↔ Placid Solar II). Grouping phases by developer or site would remove them.
+- [ ] V9 · P2 · 7 Florida lines are unplaced: new solar and storage interconnections OSM doesn't have yet (Banner – Radiant, Higdon – Birch, the FPL Oasis 500 kV lines). The Duke Energy Florida Schedule 10 text and the FPL TYSP could place them.
 
 ---
 
@@ -28,14 +65,14 @@ Legend: `[x]` done · `[~]` partly done · `[ ]` open · **P0** before demo · *
 
 | # | Requirement | Status | Evidence |
 |---|---|---|---|
-| R1 | Ingest public future-construction data from at least 2 utilities | [x] | DESC SCRTP PDF (44 projects) and Georgia Power 2025 IRP Vol 3, Table 2 (138 projects), parsed deterministically and cited per page. SERTP, EIA-860M and Florida TYSPs are also loaded. |
+| R1 | Ingest public future-construction data from at least 2 utilities | [x] | DESC SCRTP PDF (44 projects) and Georgia Power 2025 IRP Vol 3, Table 2 (138 projects), plus SERTP's SC/GA/FL rows, FRCC Form 13, Tallahassee's TYSP and EIA-860M in SC/GA/FL. All parsed deterministically and cited per page. |
 | R2 | Geographic overlap within 40 km (25 mi), closest points | [x] | `ST_DWithin` over route-or-point shapes. Each pair now also returns the closest-point `link`, which the map draws. |
 | R3 | Rank by Sperry's distance tiers | [x] | `matching.TIERS`/`rank_key`; each card shows its tier label. |
-| R4 | Timeline overlap as a strong secondary signal | [x] | Build-window IoU is 30% of the composite, plus `time_gap_days`. The pair panel now **draws** both build windows with the shared stretch hatched. |
-| R5 | **Required:** interactive UI showing both utilities' projects, highlighting overlaps | [x] | Opens on DESC ↔ GPC, now coloured blue and orange (before: both orange), with paired markers emphasised and closest-point connectors. |
-| R6 | **Required:** ranked list of top coordination opportunities | [x] | Ranked pair list with tier, score, timing, value and sort options. |
-| R7 | Find the real matches, since most of the data does not overlap | [x] | 62 DESC ↔ GPC pairs; false matches removed (C1). |
-| R8 | Sperry's reference overlaps OVL_1–OVL_6 all flagged | [x] | `tests/test_desc_gpc.py`. OVL_1 is touching; OVL_2 and OVL_3 are 4.9 km; OVL_4 is 11.0 km; OVL_5 and OVL_6 are 13.6 km. The README demo walkthrough maps each one. |
+| R4 | Timeline overlap, used together with geography | [x] | **Required** for a match since section 0: both projects are future work, building together for 30+ days. Build-window IoU is 30% of the composite. Cards, connectors and the pair panel show the shared build time. |
+| R5 | **Required:** interactive UI showing the utilities' projects, highlighting overlaps | [x] | Opens on the Southeast, with company colours (the utilities on screen get the most distinct ones), paired markers emphasised, and closest-point connectors. |
+| R6 | **Required:** ranked list of top coordination opportunities | [x] | Ranked pair list with tier, score, shared build time, value and sort options. |
+| R7 | Find the real matches, since most of the data does not overlap | [x] | 580 region matches out of 474 × 473 project combinations; false placements removed (C1, V2). |
+| R8 | Sperry's reference overlaps OVL_1–OVL_6 | [~] | All found within range (`tests/test_desc_gpc.py`: OVL_1 touching, OVL_2/3 4.9 km, OVL_4 11.0 km, OVL_5/6 13.6 km), but **none is a match** under the timing rules (section 0): each involves DESC work due by 2025, or windows years apart. |
 | R9 | Public, non-CEII data only | [x] | `source_docs/README.md` |
 | R10 | Guide Part 2: confirm each location against the filing; flag unconfirmed ones as lower-confidence | [x] | Sourced overrides (C1) and a description re-read (C2). Unconfirmed projects keep `approximate` and confidence 0.8. |
 
@@ -116,7 +153,7 @@ Legend: `[x]` done · `[~]` partly done · `[ ]` open · **P0** before demo · *
 ## 5. Docs
 
 - [x] D1 · README scoring weights now match the code (0.55 / 0.30 / 0.075 / 0.075). *(fixed in this branch)*
-- [x] D2 · README test counts (206 backend, 77 frontend). *(fixed in this branch)*
+- [x] D2 · README test counts (216 backend, 79 frontend). *(fixed in this branch)*
 - [x] D3 · Kiro `tasks.md`: 16.1, 16.2 and 17.1 marked done. *(fixed in this branch)*
 - [x] D4 · README demo walkthrough: the six reference overlaps, the pair panel, and Riverport. *(fixed in this branch)*
 - [ ] D5 · P2 · Setup note: the local `backend/.venv` predates `pdfplumber` in `requirements.txt`. Re-run `pip install -r requirements-dev.txt` before `load_public_sources`.
@@ -125,6 +162,7 @@ Legend: `[x]` done · `[~]` partly done · `[ ]` open · **P0** before demo · *
 
 ## 6. Suggested next steps
 
-1. C2 leftovers (Purrysburg, the "Cc -" customer projects, the "230 - 115Kv" title split), then re-run the SERTP load with override rows for GTC and Southern Company (C1 follow-up).
-2. U9 group near-duplicate cards · B2 portfolio roll-up: most visible for a demo.
-3. E3/E4 if the nationwide view matters; U10–U12 polish; B9–B12 stretch.
+1. V7: decide whether Georgia ITS partners (GTC, MEAG, Georgia Power) count as one planning entity, which drops about 400 same-line matches. Then V8 (developer phases) and V9 (unplaced Florida lines).
+2. C2 leftovers (Purrysburg, the "Cc -" customer projects, the "230 - 115Kv" title split), then re-run the SERTP load with override rows for GTC and Southern Company (C1 follow-up).
+3. U9 group near-duplicate cards · B2 portfolio roll-up: most visible for a demo.
+4. E3/E4 if the nationwide view matters; U10–U12 polish; B9–B12 stretch.

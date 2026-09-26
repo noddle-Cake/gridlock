@@ -12,7 +12,7 @@ backend/    FastAPI + asyncpg + PostGIS, Gemini extraction/briefs, Hypothesis te
 frontend/   React + Vite + TypeScript, Leaflet map, vis-timeline, Vitest + fast-check
 sample_data/  generated demo plans for three fictional utilities (real towns/counties)
 deploy/     Lightsail stack (app + PostGIS + Caddy), CI deploy script, instance bootstrap
-source_docs/  public FL–GA filings to ingest: page ranges + upload script
+source_docs/  public SC/GA/FL filings, their extracted citation CSVs, and the loaders' notes
 ```
 
 Toolchain: Python 3.11+ (`backend/.python-version`), Node 22 (`.nvmrc`; Vite 8's
@@ -49,26 +49,27 @@ the rest of the demo loop works offline.
 
 ### Demo walkthrough (Sperry Gridlock challenge)
 
-1. The app opens on **Dominion SC ↔ Georgia Power** (Dominion Energy South Carolina, "DESC"
-   in the filings): Dominion SC in blue, Georgia Power in orange, and
-   the list ranked by Sperry's tiers (touching → under 1.6 km → under 8 km → under 40 km),
-   then by score, which carries timing.
+1. The app opens on the **Southeast**: Dominion Energy South Carolina, Georgia Power and
+   their neighbours in SC and GA, plus Florida's utilities. A green banner states what makes
+   a match: **future work only** (in service from today), **within 40 km**, and **building
+   at the same time** for at least 30 days. Every card shows the shared build time ("7
+   months building together", "Both building Jun 2026 – Dec 2026"). The list is ranked by
+   Sperry's tiers (touching → under 1.6 km → under 8 km → under 40 km), then by score.
 2. Sperry's six reference overlaps (`source_docs/sperry_reference_overlaps.xlsx`) are all
-   there. Search "Thurmond" or "Okatie":
-
-   | Sperry | Pair | GridMerge |
-   | --- | --- | --- |
-   | OVL_1 | Hooks – Thurmond ↔ Evans Primary – Thurmond Dam #5 | touching at Thurmond |
-   | OVL_2, OVL_3 | Jasper – Okatie #2 ↔ McIntosh – Purrysburg, Goshen – McIntosh | 4.9 km |
-   | OVL_4 | Stevens Creek – Hooks ↔ Evans Primary – Thurmond Dam #5 | 11.0 km |
-   | OVL_5, OVL_6 | Okatie – Bluffton ↔ McIntosh – Purrysburg, Goshen – McIntosh | 13.6 km |
-
-3. Open a pair to see why it was flagged: the closest-point connector on the map, both
+   found within range (`tests/test_desc_gpc.py`), but none is a match any more. Every one
+   involves a DESC project already in service (DESC's public list is a 2024–2028 budget; all
+   five reference projects were due by 2025) or build windows years apart (Hooks – Thurmond
+   2024 vs Evans – Thurmond 2033). "Only Dominion SC ↔ Georgia Power" in the utility menu
+   shows that today no future DESC and Georgia Power work overlaps in time.
+3. Current matches include:
+   - DESC's Williams – Summerville 230 kV upgrade ($19.3M, May 2027) and the Pinopolis BESS
+     (300 MW, Sep 2027): 27.7 km apart, both building Sep 2026 – May 2027.
+   - Duke Energy Florida's Bartow BESS line and Tampa Electric's South Shore – Manatee
+     230 kV line: both in service Dec 2027.
+   - FPL solar sites and PowerSouth's Panhandle 115 kV lines.
+4. Open a pair to see why it was flagged: the closest-point connector on the map, both
    build windows on one time axis (shared stretch hatched), the rough coordination value
    (Sperry bonus), side-by-side projects with source-page links, and a forwardable brief.
-4. Beyond the reference table: DESC's Riverport Tap ($34.9M, "Okatie – Riverport 230 kV")
-   is 13.6 km from Georgia Power's McIntosh – Purrysburg reactors, with overlapping 2025
-   build windows.
 5. Export CSV/PDF downloads the pairs on screen (utility focus and distance bands).
 
 ### Whole stack in Docker (any OS)
@@ -99,6 +100,8 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | `HIFLD_LINES_URL` | HIFLD ArcGIS FeatureServer layer | only used by `load_hifld --fetch` |
 | `HIFLD_BBOX` | `-86.0,29.8,-80.8,31.6` | FL–GA region fetched by `load_hifld --fetch` |
 | `AUTOLOAD_LINES` | `true` | load the committed snapshot into an empty table on startup |
+| `PLANNING_FROM` | today | matches need both projects in service on or after this date; earlier work is finished and left out (`/projects?include_past=true` still lists it) |
+| `MIN_OVERLAP_DAYS` | `30` | matches need both projects building at the same time for at least this many days |
 | `COMPRESS_RESPONSES` | `true` | gzip API responses; the deploy stack sets `false` because Caddy compresses (zstd) |
 
 ## API
@@ -155,22 +158,29 @@ columns), canonicalized in `app/services/owners.py` to the same names as HIFLD o
 The FL–GA filing set, page ranges, and a one-shot upload script are in
 [`source_docs/`](source_docs/README.md).
 
-Two structured sources load without Gemini (`cd backend && .venv/bin/python -m
+**Region: the Southeast (SC, GA) plus Florida** (`app/sources/region.py`). Six structured
+sources load without Gemini (`cd backend && .venv/bin/python -m
 scripts.load_public_sources all`):
 
-- **EIA-860M planned generators** (August 2026 "Planned" sheet), nationwide: 2,311
-  generators at 1,649 plant sites in all 50 states + DC (288 GW), placed at EIA's
-  published plant coordinates. `--states GA AL ...` limits it to a region.
-- **SERTP 2026 preliminary 10-year expansion plan**: all 426 transmission projects (Duke
-  Carolinas, Duke Progress, LG&E/KU, Southern/GTC/MEAG/PowerSouth, TVA, AECI) parsed with
-  pdfplumber, substations placed from a cached OpenStreetMap lookup, county centre
-  (approximate) as fallback.
+- **Dominion Energy South Carolina**: SCRTP "Planned Transmission Projects $2M and above,
+  2024-2028" (44 projects, with costs).
+- **Georgia Power**: 2025 IRP Vol 3, Table 2 "Georgia ITS 10 Year Plan" (138 projects).
+- **SERTP 2026 preliminary 10-year expansion plan**: the 189 of its 426 projects located in
+  SC, GA or FL (Southern Company, Georgia Transmission Corp, MEAG, Dalton, Duke Energy
+  Carolinas' SC work, ...).
+- **Florida utilities**: FRCC 2026 Load and Resource Plan, Form 13 "Proposed Transmission
+  Lines" (Duke Energy Florida, FPL, Tampa Electric, Lakeland, Seminole, PowerSouth; 23
+  lines) and the City of Tallahassee 2026 Ten Year Site Plan, Table 4.2 (2 lines).
+- **EIA-860M planned generators** (August 2026) in SC, GA and FL: 78 plant sites at EIA's
+  published coordinates (`--states ALL` loads the nationwide list).
 
+Substations are placed from a cached OpenStreetMap lookup, with county centres
+(approximate) as fallback and `app/data/place_overrides.csv` for sourced corrections.
 The raw originals of every source are committed in `source_docs/`, and each run writes a
 per-project citation table (file, page/sheet, excerpt) to `source_docs/extracted/`.
-Those two CSVs ship in the Docker image, and on startup the app inserts any source whose
+Those CSVs ship in the Docker image, and on startup the app inserts any source whose
 plan is missing or was loaded from a different version of its CSV (SHA-256 kept on the
-plan), so the AWS Lightsail deploy gets all 2,075 projects with no manual step
+plan), so the AWS Lightsail deploy gets all 474 projects with no manual step
 (`AUTOLOAD_PUBLIC_SOURCES=false` turns it off). To refresh: re-run the loader, commit
 the CSVs, deploy; the new snapshot replaces the old rows on startup (briefs on replaced
 projects are dropped with them).
@@ -200,8 +210,8 @@ Real planned projects are loaded after a deploy by uploading the filings in
 
 ```bash
 docker compose up -d testdb     # disposable PostGIS on :5433 (tmpfs)
-cd backend && .venv/bin/pytest  # 206 tests; DB-backed ones skip if testdb is down
-cd frontend && npm test         # 77 tests
+cd backend && .venv/bin/pytest  # 216 tests; DB-backed ones skip if testdb is down
+cd frontend && npm test         # 79 tests
 ```
 
 All 18 design properties have a property-based test (Hypothesis / fast-check, ≥100 cases),
@@ -243,24 +253,30 @@ farther tiers' benefits:
 | under 1.6 km | access roads and permits; right-of-way land where both are routed lines | $50k–$200k; shared corridor km × half the narrower ROW width (23–61 m by kV) × $5k–$20k/acre |
 | touching | one coordinated outage and crossing design | $50k–$250k |
 
-Crew, yard and outage sharing only count when the two build windows overlap; otherwise the
-panel shows what the pair would be worth *if the schedules were aligned*. These figures are
-placeholders to start a conversation, not benchmarks: edit the constants in `impact.py`.
+Every match now builds at the same time, so crew, yard and outage sharing always count.
+These figures are placeholders to start a conversation, not benchmarks: edit the constants
+in `impact.py`.
 
-Example: DESC's Jasper–Okatie 230 kV #2 ($23.8M) and Georgia Power's McIntosh–Purrysburg
-reactors are 4.9 km apart, with in-service dates 5 months apart. Their build windows overlap,
-so the estimate is about $340k–$1.0M from one shared mobilization and one laydown yard.
+Example: DESC's Williams – Summerville 230 kV upgrade ($19.3M, in service May 2027) and the
+Pinopolis BESS (300 MW, Sep 2027) are 27.7 km apart and both building Sep 2026 – May 2027,
+so the estimate is about $193k–$579k from one shared crew and equipment mobilization (1–3%
+of DESC's published cost).
 
 ## Design notes and deviations
 
 - **Review threshold boundary.** Requirements 3.3/13.1 say "equal to or below" the
   Confidence_Threshold; design Property 17 says `<`. The implementation follows the
   requirements (`confidence <= threshold`).
-- **Geography decides, timing ranks.** Per the Sperry challenge ("geographic overlap as
-  the primary signal, timeline overlap as a strong secondary signal"), a pair is flagged on
-  distance alone. This replaces Req 6.4, which also required the padded date ranges to
-  overlap. Under that rule the default ±30 days found 0 of the 6 overlaps in Sperry's
-  reference table (their time gaps are 152–3,074 days).
+- **A match is close in space and time** (`matching.Rules`, `qualifies`). Geography
+  selects the candidates (within 40 km), and timing is required as well:
+  - both projects must still be ahead (in service on or after `PLANNING_FROM`, default
+    today), because finished work has nothing left to coordinate;
+  - both must be building at the same time for at least `MIN_OVERLAP_DAYS` (30).
+
+  Pairs years apart or undated are not matches. This reverses PR #8, which flagged on
+  distance alone so that Sperry's reference overlaps (time gaps 152–3,074 days, DESC
+  projects due 2023–2025) would all appear. They are still found within range, but none is
+  a match.
 - **Timing is scored from each project's build window, with no date padding**
   (`app/services/timing.py`). A plan's start–end range is used as given; a project with
   only an in-service date is assumed to build for the 12 months before its in-service

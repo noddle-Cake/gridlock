@@ -5,9 +5,12 @@ import { diffDraft, toDraft } from './draft'
 import {
   OTHER_COLOR,
   PALETTE,
+  bothBuildingLabel,
   dateLabel,
+  durationLabel,
   gapLabel,
   rangeLabel,
+  rulesLabel,
   timingLabel,
   usdRange,
   utilityColors,
@@ -65,6 +68,16 @@ describe('format helpers', () => {
     expect(gapLabel(3074)).toBe('8.4 years')
     expect(timingLabel({ overlap_ratio: 0, time_gap_days: 152 })).toBe('in service 5 months apart')
     expect(timingLabel({ overlap_ratio: null, time_gap_days: null })).toBe('schedule unknown')
+  })
+
+  it('says how long two projects build together, and when', () => {
+    expect(durationLabel(30)).toBe('4 weeks')
+    expect(durationLabel(213)).toBe('7 months')
+    expect(durationLabel(730)).toBe('2.0 years')
+    expect(bothBuildingLabel({ window_start: '2026-04-01', window_end: '2026-10-30' })).toBe(
+      'Both building Apr 2026 – Oct 2026',
+    )
+    expect(rulesLabel('2026-09-26', 30)).toContain('in service from Sep 26, 2026')
   })
 
   it('labels dates at their source precision', () => {

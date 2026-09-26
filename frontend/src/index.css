@@ -982,6 +982,27 @@ a {
   color: var(--muted);
 }
 
+/* The timing rules every listed pair met (PairList rules). */
+.rules {
+  margin: -4px 0 8px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  background: var(--ok-bg);
+  color: var(--ok-ink);
+  font-size: 12px;
+}
+
+/* Close in time: the shared build time on each card. */
+.card-stats .together {
+  color: var(--accent);
+}
+
+.card-foot .both-building {
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
 .cards {
   list-style: none;
   margin: 0;
