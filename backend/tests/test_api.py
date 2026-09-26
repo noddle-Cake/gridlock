@@ -174,17 +174,19 @@ def test_distance_band_edges_do_not_overlap(km, band):
 
 
 def test_overlaps_bands_filter(api_client):
-    seed(two_nearby())  # ~25.1 km apart: the 25-40 km band
+    seed(two_nearby())
     radius = 40 / matching.KM_PER_MILE
 
     def get(query: str) -> list[dict]:
         return api_client.get(f"/overlaps?radius={radius}&{query}").json()["pairs"]
 
-    assert [p["id"] for p in get("bands=40")] == ["1-2"]
-    assert [p["id"] for p in get("bands=touching,1.6,8,40")] == ["1-2"]
-    assert get("bands=touching,1.6,8,25") == []
+    (pair,) = get("bands=touching,1.6,8,25,40")
+    assert 8 <= pair["miles"] * matching.KM_PER_MILE < 25  # ~24.5 km: the 8-25 km band
+    assert [p["id"] for p in get("bands=25")] == ["1-2"]
+    assert [p["id"] for p in get("bands=touching,25,40")] == ["1-2"]
+    assert get("bands=touching,1.6,8,40") == []
     assert get("bands=") == []
-    csv = api_client.get(f"/export?format=csv&radius={radius}&bands=25").text
+    csv = api_client.get(f"/export?format=csv&radius={radius}&bands=40").text
     assert len(csv.strip().splitlines()) == 1  # header only
 
 
