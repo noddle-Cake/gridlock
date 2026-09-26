@@ -9,7 +9,7 @@ import type {
   Map as LeafletMap,
   Polyline as LeafletPolyline,
 } from 'leaflet'
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, type Ref, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CircleMarker,
   GeoJSON,
@@ -17,6 +17,7 @@ import {
   Pane,
   Polyline,
   ScaleControl,
+  Tooltip,
   useMap,
   useMapEvents,
 } from 'react-leaflet'
@@ -32,14 +33,30 @@ import {
   markerScale,
   markerStyle,
 } from '../lib/mapStyle'
-import type { ViewBounds } from '../lib/pairs'
+import { type ViewBounds, pairEnds } from '../lib/pairs'
 import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE } from '../lib/powerGrid'
 import { enableSmoothWheelZoom } from '../lib/smoothWheelZoom'
 import type { CoordinationPair, LineCollection, LineFeature, Project } from '../types'
 import { BaseMap } from './BaseMap'
 import { PowerGridLayer } from './PowerGridLayer'
 
-const FIT = { padding: [40, 40] as [number, number], maxZoom: 11 }
+const FIT_MAX_ZOOM = 11
+
+/**
+ * Fit options that keep framed projects clear of the legend stack in the top-right corner
+ * (it covered the SC side of the DESC ↔ Georgia Power view): the right edge is padded by the
+ * stack's width, capped so a narrow map still has room.
+ */
+function fitOptions(map: LeafletMap) {
+  const tools = map.getContainer().parentElement?.querySelector('.map-tools')
+  const width = map.getSize().x
+  const right = Math.min((tools?.getBoundingClientRect().width ?? 0) + 24, width * 0.4)
+  return {
+    paddingTopLeft: [40, 40] as [number, number],
+    paddingBottomRight: [Math.max(40, right), 40] as [number, number],
+    maxZoom: FIT_MAX_ZOOM,
+  }
+}
 
 /**
  * Frames all projects on load and glides to a pair when one is selected. Leaving the
@@ -60,7 +77,8 @@ function ViewController({
   useEffect(() => {
     const was = prev.current
     prev.current = { all: allBounds, pair: pairBounds }
-    const glide = { ...FIT, duration: 0.8 }
+    const fit = fitOptions(map)
+    const glide = { ...fit, duration: 0.8 }
 
     if (pairBounds !== was.pair) {
       if (pairBounds) {
@@ -83,7 +101,7 @@ function ViewController({
     }
     // Snap on first load; glide between views after that.
     if (fitted.current) map.flyToBounds(allBounds, glide)
-    else map.fitBounds(allBounds, { ...FIT, animate: false })
+    else map.fitBounds(allBounds, { ...fit, animate: false })
     fitted.current = true
   }, [map, allBounds, pairBounds])
   return null
@@ -98,7 +116,7 @@ export interface MapFocus {
 function FocusController({ focus }: { focus: MapFocus | null }) {
   const map = useMap()
   useEffect(() => {
-    if (focus) map.flyToBounds(focus.bounds, { ...FIT, duration: 0.8 })
+    if (focus) map.flyToBounds(focus.bounds, { ...fitOptions(map), duration: 0.8 })
   }, [map, focus])
   return null
 }
@@ -213,7 +231,13 @@ const ProjectMarker = memo(function ProjectMarker({
 
 const PAIR_INK = { light: { idle: '#3d4852', active: '#111' }, dark: { idle: '#c3ccd4', active: '#fff' } }
 
-/** The connector between a pair's two projects, neutral so it never reads as a project colour. */
+/** Ends this close (degrees, ~1 m) are one point: the projects touch or cross there. */
+const SAME_POINT = 1e-5
+
+/**
+ * The connector between a pair's two projects, neutral so it never reads as a project colour.
+ * It spans the gap the distance measures; projects that touch get a ring at the touch point.
+ */
 const PairLine = memo(function PairLine({
   pair,
   selected,
@@ -227,30 +251,44 @@ const PairLine = memo(function PairLine({
   scheme: 'light' | 'dark'
   onSelect?: (pair: CoordinationPair) => void
 }) {
-  const ref = useRef<LeafletPolyline>(null)
-  const { project_a: a, project_b: b } = pair
+  const ref = useRef<LeafletPolyline | LeafletCircleMarker>(null)
+  const [from, to] = pairEnds(pair)
+  const touching = Math.abs(from[0] - to[0]) < SAME_POINT && Math.abs(from[1] - to[1]) < SAME_POINT
   const active = selected || hovered
   useEffect(() => {
     const l = ref.current
     if (!l) return
-    l.bindTooltip(() => esc(`${milesToKm(pair.miles).toFixed(1)} km · ${timingLabel(pair)}`), {
-      sticky: true,
-    })
+    const where = touching ? 'touching' : `${milesToKm(pair.miles).toFixed(1)} km`
+    l.bindTooltip(() => esc(`${where} · ${timingLabel(pair)}`), { sticky: true })
     return () => void l.unbindTooltip()
-  }, [pair])
+  }, [pair, touching])
   useEffect(() => {
     if (active) ref.current?.bringToFront()
   }, [active])
   const handlers = useMemo(() => (onSelect ? { click: () => onSelect(pair) } : {}), [pair, onSelect])
+  const ink = selected ? PAIR_INK[scheme].active : PAIR_INK[scheme].idle
+  if (touching) {
+    return (
+      <CircleMarker
+        ref={ref as Ref<LeafletCircleMarker>}
+        center={from}
+        radius={active ? 10 : 6}
+        pathOptions={{
+          color: ink,
+          weight: active ? 3 : 1.5,
+          opacity: active ? 0.95 : 0.5,
+          fill: false,
+        }}
+        eventHandlers={handlers}
+      />
+    )
+  }
   return (
     <Polyline
-      ref={ref}
-      positions={[
-        [a.lat!, a.lng!],
-        [b.lat!, b.lng!],
-      ]}
+      ref={ref as Ref<LeafletPolyline>}
+      positions={[from, to]}
       pathOptions={{
-        color: selected ? PAIR_INK[scheme].active : PAIR_INK[scheme].idle,
+        color: ink,
         weight: active ? 3.5 : 1.2,
         opacity: active ? 0.95 : 0.35,
         dashArray: active ? undefined : '3 5',
@@ -346,14 +384,17 @@ export function MapView({
   // Keyed on coordinates, not the pair object, so a data refresh doesn't re-trigger the fly.
   const a = selectedPair?.project_a
   const b = selectedPair?.project_b
+  const routeKey = JSON.stringify([a?.route ?? null, b?.route ?? null])
   const pairBounds = useMemo<LatLngBoundsExpression | null>(() => {
     if (a?.lat == null || a.lng == null || b?.lat == null || b.lng == null) return null
     return [
       [a.lat, a.lng],
       [b.lat, b.lng],
+      ...(a.route ?? []),
+      ...(b.route ?? []),
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [a?.lat, a?.lng, b?.lat, b?.lng])
+  }, [a?.lat, a?.lng, b?.lat, b?.lng, routeKey])
 
   // Unpaired first so paired markers paint on top; the open/hovered pair lifts itself.
   const ordered = useMemo(
@@ -402,6 +443,36 @@ export function MapView({
             />
           ) : null}
         </Pane>
+        {/* Planned lines: a straight segment between the endpoint substations. */}
+        {ordered
+          .filter((p) => p.route && p.route.length >= 2)
+          .map((p) => {
+            const highlighted = highlightedIds.has(p.id)
+            const paired = pairedIds.has(p.id)
+            return (
+              <Polyline
+                key={`route-${p.id}`}
+                positions={p.route!}
+                pathOptions={{
+                  color: colorOf(p),
+                  weight: highlighted ? 6 : paired ? 4 : 2.5,
+                  opacity: highlighted ? 1 : paired ? 0.85 : 0.5,
+                  lineCap: 'round',
+                }}
+                eventHandlers={{
+                  click: () => onSelectProject(p),
+                  mouseover: () => onHoverProject?.(p),
+                  mouseout: () => onHoverProject?.(null),
+                }}
+              >
+                <Tooltip sticky>
+                  <strong>{p.name || 'Unnamed project'}</strong>
+                  <br />
+                  {p.utility} · planned line (straight between endpoints)
+                </Tooltip>
+              </Polyline>
+            )
+          })}
         {placedPairs
           .filter(
             (pair) =>
@@ -445,7 +516,7 @@ export function MapView({
           <button
             type="button"
             className="map-fit"
-            onClick={() => map.flyToBounds(allBounds, { ...FIT, duration: 0.8 })}
+            onClick={() => map.flyToBounds(allBounds, { ...fitOptions(map), duration: 0.8 })}
           >
             Fit all
           </button>
@@ -511,7 +582,12 @@ export function MapView({
               <span className="swatch swatch-approx" /> approximate location
             </span>
             <span className="legend-item">
-              <span className="swatch swatch-line swatch-pair-line" /> pair connector
+              <span className="swatch swatch-line swatch-pair-line" /> pair connector (closest
+              points; a ring where they touch)
+            </span>
+            <span className="legend-item">
+              <span className="swatch swatch-line" style={{ background: 'var(--ink-2)' }} />{' '}
+              planned line (straight between endpoints)
             </span>
           </div>
           {layers.grid || (lines && showLines) ? (

@@ -1,0 +1,3 @@
+state,name,power,operator,lat,lng,source
+SC,Okatie Substation,substation,Dominion Energy South Carolina,32.333758,-81.032495,"Sperry Tech GridLock challenge reference table (Projects_Overlaps.xlsx, DESC_3/DESC_5); not in OpenStreetMap"
+SC,Queensboro Substation,substation,Dominion Energy South Carolina,32.723,-79.967,"OSM Queensborough Substation (DESC spells it Queensboro); matches the Sperry reference table (DESC_4)"

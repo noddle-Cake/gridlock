@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -17,6 +18,7 @@ METERS_PER_MILE = 1609.344
 _PROJECT_COLUMNS = """
     id, plan_id::text AS plan_id, utility, state, name, type, voltage_kv, location_ref,
     ST_Y(geom::geometry) AS lat, ST_X(geom::geometry) AS lng,
+    ST_AsGeoJSON(route) AS route, cost_usd,
     start_date, end_date, start_precision, end_precision, confidence, source_url,
     source_page, raw_excerpt, reviewed, approximate, requires_review
 """
@@ -51,6 +53,15 @@ class NewProject:
     approximate: bool = False
     requires_review: bool = False
     plan_id: str | None = None
+    # Straight route through the endpoint substations, as (lat, lng) points; None = a point.
+    route: list[tuple[float, float]] | None = None
+    cost_usd: int | None = None  # estimated total cost, when the filing publishes it
+
+
+def route_wkt(route: list[tuple[float, float]] | None) -> str | None:
+    if not route or len(route) < 2:
+        return None
+    return "LINESTRING(" + ", ".join(f"{lng} {lat}" for lat, lng in route) + ")"
 
 
 @dataclass
@@ -58,6 +69,11 @@ class CandidateRow:
     a_id: int
     b_id: int
     miles: float
+    # Both projects routed: km of the shorter overlap of each line with a 1.6 km corridor
+    # around the other (a right-of-way the two could share). None when not both are lines.
+    shared_km: float | None = None
+    # Closest point of each shape as (lat, lng): the segment `miles` measures.
+    link: list[tuple[float, float]] | None = None
 
 
 @dataclass
@@ -71,12 +87,13 @@ class StoredBrief:
     radius: float
     stale: bool
     generated_at: datetime
+    source: str = "llm"  # "llm" or "template"
     extra: dict[str, Any] = field(default_factory=dict)
 
     def to_dto(self) -> CoordinationBriefDTO:
         return CoordinationBriefDTO(
             pair_id=self.pair_id, text=self.text, generated_at=self.generated_at,
-            stale=self.stale,
+            stale=self.stale, source=self.source,
         )
 
 
@@ -93,7 +110,10 @@ def round_voltage(v: float | None) -> int | None:
 
 
 def _project_from_record(r: asyncpg.Record) -> ProjectDTO:
-    return ProjectDTO(**dict(r))
+    row = dict(r)
+    if row.get("route"):
+        row["route"] = [(lat, lng) for lng, lat in json.loads(row["route"])["coordinates"]]
+    return ProjectDTO(**row)
 
 
 # ---------------------------------------------------------------- plans
@@ -162,20 +182,22 @@ _INSERT_PROJECTS_SQL = """
 INSERT INTO projects (
   plan_id, utility, state, name, type, voltage_kv, location_ref, geom,
   start_date, end_date, start_precision, end_precision, confidence,
-  source_url, source_page, raw_excerpt, reviewed, approximate, requires_review)
+  source_url, source_page, raw_excerpt, reviewed, approximate, requires_review,
+  route, cost_usd)
 SELECT plan_id, utility, state, name, type, voltage_kv, location_ref,
   CASE WHEN lat IS NULL OR lng IS NULL THEN NULL
        ELSE ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography END,
   start_date, end_date, start_precision, end_precision, confidence,
-  source_url, source_page, raw_excerpt, reviewed, approximate, requires_review
+  source_url, source_page, raw_excerpt, reviewed, approximate, requires_review,
+  ST_GeogFromText('SRID=4326;' || route_wkt), cost_usd
 FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::text[], $6::int[],
             $7::text[], $8::float8[], $9::float8[], $10::date[], $11::date[], $12::text[],
             $13::text[], $14::real[], $15::text[], $16::int[], $17::text[], $18::bool[],
-            $19::bool[], $20::bool[])
+            $19::bool[], $20::bool[], $21::text[], $22::bigint[])
   WITH ORDINALITY AS t(plan_id, utility, state, name, type, voltage_kv, location_ref, lat, lng,
                        start_date, end_date, start_precision, end_precision, confidence,
                        source_url, source_page, raw_excerpt, reviewed, approximate,
-                       requires_review, ord)
+                       requires_review, route_wkt, cost_usd, ord)
 ORDER BY ord
 RETURNING id
 """
@@ -193,7 +215,7 @@ async def insert_projects(conn: asyncpg.Connection, projects: list[NewProject]) 
             p.start_precision.value if p.start_precision else None,
             p.end_precision.value if p.end_precision else None,
             p.confidence, clean(p.source_url), p.source_page, clean(p.raw_excerpt), p.reviewed,
-            p.approximate, p.requires_review,
+            p.approximate, p.requires_review, route_wkt(p.route), p.cost_usd,
         )
         for p in projects
     ]
@@ -381,7 +403,8 @@ async def utility_counts(conn: asyncpg.Connection) -> dict[str, int]:
 async def update_project(
     conn: asyncpg.Connection, project_id: int, changes: dict[str, Any]
 ) -> ProjectDTO | None:
-    """Apply a pre-validated change set. `lat`/`lng` (together) rewrite geom."""
+    """Apply a pre-validated change set. `lat`/`lng` (together) rewrite geom and drop the
+    route: a hand-placed point replaces the located endpoints."""
     sets: list[str] = []
     args: list[Any] = [project_id]
 
@@ -405,6 +428,7 @@ async def update_project(
 
     if "lat" in changes:
         lat, lng = changes["lat"], changes["lng"]
+        sets.append("route = NULL")
         if lat is None:
             sets.append("geom = NULL")
         else:
@@ -425,34 +449,78 @@ async def update_project(
 
 # ---------------------------------------------------------------- matching
 
-_CANDIDATE_SQL = """
-SELECT a.id AS a_id, b.id AS b_id, ST_Distance(a.geom, b.geom) / {mpm} AS miles
+# A project's shape is its route when it has one, else its point. Distances are between
+# closest points, so a line crossing another is 0 km apart; projects_shape_gix serves the
+# ST_DWithin. shared_km: both projects routed -> km of the shorter overlap of each line with
+# a 1.6 km corridor around the other (a right-of-way the two could share).
+_SHAPE = "COALESCE({t}.route::geography, {t}.geom::geography)"
+_PAIR_COLUMNS = """
+       ST_Distance({shape_a}, {shape_b}) / {mpm} AS miles,
+       ST_AsGeoJSON(ST_ShortestLine({shape_a}::geometry, {shape_b}::geometry), 5) AS link,
+       CASE WHEN a.route IS NOT NULL AND b.route IS NOT NULL
+            THEN CASE WHEN ST_DWithin(a.route, b.route, 1600)
+                      THEN LEAST(
+                        ST_Length(ST_Intersection(a.route, ST_Buffer(b.route, 1600))),
+                        ST_Length(ST_Intersection(b.route, ST_Buffer(a.route, 1600))))
+                        / 1000
+                      ELSE 0 END
+       END AS shared_km"""
+
+
+def _pair_sql(sql: str) -> str:
+    return (sql.replace("{pair_columns}", _PAIR_COLUMNS)
+            .replace("{shape_a}", _SHAPE.format(t="a")).replace("{shape_b}", _SHAPE.format(t="b"))
+            .replace("{mpm}", str(METERS_PER_MILE)))
+
+
+_CANDIDATE_SQL = _pair_sql("""
+SELECT a.id AS a_id, b.id AS b_id, {pair_columns}
 FROM projects a
 JOIN projects b ON a.id < b.id                               -- Req 6.2: different utilities
   AND lower(trim(a.utility)) <> lower(trim(b.utility))
-WHERE a.geom IS NOT NULL AND b.geom IS NOT NULL              -- Req 6.8
-  AND ST_DWithin(a.geom, b.geom, $1)                         -- Req 6.3
+WHERE ST_DWithin({shape_a}, {shape_b}, $1)                   -- Req 6.3; NULL shape -> Req 6.8
   {extra}
 ORDER BY miles
-""".replace("{mpm}", str(METERS_PER_MILE))
+""")
 # Geography alone decides whether two projects pair up; timing only ranks the pair
 # (services/timing.py). Undated projects still match on distance.
+
+
+def _row(r: asyncpg.Record) -> CandidateRow:
+    link = None
+    if r["link"]:
+        link = [(lat, lng) for lng, lat in json.loads(r["link"])["coordinates"]]
+    return CandidateRow(a_id=r["a_id"], b_id=r["b_id"], miles=float(r["miles"]),
+                        shared_km=None if r["shared_km"] is None else float(r["shared_km"]),
+                        link=link)
 
 
 async def candidate_pairs(
     conn: asyncpg.Connection, radius_miles: float,
     *, project_id: int | None = None, pair: tuple[int, int] | None = None,
+    utilities: list[str] | None = None,
 ) -> list[CandidateRow]:
+    """`utilities` (compared trimmed and case-insensitively) keeps only pairs whose two
+    projects both belong to one of them; None keeps every pair."""
     args: list[Any] = [radius_miles * METERS_PER_MILE]
+
+    def arg(value: Any) -> str:
+        args.append(value)
+        return f"${len(args)}"
+
     extra = ""
     if project_id is not None:
-        args.append(project_id)
-        extra = "AND (a.id = $2 OR b.id = $2)"
+        p = arg(project_id)
+        extra = f"AND (a.id = {p} OR b.id = {p})"
     elif pair is not None:
-        args.extend(sorted(pair))
-        extra = "AND a.id = $2 AND b.id = $3"
+        lo, hi = sorted(pair)
+        extra = f"AND a.id = {arg(lo)} AND b.id = {arg(hi)}"
+    if utilities is not None:
+        u = arg(sorted({x.strip().lower() for x in utilities}))
+        extra += (f" AND lower(trim(a.utility)) = ANY({u}::text[])"
+                  f" AND lower(trim(b.utility)) = ANY({u}::text[])")
     rows = await conn.fetch(_CANDIDATE_SQL.replace("{extra}", extra), *args)
-    return [CandidateRow(a_id=r["a_id"], b_id=r["b_id"], miles=float(r["miles"])) for r in rows]
+    return [_row(r) for r in rows]
 
 
 async def qualifying_brief_pairs(
@@ -461,25 +529,16 @@ async def qualifying_brief_pairs(
     """The briefed pairs of `project_id` that still match under the radius each brief was
     flagged with, keyed by pair id. The same test as candidate_pairs, for every brief in
     one query rather than one per brief."""
-    rows = await conn.fetch(
-        """SELECT br.pair_id, a.id AS a_id, b.id AS b_id,
-                  ST_Distance(a.geom, b.geom) / {mpm} AS miles
-           FROM briefs br
-           JOIN projects a ON a.id = br.a_id
-           JOIN projects b ON b.id = br.b_id
-           WHERE (br.a_id = $1 OR br.b_id = $1)
-             AND a.id < b.id
-             AND lower(trim(a.utility)) <> lower(trim(b.utility))
-             AND a.geom IS NOT NULL AND b.geom IS NOT NULL
-             AND ST_DWithin(a.geom, b.geom, br.radius * {mpm})""".replace(
-            "{mpm}", str(METERS_PER_MILE)
-        ),
-        project_id,
-    )
-    return {
-        r["pair_id"]: CandidateRow(a_id=r["a_id"], b_id=r["b_id"], miles=float(r["miles"]))
-        for r in rows
-    }
+    rows = await conn.fetch(_pair_sql("""
+        SELECT br.pair_id, a.id AS a_id, b.id AS b_id, {pair_columns}
+        FROM briefs br
+        JOIN projects a ON a.id = br.a_id
+        JOIN projects b ON b.id = br.b_id
+        WHERE (br.a_id = $1 OR br.b_id = $1)
+          AND a.id < b.id
+          AND lower(trim(a.utility)) <> lower(trim(b.utility))
+          AND ST_DWithin({shape_a}, {shape_b}, br.radius * {mpm})"""), project_id)
+    return {r["pair_id"]: _row(r) for r in rows}
 
 
 # ---------------------------------------------------------------- briefs
@@ -491,16 +550,16 @@ def _brief_from_record(r: asyncpg.Record) -> StoredBrief:
 
 async def upsert_brief(
     conn: asyncpg.Connection, *, pair_id: str, a_id: int, b_id: int, text: str, miles: float,
-    overlap_days: int, radius: float,
+    overlap_days: int, radius: float, source: str = "llm",
 ) -> StoredBrief:
     r = await conn.fetchrow(
-        """INSERT INTO briefs (pair_id, a_id, b_id, text, miles, overlap_days, radius)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
+        """INSERT INTO briefs (pair_id, a_id, b_id, text, miles, overlap_days, radius, source)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
            ON CONFLICT (pair_id) DO UPDATE SET text = EXCLUDED.text, miles = EXCLUDED.miles,
              overlap_days = EXCLUDED.overlap_days, radius = EXCLUDED.radius,
-             stale = false, generated_at = now()
+             source = EXCLUDED.source, stale = false, generated_at = now()
            RETURNING *""",
-        pair_id, a_id, b_id, clean(text), miles, overlap_days, radius,
+        pair_id, a_id, b_id, clean(text), miles, overlap_days, radius, source,
     )
     return _brief_from_record(r)
 

@@ -117,6 +117,42 @@ def test_locate_unresolved_needs_review(fake_osm):
     assert got.lat is None and got.requires_review
 
 
+def test_curated_overrides_pin_and_block_for_their_planning_entity(fake_osm, tmp_path,
+                                                                   monkeypatch):
+    path = tmp_path / "overrides.csv"
+    path.write_text(
+        "operator,name,state,county,lat,lng,approximate,source\n"
+        "Georgia Power,Oak Grove,,,33.0,-84.0,false,picked from two same-named\n"
+        "Georgia Power,Winder Primary,,,,,,wrong same-named feature\n"
+        "Georgia Power,Doyle,GA,Fulton County,,,true,county\n"
+    )
+    table = locate_mod._overrides.__wrapped__(path)
+    monkeypatch.setattr(locate_mod, "_overrides", lambda: table)
+
+    def at(names, operator):
+        return locate_mod.locate(names, ["GA"], FakePlaces({}), operator=operator)
+
+    pinned = at(["OAK GROVE"], "Georgia Power")  # ambiguous in OSM, pinned by the override
+    assert (pinned.lat, pinned.lng, pinned.approximate) == (33.0, -84.0, False)
+    assert at(["WINDER PRIMARY"], "Georgia Power").requires_review  # blocked despite OSM
+    county = at(["DOYLE"], "Georgia Power")
+    assert county.approximate and "county centre, curated" in county.how
+    # Georgia Power and Southern Company plan together, so the override covers both ...
+    assert at(["WINDER PRIMARY"], "Southern Company").requires_review
+    # ... but not other utilities, and not calls without an operator.
+    assert at(["WINDER PRIMARY"], "Duke Energy Carolinas").lat == 34.0
+    assert at(["WINDER PRIMARY"], None).lat == 34.0
+
+
+def test_committed_overrides_all_resolve():
+    table = locate_mod._overrides.__wrapped__(locate_mod.OVERRIDES_PATH)
+    with locate_mod.OVERRIDES_PATH.open() as f:
+        rows = list(csv.DictReader(f))
+    assert len(table) == len(rows)  # one key per row, every county found
+    assert all(r["source"].strip() for r in rows)  # every row says why
+    assert locate_mod.override("Georgia Power", "BUZZARD ROOST").lat is None  # blocked
+
+
 def test_eia_plant_record_cites_rows():
     plant = PlannedPlant(
         plant_id=1, plant_name="Dega Solar", entity="Tennessee Valley Authority", state="AL",
@@ -215,4 +251,5 @@ def test_startup_snapshot_load_is_idempotent_and_follows_csv_changes(tmp_path):
             await pool.close()
         return counts
 
-    assert run_db(load_twice_then_change) == [(2, 6), (2, 6), (2, 10)]
+    k = len(snapshot.SOURCES)
+    assert run_db(load_twice_then_change) == [(k, 3 * k), (k, 3 * k), (k, 5 * k)]

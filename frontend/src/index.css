@@ -1353,6 +1353,89 @@ a {
   margin-left: auto;
 }
 
+/* Ranking tier: what two projects this close can share. Closer tiers read stronger. */
+.tier {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.tier-detail {
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.tier-0 {
+  color: var(--error);
+}
+
+.tier-3 {
+  color: var(--ink-2);
+}
+
+.card-value {
+  font-size: 12px;
+  color: var(--ok-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rough coordination value (Why flagged panel). */
+.impact-total {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.impact-total strong {
+  font-size: 18px;
+  color: var(--ok-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.impact-items {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.impact-items th,
+.impact-items td {
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  font-weight: 500;
+}
+
+.impact-items td.num {
+  text-align: right;
+  white-space: nowrap;
+  padding-left: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.impact-items tr.muted {
+  color: var(--muted);
+}
+
+.impact-basis {
+  display: block;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.impact-assumptions {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.impact-assumptions ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
 .score-chip {
   display: inline-block;
   padding: 2px 8px;
@@ -1591,6 +1674,98 @@ td > .badge:first-child {
   margin: 0 0 12px;
   font-size: 11px;
   color: var(--muted);
+}
+
+/* Build-window strip (WhyFlaggedPanel BuildWindows): two bars on one time axis. */
+.build-windows .section-title {
+  margin-top: 12px;
+}
+
+.bw-chart {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.bw-labels,
+.bw-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Room under the bars for the year labels. */
+  padding-bottom: 18px;
+}
+
+.bw-labels {
+  flex: none;
+  width: 9.5rem;
+}
+
+.bw-labels span {
+  height: 16px;
+  line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+
+.bw-tracks {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.bw-track {
+  position: relative;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+
+.bw-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+}
+
+.bw-unknown {
+  padding-left: 6px;
+  line-height: 16px;
+  color: var(--muted);
+}
+
+.bw-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--line);
+}
+
+.bw-tick > span {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+/* Both building: hatched over both bars. */
+.bw-shared {
+  position: absolute;
+  top: -3px;
+  bottom: 15px;
+  z-index: 1;
+  border: 1.5px solid var(--ink);
+  border-radius: 5px;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ink) 28%, transparent) 0 2px,
+    transparent 2px 6px
+  );
+  pointer-events: none;
 }
 
 .fact {

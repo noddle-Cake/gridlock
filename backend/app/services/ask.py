@@ -106,7 +106,8 @@ TOOLS: list[dict[str, Any]] = [
         "name": "find_coordination_overlaps",
         "description": (
             "Coordination pairs: two projects of different utilities within `max_miles` "
-            "of each other, ranked by a score of distance, timing, type, and voltage. "
+            "of each other, ranked by distance tier (0 = touching ... 3 = within 40 km), "
+            "then by a score of distance, timing, type, and voltage. "
             "Optionally only pairs involving a company and/or a state."
         ),
         "parameters": {
@@ -157,6 +158,8 @@ def _pair(pair: CoordinationPairDTO, *, other_of: int | None = None) -> dict[str
         "pair_id": pair.id, "score": round(pair.scores.composite, 2),
         "miles": round(pair.miles, 1), "overlap_days": pair.overlap_days,
     }
+    if pair.tier is not None:
+        d["tier"] = pair.tier  # 0 = touching ... 3 = within 40 km: can share crews
     if pair.window_start:
         d["shared_window"] = [_iso(pair.window_start), _iso(pair.window_end)]
     if other_of is None:

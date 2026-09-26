@@ -44,6 +44,24 @@ describe('WhyFlaggedPanel (Req 11)', () => {
     expect(within(factors).getByText('n/a')).toBeInTheDocument() // indeterminate voltage
   })
 
+  it('shows the rough coordination value, counting timing items only if aligned', () => {
+    const impact = {
+      items: [
+        { label: 'Share crews & equipment (one mobilization)', low: 150_000, high: 400_000,
+          basis: 'flat range', acres: null, needs_timing: true },
+        { label: 'Share access roads and permitting', low: 50_000, high: 200_000,
+          basis: 'one permit package', acres: null, needs_timing: false },
+      ],
+      total_low: 50_000, total_high: 200_000, if_aligned_low: 200_000, if_aligned_high: 600_000,
+      windows_overlap: false, acres: null, assumptions: ['Ranges are planning assumptions.'],
+    }
+    render(<WhyFlaggedPanel pair={pair({ impact })} colorOf={colorOf} onGenerateBrief={vi.fn()} />)
+    const section = screen.getByRole('region', { name: 'Rough coordination value' })
+    expect(within(section).getByTestId('impact-total')).toHaveTextContent('$50k–$200k')
+    expect(section).toHaveTextContent('up to $200k–$600k if aligned')
+    expect(within(section).getByText('Ranges are planning assumptions.')).toBeInTheDocument()
+  })
+
   it('shows 0% and the in-service gap when build windows never meet', () => {
     const apart = pair({
       overlap_days: 0, overlap_ratio: 0, time_gap_days: 400, window_start: null, window_end: null,
@@ -52,6 +70,35 @@ describe('WhyFlaggedPanel (Req 11)', () => {
     expect(screen.getByTestId('overlap-pct')).toHaveTextContent('0%')
     expect(screen.getByTestId('time-gap')).toHaveTextContent('13 months')
     expect(screen.getByTestId('overlap-days')).toHaveTextContent('None')
+  })
+
+  it('draws both build windows, hatching the stretch both are building', () => {
+    const windows = {
+      build_a: ['2026-01-01', '2026-06-30'] as [string, string],
+      build_b: ['2026-04-01', '2026-12-31'] as [string, string],
+      window_start: '2026-04-01',
+      window_end: '2026-06-30',
+    }
+    const { container, rerender } = render(
+      <WhyFlaggedPanel pair={pair(windows)} colorOf={colorOf} onGenerateBrief={vi.fn()} />,
+    )
+    const strip = screen.getByRole('region', { name: 'Build windows' })
+    const bars = container.querySelectorAll<HTMLElement>('.bw-bar')
+    expect(bars).toHaveLength(2)
+    expect(bars[0].style.background).toBe('rgb(47, 111, 223)') // project A's utility colour
+    expect(within(strip).getByTestId('bw-shared')).toHaveTextContent('Both building')
+
+    // Windows that never meet: two bars, no hatching.
+    const apart = { ...windows, build_b: ['2028-01-01', '2028-12-31'] as [string, string] }
+    rerender(
+      <WhyFlaggedPanel
+        pair={pair({ ...apart, window_start: null, window_end: null })}
+        colorOf={colorOf}
+        onGenerateBrief={vi.fn()}
+      />,
+    )
+    expect(container.querySelectorAll('.bw-bar')).toHaveLength(2)
+    expect(screen.queryByTestId('bw-shared')).toBeNull()
   })
 
   it('says explicitly when no brief exists, and shows one when it does', () => {
@@ -63,6 +110,15 @@ describe('WhyFlaggedPanel (Req 11)', () => {
     rerender(<WhyFlaggedPanel pair={pair({ brief })} colorOf={colorOf} onGenerateBrief={vi.fn()} />)
     expect(screen.getByTestId('brief-text')).toHaveTextContent('Share a crane crew.')
     expect(screen.queryByTestId('no-brief')).toBeNull()
+    expect(screen.queryByText('template')).toBeNull()
+    rerender(
+      <WhyFlaggedPanel
+        pair={pair({ brief: { ...brief, source: 'template' } })}
+        colorOf={colorOf}
+        onGenerateBrief={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('template')).toBeInTheDocument()
   })
 
   it('requests a brief for the selected pair', async () => {

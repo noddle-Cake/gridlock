@@ -277,3 +277,59 @@ def test_cross_utility_coverage(utilities):
 async def _insert_and_match(conn, projects):
     await repo.insert_projects(conn, projects)
     return await repo.candidate_pairs(conn, 1.0)
+
+
+# Sperry: "measure the closest points between two projects, not their centers".
+def test_line_route_measured_at_closest_point():
+    # A ~60 km east-west line; its midpoint is ~30 km from a substation that sits 2 km
+    # north of the line's western end.
+    line = repo.NewProject(utility="A", confidence=1, lat=33.0, lng=-81.68,
+                           route=[(33.0, -82.0), (33.0, -81.36)])
+    sub = repo.NewProject(utility="B", confidence=1, lat=33.018, lng=-81.99)
+    crossing = repo.NewProject(utility="C", confidence=1, lat=33.0, lng=-81.5,
+                               route=[(32.9, -81.5), (33.1, -81.5)])
+
+    async def body(conn):
+        ids = await repo.insert_projects(conn, [line, sub, crossing])
+        got = await repo.get_project(conn, ids[0])
+        return got, {(r.a_id, r.b_id): r.miles for r in
+                     await repo.candidate_pairs(conn, 40 / matching.KM_PER_MILE)}
+
+    got, pairs = run_db(body)
+    assert got.route == [(33.0, -82.0), (33.0, -81.36)]
+    assert 1.8 < pairs[(1, 2)] * matching.KM_PER_MILE < 2.3  # not the ~30 km to the midpoint
+    assert pairs[(1, 3)] < 1e-6 and matching.distance_band(pairs[(1, 3)]) == "touching"
+    assert (2, 3) not in pairs  # ~46 km apart
+
+
+def test_rematch_rechecks_briefs_on_routes_not_midpoints():
+    # Crossing lines whose midpoints are ~30 km apart: 0 km as matched, so an edit that
+    # doesn't move them must keep the brief as-is (not refresh it to the midpoint distance).
+    a = repo.NewProject(utility="A", confidence=1, lat=33.0, lng=-81.72,
+                        route=[(33.0, -82.0), (33.0, -81.44)])
+    b = repo.NewProject(utility="B", confidence=1, lat=33.13, lng=-81.5,
+                        route=[(32.9, -81.5), (33.36, -81.5)])
+
+    async def body(conn):
+        ids = await repo.insert_projects(conn, [a, b])
+        (row,) = await repo.candidate_pairs(conn, 25.0)
+        await repo.upsert_brief(conn, pair_id=matching.pair_id(*ids), a_id=ids[0],
+                                b_id=ids[1], text="brief", miles=row.miles, overlap_days=0,
+                                radius=25.0)
+        await repo.update_project(conn, ids[0], {"name": "renamed"})
+        return row, await matching.rematch_project(conn, ids[0])
+
+    row, result = run_db(body)
+    assert row.miles < 1e-6
+    assert result.invalidated == [] and result.updated == []
+
+
+def test_hand_placed_point_drops_route():
+    line = repo.NewProject(utility="A", confidence=1, lat=33.0, lng=-81.68,
+                           route=[(33.0, -82.0), (33.0, -81.36)])
+
+    async def body(conn):
+        (pid,) = await repo.insert_projects(conn, [line])
+        return await repo.update_project(conn, pid, {"lat": 33.2, "lng": -81.7})
+
+    assert run_db(body).route is None

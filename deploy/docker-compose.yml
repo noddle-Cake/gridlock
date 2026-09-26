@@ -34,6 +34,8 @@ services:
       GEOCODER: nominatim
       # Demo-seed source links, served by the API mounted at /api.
       SAMPLE_BASE_URL: /api/samples
+      # Caddy compresses (zstd/gzip); the app compressing first would force gzip.
+      COMPRESS_RESPONSES: "false"
     depends_on:
       db:
         condition: service_healthy

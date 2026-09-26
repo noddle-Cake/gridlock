@@ -15,6 +15,8 @@ export interface Project {
   location_ref: string | null
   lat: number | null
   lng: number | null
+  /** Planned line: straight route between its endpoint substations, as [lat, lng] points. */
+  route?: [number, number][] | null
   start_date: string | null
   end_date: string | null
   start_precision: DatePrecision | null
@@ -59,6 +61,30 @@ export interface CoordinationBrief {
   text: string
   generated_at: string
   stale: boolean
+  /** 'template' = built from the pair's facts because no AI model is configured. */
+  source?: 'llm' | 'template'
+}
+
+export interface ImpactItem {
+  label: string
+  low: number
+  high: number
+  basis: string
+  acres: number | null
+  /** Only realised if the build windows overlap. */
+  needs_timing: boolean
+}
+
+/** Rough, assumption-based coordination value in USD (backend services/impact.py). */
+export interface Impact {
+  items: ImpactItem[]
+  total_low: number
+  total_high: number
+  if_aligned_low: number
+  if_aligned_high: number
+  windows_overlap: boolean
+  acres: number | null
+  assumptions: string[]
 }
 
 /** Projects as embedded in a pair: GET /overlaps leaves out the source excerpt. */
@@ -69,6 +95,10 @@ export interface CoordinationPair {
   project_a: PairProject
   project_b: PairProject
   miles: number
+  /** Distance band id (see lib/distanceBands); null beyond 40 km. */
+  band: string | null
+  /** Ranking tier: 0 touching, 1 under 1.6 km, 2 under 8 km, 3 under 40 km. */
+  tier: number | null
   /** Days both build windows share; 0 when they don't meet or a date is unknown. */
   overlap_days: number
   /** Shared days / days either project is building (0–1); null when either is undated. */
@@ -78,7 +108,15 @@ export interface CoordinationPair {
   /** The shared stretch of the two build windows, when there is one. */
   window_start: string | null
   window_end: string | null
+  /** Each project's build window [start, end] as scored; null when undated. */
+  build_a?: [string, string] | null
+  build_b?: [string, string] | null
+  /** km of shared corridor when both projects are routed lines. */
+  shared_km?: number | null
+  /** Closest points of the two shapes, [lat, lng] each: the segment `miles` measures. */
+  link?: [number, number][] | null
   scores: ScoreFactors
+  impact?: Impact | null
   brief: CoordinationBrief | null
 }
 

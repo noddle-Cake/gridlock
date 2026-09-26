@@ -12,6 +12,8 @@ from app.core.errors import InvalidParameterError
 from app.db import repository as repo
 from app.models.dto import CoordinationPairDTO, ProjectDTO
 from app.services import timing
+from app.services.impact import estimate
+from app.services.owners import planning_entity
 from app.services.scoring import score_pair
 
 
@@ -67,6 +69,21 @@ def distance_band(miles: float) -> str | None:
     return None
 
 
+# Sperry's ranking tiers: closer overlaps are worth more. The 8-25 and 25-40 km filter bands
+# are one tier ("under 40 km -> can share crews and equipment").
+TIERS: dict[str, int] = {"touching": 0, "1.6": 1, "8": 2, "25": 3, "40": 3}
+OUTSIDE_TIER = len(set(TIERS.values()))
+
+
+def tier(band: str | None) -> int:
+    return TIERS.get(band, OUTSIDE_TIER) if band else OUTSIDE_TIER
+
+
+def rank_key(pair: CoordinationPairDTO) -> tuple[int, float, float]:
+    """Tier first, then the composite score (which carries timing), then distance."""
+    return (tier(pair.band), -pair.scores.composite, pair.miles)
+
+
 def parse_bands(raw: str | None) -> set[str] | None:
     """None when the param is absent (no band filter); an empty set when it is empty."""
     if raw is None:
@@ -79,6 +96,14 @@ def parse_bands(raw: str | None) -> set[str] | None:
             field="bands", fields=["bands"],
         )
     return bands
+
+
+def _cross_entity(
+    rows: list[repo.CandidateRow], projects: dict[int, ProjectDTO]
+) -> list[repo.CandidateRow]:
+    """Drop pairs whose utilities plan together (owners.PLANNING_ENTITY)."""
+    return [r for r in rows if planning_entity(projects[r.a_id].utility)
+            != planning_entity(projects[r.b_id].utility)]
 
 
 def _window(p: ProjectDTO) -> timing.Window | None:
@@ -98,30 +123,49 @@ def _build_pair(
         voltage_a=a.voltage_kv, voltage_b=b.voltage_kv, radius=radius,
     )
     shared = t.shared if t else None
+    band = distance_band(row.miles)
+    pair_tier = tier(band)
+    shared_km = None if row.shared_km is None else round(row.shared_km, 2)
     return CoordinationPairDTO(
         id=pair_id(a.id, b.id), project_a=a, project_b=b, miles=round(row.miles, 3),
+        band=band, tier=pair_tier,
         overlap_days=t.overlap_days if t else 0,
         overlap_ratio=round(t.ratio, 4) if t else None,
         time_gap_days=t.in_service_gap_days if t else None,
         window_start=shared.start if shared else None,
         window_end=shared.end if shared else None,
-        scores=scores,
+        build_a=(wa.start, wa.end) if wa else None,
+        build_b=(wb.start, wb.end) if wb else None,
+        shared_km=shared_km, link=row.link, scores=scores,
+        impact=estimate(tier=pair_tier, a=a, b=b, shared_km=shared_km,
+                        windows_overlap=shared is not None),
     )
+
+
+def parse_utilities(raw: list[str] | None) -> list[str] | None:
+    """Repeated `utility` params -> the utilities to keep, or None (no filter) when absent
+    or all blank."""
+    names = [u.strip() for u in raw or [] if u.strip()]
+    return names or None
 
 
 async def overlaps(
     conn: asyncpg.Connection, radius: float, *, bands: set[str] | None = None,
+    utilities: list[str] | None = None,
 ) -> list[CoordinationPairDTO]:
-    rows = await repo.candidate_pairs(conn, radius)
+    """Every qualifying pair, ranked. `utilities` keeps only pairs between those utilities,
+    filtered in SQL so a two-utility view doesn't build thousands of pairs it would drop."""
+    rows = await repo.candidate_pairs(conn, radius, utilities=utilities)
     if bands is not None:
         rows = [r for r in rows if distance_band(r.miles) in bands]
     projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
+    rows = _cross_entity(rows, projects)
     pairs = [_build_pair(r, projects, radius) for r in rows]
     briefs = await repo.briefs_for_pairs(conn, [p.id for p in pairs])
     for p in pairs:
         if p.id in briefs:
             p.brief = briefs[p.id].to_dto()
-    pairs.sort(key=lambda p: p.scores.composite, reverse=True)
+    pairs.sort(key=rank_key)
     return pairs
 
 
@@ -132,17 +176,19 @@ async def find_pair(
     if not rows:
         return None
     projects = await repo.get_projects(conn, [a_id, b_id])
+    if not _cross_entity(rows, projects):
+        return None
     return _build_pair(rows[0], projects, radius)
 
 
 async def pairs_for_project(
     conn: asyncpg.Connection, project_id: int, radius: float
 ) -> list[CoordinationPairDTO]:
-    """Every pair one project belongs to, best score first."""
+    """Every pair one project belongs to, ranked like `overlaps`."""
     rows = await repo.candidate_pairs(conn, radius, project_id=project_id)
     projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
-    pairs = [_build_pair(r, projects, radius) for r in rows]
-    return sorted(pairs, key=lambda p: p.scores.composite, reverse=True)
+    rows = _cross_entity(rows, projects)
+    return sorted((_build_pair(r, projects, radius) for r in rows), key=rank_key)
 
 
 @dataclass
@@ -166,6 +212,8 @@ async def rematch_project(conn: asyncpg.Connection, project_id: int) -> RematchR
     qualifying = await repo.qualifying_brief_pairs(conn, project_id) if briefs else {}
     ids = {i for r in [*rows, *qualifying.values()] for i in (r.a_id, r.b_id)}
     projects = await repo.get_projects(conn, sorted(ids))
+    rows = _cross_entity(rows, projects)
+    qualifying = {k: r for k, r in qualifying.items() if _cross_entity([r], projects)}
     pairs = [_build_pair(r, projects, radius) for r in rows]
 
     invalidated: list[str] = []

@@ -40,11 +40,37 @@ npm install
 npm run dev                     # http://localhost:5173
 ```
 
-Without `GEMINI_API_KEY` everything works except the two LLM steps: uploads fail with
+Without `GEMINI_API_KEY` everything works except PDF extraction: uploads fail with
 "Extraction failed: GEMINI_API_KEY is not configured" (the plan is marked failed, no
-projects are created), brief generation returns a 502, and Ask GridMerge returns a 503
-(the search bar itself never needs the key). The seed script loads
-pre-extracted projects so the rest of the demo loop works offline.
+projects are created). Coordination briefs fall back to a template built from the pair's
+facts (distance, timing, what the tier lets them share, rough value), stored and labelled
+`template`. Ask GridMerge returns a 503 (the search bar itself never needs the key). The
+seed script and the committed public-source snapshots load without it, so
+the rest of the demo loop works offline.
+
+### Demo walkthrough (Sperry Gridlock challenge)
+
+1. The app opens on **Dominion SC ↔ Georgia Power** (Dominion Energy South Carolina, "DESC"
+   in the filings): Dominion SC in blue, Georgia Power in orange, and
+   the list ranked by Sperry's tiers (touching → under 1.6 km → under 8 km → under 40 km),
+   then by score, which carries timing.
+2. Sperry's six reference overlaps (`source_docs/sperry_reference_overlaps.xlsx`) are all
+   there. Search "Thurmond" or "Okatie":
+
+   | Sperry | Pair | GridMerge |
+   | --- | --- | --- |
+   | OVL_1 | Hooks – Thurmond ↔ Evans Primary – Thurmond Dam #5 | touching at Thurmond |
+   | OVL_2, OVL_3 | Jasper – Okatie #2 ↔ McIntosh – Purrysburg, Goshen – McIntosh | 4.9 km |
+   | OVL_4 | Stevens Creek – Hooks ↔ Evans Primary – Thurmond Dam #5 | 11.0 km |
+   | OVL_5, OVL_6 | Okatie – Bluffton ↔ McIntosh – Purrysburg, Goshen – McIntosh | 13.6 km |
+
+3. Open a pair to see why it was flagged: the closest-point connector on the map, both
+   build windows on one time axis (shared stretch hatched), the rough coordination value
+   (Sperry bonus), side-by-side projects with source-page links, and a forwardable brief.
+4. Beyond the reference table: DESC's Riverport Tap ($34.9M, "Okatie – Riverport 230 kV")
+   is 13.6 km from Georgia Power's McIntosh – Purrysburg reactors, with overlapping 2025
+   build windows.
+5. Export CSV/PDF downloads the pairs on screen (utility focus and distance bands).
 
 ### Whole stack in Docker (any OS)
 
@@ -74,6 +100,7 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | `HIFLD_LINES_URL` | HIFLD ArcGIS FeatureServer layer | only used by `load_hifld --fetch` |
 | `HIFLD_BBOX` | `-86.0,29.8,-80.8,31.6` | FL–GA region fetched by `load_hifld --fetch` |
 | `AUTOLOAD_LINES` | `true` | load the committed snapshot into an empty table on startup |
+| `COMPRESS_RESPONSES` | `true` | gzip API responses; the deploy stack sets `false` because Caddy compresses (zstd) |
 | `SEARCH_ZIP_RADIUS_MILES` | `25` | a ZIP search matches projects this close to the ZIP (widens to 50, then 100, when empty) |
 
 ## API
@@ -84,9 +111,9 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | GET | `/plans`, `/plans/{id}` | ingestion status (`processing` / `complete` / `failed`) |
 | GET | `/projects` | all stored projects |
 | PATCH | `/projects/{id}` | review/edit; geom/date edits immediately re-match that project |
-| GET | `/overlaps?radius=&bands=` | scored coordination pairs (default 25 mi; `bands` e.g. `touching,1.6,8,25,40`) |
-| POST | `/overlaps/{id}/brief?radius=` | generate a brief (30 s budget) |
-| GET | `/export?format=csv\|pdf&radius=&bands=` | briefs export (stretch) |
+| GET | `/overlaps?radius=&bands=&utility=` | scored coordination pairs (default 25 mi; `bands` e.g. `touching,1.6,8,25,40`; repeat `utility` to keep only pairs between those utilities). Each pair has `link` (the closest points the distance measures) and `build_a`/`build_b` (each project's scored build window) |
+| POST | `/overlaps/{id}/brief?radius=` | generate a brief (30 s budget; a facts-only `template` brief without a model) |
+| GET | `/export?format=csv\|pdf&radius=&bands=&utility=` | briefs export (stretch) |
 | GET | `/lines?bbox=&min_kv=&owner=` | existing transmission lines (HIFLD) as GeoJSON; `owner` may repeat |
 | GET | `/lines/owners` | owner roster: line count, km, voltage range, raw HIFLD spellings |
 | GET | `/search?q=&limit=` | search bar: ZIP code, state, company (name, acronym like `FPL`, or prefix), project type, and text, combined (`FPL 33101`, `Georgia transmission`). Deterministic Postgres + pg_trgm, no LLM |
@@ -177,8 +204,8 @@ Real planned projects are loaded after a deploy by uploading the filings in
 
 ```bash
 docker compose up -d testdb     # disposable PostGIS on :5433 (tmpfs)
-cd backend && .venv/bin/pytest  # 120 tests; DB-backed ones skip if testdb is down
-cd frontend && npm test         # 27 tests
+cd backend && .venv/bin/pytest  # 206 tests; DB-backed ones skip if testdb is down
+cd frontend && npm test         # 77 tests
 ```
 
 All 18 design properties have a property-based test (Hypothesis / fast-check, ≥100 cases),
@@ -206,6 +233,28 @@ automatic HTTPS; without it the site is plain HTTP on the IP. The database lives
 `gridlock_pgdata` Docker volume on the instance — enable Lightsail automatic snapshots for
 backups.
 
+## Coordination value estimate (Sperry bonus)
+
+Every flagged pair carries a rough, assumption-based `impact` (`app/services/impact.py`),
+shown under "Rough coordination value" in the pair panel and exported as `value_*_usd`
+columns. Each distance tier unlocks one more kind of sharing, and nearer tiers keep the
+farther tiers' benefits:
+
+| Tier | Adds | Assumed value |
+| --- | --- | --- |
+| under 40 km | one crew/equipment mobilization instead of two | 1–3% of the smaller published project cost (DESC publishes costs), else $150k–$400k |
+| under 8 km | one laydown yard, shared deliveries | $100k–$300k |
+| under 1.6 km | access roads and permits; right-of-way land where both are routed lines | $50k–$200k; shared corridor km × half the narrower ROW width (23–61 m by kV) × $5k–$20k/acre |
+| touching | one coordinated outage and crossing design | $50k–$250k |
+
+Crew, yard and outage sharing only count when the two build windows overlap; otherwise the
+panel shows what the pair would be worth *if the schedules were aligned*. These figures are
+placeholders to start a conversation, not benchmarks: edit the constants in `impact.py`.
+
+Example: DESC's Jasper–Okatie 230 kV #2 ($23.8M) and Georgia Power's McIntosh–Purrysburg
+reactors are 4.9 km apart, with in-service dates 5 months apart. Their build windows overlap,
+so the estimate is about $340k–$1.0M from one shared mobilization and one laydown yard.
+
 ## Design notes and deviations
 
 - **Review threshold boundary.** Requirements 3.3/13.1 say "equal to or below" the
@@ -224,7 +273,13 @@ backups.
   two "in service 2026" projects score 1.0 and no UI setting can inflate it. Each pair
   also reports `overlap_days` (the shared stretch, `window_start`–`window_end`) and
   `time_gap_days` (days between the in-service dates, as in Sperry's overlap table).
-  Weights: distance 0.60, timing 0.25, type 0.075, voltage 0.075.
+  Weights (`app/services/scoring.py`): distance 0.55, timing 0.30, type 0.075,
+  voltage 0.075.
+- **Overlap definition.** The challenge brief says "within 25 mi", the extended
+  instructions "within 40 km (25 miles), measured between the projects' closest points",
+  and the locations guide measures centre to centre. GridMerge measures closest points
+  (a planned line counts from anywhere along it) out to 40 km, which can only be nearer
+  than Sperry's centre-to-centre figures, and ranks by Sperry's four distance tiers.
 - **Pair identity** is `"{a_id}-{b_id}"` with `a_id < b_id`, joined on
   `lower(trim(utility))` inequality, so "Met-Ed" and "met-ed " are the same utility.
 - **Projects missing both dates** still match on distance; their timing factor is
@@ -243,7 +298,9 @@ backups.
 ## Not yet done
 
 - Golden-set extraction accuracy harness (task 10.3) — needs a hand-labeled corpus.
-- Matching on transmission-line geometry (stretch 16): the HIFLD layer supplies real routes
-  with `sub_1`/`sub_2` endpoints, but planned line projects are still stored as points.
+- Real routes for planned lines (stretch 16): a planned line whose two endpoints match
+  exact OSM substations is stored as a straight `route` between them, and matching measures
+  closest points between routes and points (a line crossing another is 0 km, "touching").
+  Snapping those segments to the HIFLD corridor they rebuild is not done yet.
 - Custom domain (stretch 17).
 - Export property tests (14.2); only example tests exist.

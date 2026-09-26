@@ -2,10 +2,83 @@ import { useState } from 'react'
 
 import { ApiError } from '../api'
 import { milesToKm } from '../lib/distanceBands'
-import { FACTOR_LABELS, dayLabel, gapLabel, overlapPct, pct, rangeLabel } from '../lib/format'
+import {
+  FACTOR_LABELS,
+  dayLabel,
+  gapLabel,
+  overlapPct,
+  pct,
+  rangeLabel,
+  usdRange,
+} from '../lib/format'
+import { type Span, windowScale } from '../lib/buildWindows'
 import { scoreBand } from '../lib/pairs'
-import type { CoordinationBrief, CoordinationPair, PairProject } from '../types'
+import type { CoordinationBrief, CoordinationPair, Impact, PairProject } from '../types'
 import { SourceLink } from './SourceLink'
+
+/**
+ * Both projects' build windows on one time axis, with the stretch both are building hatched:
+ * the timeline-overlap signal drawn, not just stated.
+ */
+function BuildWindows({
+  pair,
+  colorOf,
+}: {
+  pair: CoordinationPair
+  colorOf: (p: PairProject) => string
+}) {
+  const scale = windowScale([pair.build_a, pair.build_b])
+  if (!scale) return null
+  const shared: Span | null =
+    pair.window_start && pair.window_end ? [pair.window_start, pair.window_end] : null
+  const rows = [
+    { p: pair.project_a, span: pair.build_a },
+    { p: pair.project_b, span: pair.build_b },
+  ]
+  const at = (span: Span) => {
+    const { left, width } = scale.place(span)
+    return { left: `${left}%`, width: `${width}%` }
+  }
+  return (
+    <section className="build-windows" aria-label="Build windows">
+      <h3 className="section-title">Build windows</h3>
+      <div className="bw-chart">
+        <div className="bw-labels">
+          {rows.map(({ p }) => (
+            <span key={p.id} title={p.name ?? undefined}>
+              {p.utility}
+            </span>
+          ))}
+        </div>
+        <div className="bw-tracks">
+          {scale.years.map((y) => (
+            <span key={y.year} className="bw-tick" style={{ left: `${y.at}%` }} aria-hidden="true">
+              <span>{y.year}</span>
+            </span>
+          ))}
+          {shared ? (
+            <span className="bw-shared" style={at(shared)} data-testid="bw-shared">
+              <span className="sr-only">Both building</span>
+            </span>
+          ) : null}
+          {rows.map(({ p, span }) => (
+            <div key={p.id} className="bw-track">
+              {span ? (
+                <span
+                  className="bw-bar"
+                  style={{ ...at(span), background: colorOf(p) }}
+                  title={`${p.name ?? 'Unnamed'}: ${dayLabel(span[0])} – ${dayLabel(span[1])}`}
+                />
+              ) : (
+                <em className="bw-unknown">schedule unknown</em>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
 
 interface Props {
   pair: CoordinationPair | null
@@ -40,6 +113,51 @@ function ProjectCard({ p, color }: { p: PairProject; color: string }) {
       </dl>
       <SourceLink url={p.source_url} page={p.source_page} />
     </article>
+  )
+}
+
+function ImpactSection({ impact }: { impact: Impact }) {
+  const now = impact.total_high > 0
+  return (
+    <section className="impact" aria-label="Rough coordination value">
+      <h3 className="section-title">Rough coordination value</h3>
+      <p className="impact-total">
+        <strong data-testid="impact-total">
+          {usdRange(
+            now ? impact.total_low : impact.if_aligned_low,
+            now ? impact.total_high : impact.if_aligned_high,
+          )}
+        </strong>{' '}
+        {now
+          ? 'on the current schedules'
+          : 'if the two schedules were aligned (their build windows don\u2019t overlap today)'}
+        {now && impact.if_aligned_high > impact.total_high
+          ? `; up to ${usdRange(impact.if_aligned_low, impact.if_aligned_high)} if aligned`
+          : ''}
+        {impact.acres ? ` · ${impact.acres} acres of right-of-way could be shared` : ''}
+      </p>
+      <table className="impact-items">
+        <tbody>
+          {impact.items.map((i) => (
+            <tr key={i.label} className={!impact.windows_overlap && i.needs_timing ? 'muted' : ''}>
+              <th scope="row">
+                {i.label}
+                <span className="impact-basis">{i.basis}</span>
+              </th>
+              <td className="num">{usdRange(i.low, i.high)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <details className="impact-assumptions">
+        <summary>Assumptions</summary>
+        <ul>
+          {impact.assumptions.map((a) => (
+            <li key={a}>{a}</li>
+          ))}
+        </ul>
+      </details>
+    </section>
   )
 }
 
@@ -125,10 +243,14 @@ export function WhyFlaggedPanel({ pair, colorOf, onGenerateBrief }: Props) {
           <span className="fact-label">both building</span>
         </div>
       </div>
+      <BuildWindows pair={pair} colorOf={colorOf} />
       <p className="fact-note">
-        Build time shared = days both projects are building ÷ days either one is. Where a plan
-        gives only an in-service date, construction is assumed to take the 12 months before it.
+        Build time shared = days both projects are building (hatched) ÷ days either one is. Where
+        a plan gives only an in-service date, construction is assumed to take the 12 months
+        before it.
       </p>
+
+      {pair.impact ? <ImpactSection impact={pair.impact} /> : null}
 
       <h3 className="section-title">Projects</h3>
       <div className="side-by-side">
@@ -180,6 +302,14 @@ export function WhyFlaggedPanel({ pair, colorOf, onGenerateBrief }: Props) {
           {pair.brief?.stale ? (
             <span className="badge badge-warn" title="A project was edited after this brief">
               outdated
+            </span>
+          ) : null}
+          {pair.brief?.source === 'template' ? (
+            <span
+              className="badge badge-approx"
+              title="No AI model is configured, so this brief is assembled from the pair's facts"
+            >
+              template
             </span>
           ) : null}
         </header>

@@ -17,6 +17,8 @@ from pathlib import Path
 from app.services.geocoding import Candidate, dedupe_candidates
 
 CACHE_PATH = Path(__file__).resolve().parent.parent / "data" / "osm_substations.csv"
+# Hand-verified substations OSM doesn't have, each with its public source (same columns).
+CURATED_PATH = CACHE_PATH.with_name("curated_substations.csv")
 
 # Words that describe the equipment, not the place.
 _EQUIPMENT = re.compile(
@@ -53,17 +55,18 @@ class Substation:
 @lru_cache
 def _index() -> dict[str, list[Substation]]:
     table: dict[str, list[Substation]] = {}
-    if not CACHE_PATH.exists():
-        return table
-    with CACHE_PATH.open(encoding="utf-8") as f:
-        for row in csv.DictReader(f):
-            key = name_key(row["name"])
-            if not key:
-                continue
-            table.setdefault(key, []).append(Substation(
-                row["state"], row["name"], row["power"], row["operator"],
-                float(row["lat"]), float(row["lng"]),
-            ))
+    for path in (CACHE_PATH, CURATED_PATH):
+        if not path.exists():
+            continue
+        with path.open(encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                key = name_key(row["name"])
+                if not key:
+                    continue
+                table.setdefault(key, []).append(Substation(
+                    row["state"], row["name"], row["power"], row["operator"],
+                    float(row["lat"]), float(row["lng"]),
+                ))
     return table
 
 

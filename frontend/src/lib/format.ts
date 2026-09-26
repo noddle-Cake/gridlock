@@ -61,6 +61,18 @@ export function rangeLabel(
   return a === b ? a : `${a} – ${b}`
 }
 
+/** "$340k", "$1.2M". */
+export function usd(x: number): string {
+  if (x >= 1_000_000) return `$${(x / 1_000_000).toFixed(x >= 10_000_000 ? 0 : 1)}M`
+  if (x >= 1_000) return `$${Math.round(x / 1_000)}k`
+  return `$${Math.round(x)}`
+}
+
+/** "$340k–$1.0M". */
+export function usdRange(low: number, high: number): string {
+  return low === high ? usd(low) : `${usd(low)}–${usd(high)}`
+}
+
 export function pct(x: number): string {
   return `${Math.round(x * 100)}%`
 }
@@ -100,10 +112,19 @@ export function topUtilities(names: string[], n = PALETTE.length): string[] {
 /**
  * Colours for the busiest utilities (pass one name per project). Assigned in alphabetical
  * order so they don't shuffle as counts shift; look up with `?? OTHER_COLOR`.
+ *
+ * `first` (e.g. the utilities on screen) take the leading slots, which are the most distinct:
+ * two compared utilities get blue and orange instead of whichever slots the alphabet gives them.
  */
-export function utilityColors(names: string[]): Record<string, string> {
-  const top = topUtilities(names).sort((a, b) => a.localeCompare(b))
-  return Object.fromEntries(top.map((u, i) => [u, PALETTE[i]]))
+export function utilityColors(names: string[], first: readonly string[] = []): Record<string, string> {
+  const byName = (a: string, b: string) => a.localeCompare(b)
+  const lead = [...new Set(first)].sort(byName).slice(0, PALETTE.length)
+  const taken = new Set(lead)
+  const rest = topUtilities(
+    names.filter((u) => !taken.has(u)),
+    PALETTE.length - lead.length,
+  ).sort(byName)
+  return Object.fromEntries([...lead, ...rest].map((u, i) => [u, PALETTE[i]]))
 }
 
 export const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)

@@ -1,5 +1,8 @@
 """Place a plan entry that names substations, not coordinates.
 
+0. A curated override for the utility (`app/data/place_overrides.csv`) wins: a sourced
+   point or county, or a block on a known-wrong same-named match (guide Part 2: a
+   similarly named feature in the wrong area is the common false match).
 1. Each named substation is looked up in the offline OSM gazetteer (substations.py).
 2. A name OSM doesn't know as a substation is searched once as a place (Nominatim, limited
    to the Southeast) and resolved to its county; the county centre is used and the
@@ -12,19 +15,23 @@ network calls. Only public data is used: OSM features and Census county centroid
 
 from __future__ import annotations
 
+import csv
 import json
 import math
 import re
 import time
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 import httpx
 
 from app.services.geocoding import STATE_NAMES, county_centroid
+from app.services.owners import planning_entity
 from app.sources.substations import candidates, name_key
 
 PLACE_CACHE = Path(__file__).resolve().parent.parent / "data" / "place_cache.json"
+OVERRIDES_PATH = PLACE_CACHE.with_name("place_overrides.csv")
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 SOUTHEAST_VIEWBOX = "-100.0,40.8,-75.0,24.0"  # left,top,right,bottom
 PLACE_TYPES = {
@@ -67,6 +74,9 @@ class Located:
     approximate: bool = False
     requires_review: bool = False
     how: str = ""  # human-readable trail, appended to the excerpt
+    # Both endpoints matched exact OSM substations: the straight segment between them,
+    # as (lat, lng) points. Callers use it as the route of a planned line.
+    ends: list[tuple[float, float]] | None = None
 
 
 class PlaceCache:
@@ -127,6 +137,45 @@ class PlaceCache:
             self._dirty = False
 
 
+@dataclass(frozen=True)
+class Override:
+    """A curated location for one utility's substation name. No point = blocked: the name
+    stays unplaced rather than take a same-named feature from somewhere else."""
+
+    lat: float | None
+    lng: float | None
+    approximate: bool
+    label: str
+
+
+@lru_cache
+def _overrides(path: Path = OVERRIDES_PATH) -> dict[tuple[str, str], Override]:
+    table: dict[tuple[str, str], Override] = {}
+    if not path.exists():
+        return table
+    with path.open(encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            key = (planning_entity(row["operator"]), name_key(row["name"]))
+            if row["county"]:
+                (hit,) = county_centroid(row["county"], row["state"])  # curated: must resolve
+                ov = Override(hit.lat, hit.lng, True,
+                              f"{row['county']}, {row['state']} (county centre, curated)")
+            elif row["lat"]:
+                exact = row["approximate"].strip().lower() != "true"
+                ov = Override(float(row["lat"]), float(row["lng"]), not exact,
+                              f"curated point ({row['source'].split(';')[0][:80]})")
+            else:
+                ov = Override(None, None, False, "no public location (curated block)")
+            table[key] = ov
+    return table
+
+
+def override(operator: str | None, name: str) -> Override | None:
+    if not operator:
+        return None
+    return _overrides().get((planning_entity(operator), name_key(name)))
+
+
 def _county_point(place: dict) -> tuple[float, float, str] | None:
     """County centre for a place match; the place itself if it has no county (VA cities)."""
     county = place.get("county") or ""
@@ -148,7 +197,13 @@ def locate(
     exact: list[tuple[float, float, str]] = []
     ambiguous: dict[str, list] = {}
     rough_names: list[str] = []
+    curated_rough: list[tuple[float, float, str]] = []
     for name in endpoints:
+        if ov := override(operator, name):
+            if ov.lat is not None and ov.lng is not None:
+                point = (ov.lat, ov.lng, f"{name} = {ov.label}")
+                (curated_rough if ov.approximate else exact).append(point)
+            continue  # blocked names are never looked up elsewhere
         subs = [s for s in candidates(name, states, operator_hint=operator)
                 if inside(s.lat, s.lng)]
         if len(subs) == 1:
@@ -171,7 +226,7 @@ def locate(
             exact.append(pick)
             del ambiguous[name]
 
-    rough: list[tuple[float, float, str]] = []
+    rough: list[tuple[float, float, str]] = list(curated_rough)
     for name in rough_names:
         matches = [p for p in places.places(name)
                    if p["state"] in states and inside(p["lat"], p["lng"])]
@@ -211,6 +266,9 @@ def locate(
         used = [first]
     approximate = not all(u[3] for u in used) or len(used) < len(endpoints)
     how = "Located: " + "; ".join(u[2] for u in used)
+    ends = None
     if len(used) == 2:
         how += " (midpoint)"
-    return Located(round(lat, 3), round(lng, 3), approximate=approximate, how=how)
+        if all(u[3] for u in used):
+            ends = [(round(u[0], 5), round(u[1], 5)) for u in used]
+    return Located(round(lat, 3), round(lng, 3), approximate=approximate, how=how, ends=ends)

@@ -3,7 +3,7 @@ import type { CoordinationPair, PairProject } from '../types'
 export type SortKey = 'score' | 'distance' | 'overlap' | 'start'
 
 export const SORT_LABELS: Record<SortKey, string> = {
-  score: 'Highest score',
+  score: 'Best opportunity',
   distance: 'Closest first',
   overlap: 'Most time overlap',
   start: 'Soonest window',
@@ -48,6 +48,25 @@ export function filterPairs(pairs: CoordinationPair[], f: PairFilter): Coordinat
   )
 }
 
+/** Projects of the shown utilities that match the search text (the Review table's scope). */
+export function filterProjects<P extends PairProject>(projects: P[], f: PairFilter): P[] {
+  const q = f.query.trim().toLowerCase()
+  return projects.filter((p) => !f.hiddenUtilities.has(p.utility) && (!q || matches(p, q)))
+}
+
+/** Above this many shown utilities the pair query asks for everything and filters locally. */
+export const MAX_SCOPED_UTILITIES = 40
+
+/**
+ * Utilities to send with the pair query: the shown ones when only some are, so a two-utility
+ * view fetches its few dozen pairs instead of every pair nationwide. Undefined = all pairs.
+ */
+export function pairScope(utilities: string[], hidden: ReadonlySet<string>): string[] | undefined {
+  if (hidden.size === 0) return undefined
+  const shown = utilities.filter((u) => !hidden.has(u))
+  return shown.length <= MAX_SCOPED_UTILITIES ? shown : undefined
+}
+
 function placedIn(p: PairProject, b: ViewBounds): boolean {
   return (
     p.lat != null &&
@@ -69,6 +88,15 @@ export function pairsInView(pairs: CoordinationPair[], b: ViewBounds | null): Co
   })
 }
 
+/** Backend ranking: closest tier first, then composite score, then distance. */
+export function compareRank(a: CoordinationPair, b: CoordinationPair): number {
+  return (
+    (a.tier ?? 99) - (b.tier ?? 99) ||
+    b.scores.composite - a.scores.composite ||
+    a.miles - b.miles
+  )
+}
+
 export function sortPairs(pairs: CoordinationPair[], key: SortKey): CoordinationPair[] {
   const out = [...pairs]
   switch (key) {
@@ -88,16 +116,29 @@ export function sortPairs(pairs: CoordinationPair[], key: SortKey): Coordination
         (a.window_start ?? '\uffff').localeCompare(b.window_start ?? '\uffff'),
       )
     default:
-      return out.sort((a, b) => b.scores.composite - a.scores.composite)
+      return out.sort(compareRank)
   }
 }
 
-/** The highest-scoring pair a project belongs to, if any. */
+/**
+ * The two ends of a pair's map connector: the closest points of the two shapes (what the
+ * distance measures) when the API sends them, else the two project markers.
+ */
+export function pairEnds(pair: CoordinationPair): [[number, number], [number, number]] {
+  const { project_a: a, project_b: b, link } = pair
+  if (link && link.length >= 2) return [link[0], link[link.length - 1]]
+  return [
+    [a.lat!, a.lng!],
+    [b.lat!, b.lng!],
+  ]
+}
+
+/** The best-ranked pair a project belongs to, if any. */
 export function bestPairFor(p: PairProject, pairs: CoordinationPair[]): CoordinationPair | null {
   let best: CoordinationPair | null = null
   for (const pair of pairs) {
     if (pair.project_a.id !== p.id && pair.project_b.id !== p.id) continue
-    if (!best || pair.scores.composite > best.scores.composite) best = pair
+    if (!best || compareRank(pair, best) < 0) best = pair
   }
   return best
 }

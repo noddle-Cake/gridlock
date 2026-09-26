@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
-import { milesToKm } from '../lib/distanceBands'
-import { OTHER_COLOR, pct, rangeLabel, timingLabel } from '../lib/format'
+import { milesToKm, TIERS } from '../lib/distanceBands'
+import { OTHER_COLOR, pct, rangeLabel, timingLabel, usdRange } from '../lib/format'
 import { SORT_LABELS, type SortKey, scoreBand } from '../lib/pairs'
 import type { CoordinationPair, PairProject } from '../types'
 
@@ -119,6 +119,7 @@ export function PairList({
         {pairs.slice(0, limit).map((pair) => {
           const { project_a: a, project_b: b } = pair
           const band = scoreBand(pair.scores.composite)
+          const tier = pair.tier != null ? TIERS[pair.tier] : undefined
           const approximate = a.approximate || b.approximate
           return (
             <li key={pair.id}>
@@ -148,6 +149,18 @@ export function PairList({
                     </span>
                   ) : null}
                 </span>
+                {tier ? (
+                  <span className={`tier tier-${pair.tier}`} title={tier.detail}>
+                    {tier.label} <span className="tier-detail">· {tier.detail}</span>
+                  </span>
+                ) : null}
+                {pair.impact && pair.impact.if_aligned_high > 0 ? (
+                  <span className="card-value" title="Rough, assumption-based estimate">
+                    {pair.impact.total_high > 0
+                      ? `≈ ${usdRange(pair.impact.total_low, pair.impact.total_high)} coordination value`
+                      : `≈ ${usdRange(pair.impact.if_aligned_low, pair.impact.if_aligned_high)} if schedules aligned`}
+                  </span>
+                ) : null}
                 <ProjectLine p={a} color={colorOf(a)} />
                 <ProjectLine p={b} color={colorOf(b)} />
                 <span className="card-foot">

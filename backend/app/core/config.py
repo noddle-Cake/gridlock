@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     geocoder: str = "nominatim"  # nominatim | none
     geocoder_user_agent: str = "GridMerge/0.1 (hackathon demo)"
     cors_origins: str = "http://localhost:5173"
+    # gzip JSON responses (the pair list runs to megabytes). The deploy stack turns this
+    # off because Caddy already compresses, with zstd where the browser takes it.
+    compress_responses: bool = True
 
     # HIFLD transmission-line reference layer (existing lines). The snapshot committed
     # under app/data is loaded into an empty table at startup; refresh it with

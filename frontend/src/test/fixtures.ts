@@ -42,6 +42,8 @@ export function pair(overrides: Partial<CoordinationPair> = {}): CoordinationPai
       approximate: true,
     }),
     miles: 15.62,
+    band: '25',
+    tier: 3,
     overlap_days: 213,
     overlap_ratio: 0.58,
     time_gap_days: 0,
