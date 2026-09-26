@@ -9,15 +9,16 @@ import {
   MapContainer,
   Pane,
   Polyline,
-  TileLayer,
   Tooltip,
   useMap,
 } from 'react-leaflet'
 
 import { lineBounds, lineOwners, lineStyle, lineTooltip, UNKNOWN_OWNER } from '../lib/lines'
 import { markerStyle } from '../lib/mapStyle'
+import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE } from '../lib/powerGrid'
 import { enableSmoothWheelZoom } from '../lib/smoothWheelZoom'
 import type { CoordinationPair, LineCollection, LineFeature, Project } from '../types'
+import { PowerGridLayer } from './PowerGridLayer'
 
 function FitBounds({ bounds }: { bounds: LatLngBoundsExpression | null }) {
   const map = useMap()
@@ -108,10 +109,7 @@ export function MapView({
         className="map"
       >
         <SmoothWheelZoom />
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <PowerGridLayer />
         <FitBounds bounds={pairBounds ?? allBounds} />
         {/* Existing lines sit in their own pane under the project markers. */}
         <Pane name="reference-lines" style={{ zIndex: 350 }}>
@@ -187,6 +185,25 @@ export function MapView({
         </span>
         <span className="legend-item">
           <span className="swatch swatch-approx" /> approximate location
+        </span>
+      </div>
+      <div className="map-legend grid-legend" aria-label="Power grid legend">
+        <span>Grid lines (kV):</span>
+        {[...VOLTAGE_SCALE].reverse().map(([kv, c]) => (
+          <span key={kv} className="legend-item">
+            <span className="swatch swatch-line" style={{ background: c }} />
+            {kv}+
+          </span>
+        ))}
+        <span className="legend-item">
+          <span className="swatch swatch-line" style={{ background: LOW_VOLTAGE_COLOR }} />
+          lower / unknown
+        </span>
+        <span className="legend-item">
+          <span className="swatch swatch-substation" /> substation
+        </span>
+        <span className="legend-item">
+          <span className="swatch swatch-plant" /> power plant
         </span>
       </div>
       {lines && owners.length ? (
