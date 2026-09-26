@@ -31,6 +31,10 @@ services:
       # gemini-2.5-flash is closed to new keys; the free tier allows 5 requests/min.
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
       GEMINI_RPM: ${GEMINI_RPM:-5}
+      # Sign-in: both set = the app needs a session; either empty = open (app/core/auth.py).
+      AUTH_USERNAME: ${AUTH_USERNAME:-}
+      AUTH_PASSWORD: ${AUTH_PASSWORD:-}
+      AUTH_SECRET: ${AUTH_SECRET:-}
       GEOCODER: nominatim
       # Demo-seed source links, served by the API mounted at /api.
       SAMPLE_BASE_URL: /api/samples

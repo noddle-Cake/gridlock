@@ -10,6 +10,7 @@ import {
 
 import { ApiError, api } from './api'
 import { AskPanel, type AskState } from './components/AskPanel'
+import type { Account } from './components/AuthGate'
 import { FilterMenu } from './components/FilterMenu'
 import { type MapFocus, MapView } from './components/MapView'
 import { PairList } from './components/PairList'
@@ -49,7 +50,8 @@ const REQUERY_DEBOUNCE_MS = 150
 
 type Tab = 'radar' | 'review'
 
-export default function App() {
+/** `account` is the signed-in user (AuthGate); null when the server has no sign-in. */
+export default function App({ account = null }: { account?: Account | null }) {
   const [projects, setProjects] = useState<Project[]>([])
   // The first project load decides the utility focus, which scopes the pair query.
   const [projectsLoaded, setProjectsLoaded] = useState(false)
@@ -382,6 +384,16 @@ export default function App() {
           <a href={api.exportUrl('pdf', MAX_RADIUS_MILES, bands, scope)} download>
             Export PDF
           </a>
+          {account ? (
+            <button
+              type="button"
+              className="sign-out"
+              title={account.username ? `Signed in as ${account.username}` : undefined}
+              onClick={account.onSignOut}
+            >
+              Sign out
+            </button>
+          ) : null}
         </div>
       </header>
 

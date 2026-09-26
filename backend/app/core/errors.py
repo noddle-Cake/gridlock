@@ -104,6 +104,16 @@ class AskTimeoutError(GridMergeError):
     code = "ask_timeout"
 
 
+class InvalidCredentialsError(GridMergeError):
+    status_code = 401
+    code = "invalid_credentials"
+
+
+class TooManyAttemptsError(GridMergeError):
+    status_code = 429
+    code = "too_many_attempts"
+
+
 class AskFailedError(GridMergeError):
     status_code = 502
     code = "ask_failed"
