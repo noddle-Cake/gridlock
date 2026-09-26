@@ -10,6 +10,7 @@ import asyncpg
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -74,6 +75,8 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    if settings.compress_responses:
+        app.add_middleware(GZipMiddleware, minimum_size=1024)
     install_error_handlers(app)
 
     @app.exception_handler(RequestValidationError)

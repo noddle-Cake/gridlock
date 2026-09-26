@@ -289,17 +289,19 @@ Tasks and sub-tasks tagged **[Stretch]** are explicitly out of the MVP path.
     - With 3+ utilities, every distinct utility combination is considered by matching (DB-backed)
     - _Requirements: 15.2_
 
-- [ ] 16. [Stretch] Transmission-line geometry
-  - [ ] 16.1 Represent transmission lines by endpoint substations and match on line geometry
+- [x] 16. [Stretch] Transmission-line geometry
+  - [x] 16.1 Represent transmission lines by endpoint substations and match on line geometry
     - For `transmission line` projects, build a two-point/LINESTRING geometry from endpoint substations and measure distance for line-involving pairs against that geometry via the same `ST_Distance`/`ST_DWithin` operators
+    - Done: `projects.route` (both endpoints on exact OSM substations), closest-point `ST_Distance` over `COALESCE(route, geom)`; each pair returns the closest-point `link` the map draws
     - _Requirements: 17.1, 17.2_
 
-  - [ ]* 16.2 Write example tests for line-involving distance
+  - [x]* 16.2 Write example tests for line-involving distance
     - Line-involving distance uses the line geometry rather than a single point
+    - Done: `tests/test_api.py::test_pair_link_is_the_closest_points` (a route through a point is 0 mi, touching)
     - _Requirements: 17.1, 17.2_
 
 - [ ] 17. [Stretch] Public deployment (AWS Lightsail + GoDaddy)
-  - [ ] 17.1 Configure the AWS Lightsail deployment
+  - [x] 17.1 Configure the AWS Lightsail deployment
     - Build one container image serving the FastAPI backend under `/api` and the built React bundle at `/`; run it with Postgres/PostGIS and Caddy (HTTPS) via Docker Compose on one Lightsail instance, deployed over SSH from GitHub Actions only after tests pass on `master`; keep the DB password and `GEMINI_API_KEY` in GitHub secrets written to the server's `.env` so nothing sensitive is baked into the frontend bundle
     - _Requirements: 16.1_
 

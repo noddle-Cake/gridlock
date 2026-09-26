@@ -22,6 +22,7 @@ import argparse
 import asyncio
 import csv
 from collections import Counter
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
@@ -152,6 +153,16 @@ def desc_projects(path: Path, *, offline: bool) -> list[repo.NewProject]:
         for e in entries:
             where = locate(e.endpoints, desc.STATES, places, operator=desc.UTILITY,
                            bounds=desc.BOUNDS)
+            extra = [n for n in e.description_endpoints if n not in e.endpoints]
+            if where.requires_review and extra:
+                # Guide Part 2: re-read the description. A new tap or substation is often
+                # described by the line it hangs off ("Okatie – Riverport 230 kV"); place the
+                # project on that line, approximately, and draw no route for it.
+                alt = locate([*e.endpoints, *extra], desc.STATES, places,
+                             operator=desc.UTILITY, bounds=desc.BOUNDS)
+                if not alt.requires_review:
+                    where = replace(alt, approximate=True, ends=None,
+                                    how=f"{alt.how} (endpoints from the project description)")
             stats["review" if where.requires_review else
                   "approximate" if where.approximate else "exact"] += 1
             start, end = e.in_service or (None, None)

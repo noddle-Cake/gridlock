@@ -7,7 +7,7 @@ import re
 
 from app.core.errors import BriefGenerationError, BriefTimeoutError
 from app.models.dto import CoordinationPairDTO, ProjectDTO
-from app.services.llm import LLMClient
+from app.services.llm import LLMClient, UnconfiguredClient
 
 TIMEOUT_S = 30.0
 MAX_CHARS = 600
@@ -55,7 +55,11 @@ def window_text(pair: CoordinationPairDTO) -> str:
         share = f"{round((pair.overlap_ratio or 0) * 100)}% overlapping build windows"
         return f"{share}, shared {_day(pair.window_start)} – {_day(pair.window_end)}"
     if pair.time_gap_days is not None:
-        return f"in-service dates about {gap_text(pair.time_gap_days)} apart"
+        # Name the years: they are what finalize_brief checks a brief states.
+        years = sorted(set(_years(pair)))
+        when = (f" {years[0]} and {years[1]}," if len(years) == 2
+                else f" both in {years[0]}," if years else "")
+        return f"in-service dates{when} about {gap_text(pair.time_gap_days)} apart"
     return "schedule not published for one of the projects"
 
 
@@ -134,10 +138,56 @@ def finalize_brief(raw: str, pair: CoordinationPairDTO) -> str:
     return brief
 
 
+# What each distance tier lets the two projects share (matching.TIERS order): the proposed
+# opportunity of a template brief.
+TIER_OPPORTUNITY = [
+    "They touch, so the two utilities should agree one outage window and the crossing design "
+    "before either one builds.",
+    "At under 1.6 km apart they could share right-of-way, access roads and one permit package.",
+    "At under 8 km apart they could share a laydown yard and coordinate deliveries.",
+    "They are within one crew's driving range, so they could share line crews, cranes and "
+    "contractors.",
+]
+
+
+def _usd(n: float) -> str:
+    return f"${n / 1e6:.1f}M" if n >= 1e6 else f"${round(n / 1e3)}k"
+
+
+def template_brief(pair: CoordinationPairDTO) -> str:
+    """A brief built only from the pair's facts, for deployments without a model: the
+    distance and timing, what the tier allows sharing, and the rough value estimate."""
+    tier = pair.tier if pair.tier is not None and 0 <= pair.tier < len(TIER_OPPORTUNITY) else 3
+    sentences = [facts_sentence(pair), TIER_OPPORTUNITY[tier]]
+    impact = pair.impact
+    if pair.window_start is None and pair.time_gap_days is not None:
+        sentences.append("Their build windows don't overlap today, so the schedules would need "
+                         "aligning first.")
+    if impact and impact.if_aligned_high:
+        low, high = ((impact.total_low, impact.total_high) if impact.total_high
+                     else (impact.if_aligned_low, impact.if_aligned_high))
+        sentences.append(f"A rough, assumption-based value is {_usd(low)}–{_usd(high)}.")
+    # Facts come first, so fitting to the limits keeps them; no model markup to clean up
+    # (finalize_brief would also strip the '#' of "#2" from project names).
+    return _fit(sentences) or finalize_brief(" ".join(sentences), pair)
+
+
 class BriefGenerator:
     def __init__(self, llm: LLMClient, *, timeout: float = TIMEOUT_S) -> None:
         self._llm = llm
         self._timeout = timeout
+
+    @property
+    def configured(self) -> bool:
+        return not isinstance(self._llm, UnconfiguredClient)
+
+    async def draft(self, pair: CoordinationPairDTO) -> tuple[str, str]:
+        """(text, source): the model's brief ("llm"), or, when no model is configured, a
+        template from the pair's facts ("template") so briefs still work offline. A
+        configured model that fails still raises, as generate() does (Req 8.6, 8.7)."""
+        if not self.configured:
+            return template_brief(pair), "template"
+        return await self.generate(pair), "llm"
 
     async def generate(self, pair: CoordinationPairDTO) -> str:
         """Never returns a partial brief: timeout -> BriefTimeoutError (Req 8.6), any other

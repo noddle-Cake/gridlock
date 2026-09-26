@@ -7,14 +7,14 @@ Status: In Progress
 Planned In-Service Date: 12/31/23
 Estimated cost (Previous, 2024-2028, Total): $4,604,301, $800,000, $0, $0, $0, $0, $5,404,301
 Located: Queensboro = OSM substation 'Queensboro Substation' (SC)"
-Dominion Energy South Carolina,SC,Union Pier 115-13.8 kV Sub: Tap,transmission line,115.0,2027-12-31,,,,,5300000,False,True,0.6,Union Pier,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,2,"Union Pier 115-13.8 kV Sub: Tap
+Dominion Energy South Carolina,SC,Union Pier 115-13.8 kV Sub: Tap,transmission line,115.0,2027-12-31,,32.8,-79.942,,5300000,True,False,0.8,Union Pier,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,2,"Union Pier 115-13.8 kV Sub: Tap
 Project ID: 0167C-D
 Description: Installing a 115 kV Tap to feed the future Union Pier 115 kV Sub.
 Need: This project is needed to for load growth in the Charleston area.
 Status: Planned
 Planned In-Service Date: 12/31/27
 Estimated cost (Previous, 2024-2028, Total): $0, $0, $100,000, $100,000, $5,100,000, $0, $5,300,000
-No substation or place match; needs review."
+Located: Union Pier = Charleston County, SC (county centre, curated)"
 Dominion Energy South Carolina,SC,"Okatie 230-115kV Substation, Jasper – Yemassee 230kV #1 Fold-in",transmission line,230.0,2024-12-31,,32.334,-81.032,,11116933,False,False,0.95,Okatie,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,3,"Okatie 230-115kV Substation, Jasper – Yemassee 230kV #1 Fold-in
 Project ID: 0139 M,N
 Description: Expand existing Okatie Transmission sub, add a 230-115 autobank and fold the Jasper – Yemassee 230 kV #1 line into the 230 kV side. Construct two additional 115 kV bus tie lines.
@@ -63,14 +63,14 @@ Status: In Progress
 Planned In-Service Date: 12/31/26
 Estimated cost (Previous, 2024-2028, Total): $332,096, $80,000, $100,000, $4,400,000, $0, $0, $4,912,096
 Located: Denny Terrace = OSM substation 'Denny Terrace Substation' (SC)"
-Dominion Energy South Carolina,SC,Wateree-Killian 230kV: Rebuild,transmission line,230.0,2028-12-31,,,,,48224719,False,True,0.6,Wateree - Killian,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,9,"Wateree-Killian 230kV: Rebuild
+Dominion Energy South Carolina,SC,Wateree-Killian 230kV: Rebuild,transmission line,230.0,2028-12-31,,33.928,-80.761,,48224719,True,False,0.8,Wateree - Killian,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,9,"Wateree-Killian 230kV: Rebuild
 Project ID: 6808 R
 Description: Replace wooden H-Frame structures with Self Supporting Steel Structures.
 Need: This project is required to address end of life and reliability issues on these lines.
 Status: In Progress
 Planned In-Service Date: 12/31/28
 Estimated cost (Previous, 2024-2028, Total): $174,719, $0, $100,000, $450,000, $25,000,000, $22,500,000, $48,224,719
-No substation or place match; needs review."
+Located: Wateree = curated point (OSM 'Wateree Substation' beside DESC's Wateree Station, Richland County); Killian = Richland County, SC (county centre, curated) (midpoint)"
 Dominion Energy South Carolina,SC,Okatie-Bluffton 115kV: Rebuild,transmission line,115.0,2025-06-01,,32.284,-80.943,32.33376 -81.03249;32.235 -80.853,40660000,False,False,0.95,Okatie - Bluffton,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,10,"Okatie-Bluffton 115kV: Rebuild
 Project ID: 6808 S
 Description: Replace wooden H-Frame structures with Self Supporting Steel Structures and upgrade conductor to standard 1272 ACSR.
@@ -119,14 +119,14 @@ Status: Planned
 Planned In-Service Date: 12/31/25
 Estimated cost (Previous, 2024-2028, Total): $0, $50,000, $200,000, $7,550,000, $0, $0, $7,800,000
 Located: Stevens Creek = OSM substation 'Stevens Creek Dam Substation' (GA)"
-Dominion Energy South Carolina,SC,"Edenwood Sub: #1 & #2 230-115kV Autobanks, Replace with 336MVA",substation,230.0,2024-12-25,,,,,10833462,False,True,0.6,Edenwood,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,16,"Edenwood Sub: #1 & #2 230-115kV Autobanks, Replace with 336MVA
+Dominion Energy South Carolina,SC,"Edenwood Sub: #1 & #2 230-115kV Autobanks, Replace with 336MVA",substation,230.0,2024-12-25,,33.892,-81.273,,10833462,True,False,0.8,Edenwood,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,16,"Edenwood Sub: #1 & #2 230-115kV Autobanks, Replace with 336MVA
 Project ID: 6805 G
 Description: Replace Autobank 1 and 2 at Edenwood Substation.
 Need: This project is required to address end of life and maintenance issues on these transformers.
 Status: In Progress
 Planned In-Service Date: 12/25/24
 Estimated cost (Previous, 2024-2028, Total): $3,300,432, $7,533,030, $0, $0, $0, $0, $10,833,462
-No substation or place match; needs review."
+Located: Edenwood = Lexington County, SC (county centre, curated)"
 Dominion Energy South Carolina,SC,"Williams St Sub: Replace Sw House & Relays, AM Williams Sub: Replace Sw House, and McMeekin Sub: Add Sw House",substation,,2028-12-31,,,,,9898924,False,True,0.6,Williams St,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,17,"Williams St Sub: Replace Sw House & Relays, AM Williams Sub: Replace Sw House, and McMeekin Sub: Add Sw House
 Project ID: 1060A, I, L
 Description: Replace switch house, switch house equipment, and relay panels at Williams Street substation. Replace the switch house at AM Williams substation. Add Switching House at McMeekin Substation to move relays from plant relay room.
@@ -143,14 +143,14 @@ Status: Planned
 Planned In-Service Date: 3/31/2027
 Estimated cost (Previous, 2024-2028, Total): $0, $0, $250,000, $1,500,000, $1,000,000, $0, $2,750,000
 Located: Harleyville = OSM substation 'Harleyville Substation' (SC)"
-Dominion Energy South Carolina,SC,Summerville: Replace and Spare 230-115kV 336MVA Auto Bank,substation,230.0,2024-12-31,,,,,3982052,False,True,0.6,Summerville,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,19,"Summerville: Replace and Spare 230-115kV 336MVA Auto Bank
+Dominion Energy South Carolina,SC,Summerville: Replace and Spare 230-115kV 336MVA Auto Bank,substation,230.0,2024-12-31,,33.082,-80.405,,3982052,True,False,0.8,Summerville,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,19,"Summerville: Replace and Spare 230-115kV 336MVA Auto Bank
 Project ID: 05004 P
 Description: Purchase a spare 230/115kV, 336MVA Autobank for the Southern Region to be stored at Summerville 230kV Sub. Include a pad, AC for heaters, and possibly a pit for oil containment.
 Need: Spare equipment needs.
 Status: In Progress
 Planned In-Service Date: 12/31/2024
 Estimated cost (Previous, 2024-2028, Total): $782,052, $3,200,000, $0, $0, $0, $0, $3,982,052
-No substation or place match; needs review."
+Located: Summerville = Dorchester County, SC (county centre, curated)"
 Dominion Energy South Carolina,SC,Canadys-Ritter 115KV-Rebld SPDC 230/115KV 1272 (Approx 18 Miles),transmission line,230.0,2026-06-01,,32.957,-80.639,,40000000,True,False,0.8,Canadys - Ritter,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,20,"Canadys-Ritter 115KV-Rebld SPDC 230/115KV 1272 (Approx 18 Miles)
 Project ID: 06076A
 Description: Rebuild Canadys-Ritter 115 kV line as SPDC with 230 kV on one side and 115 kV on the other side.
@@ -167,14 +167,14 @@ Status: Planned
 Planned In-Service Date: 6/1/2026
 Estimated cost (Previous, 2024-2028, Total): $100,000, $1,300,000, $18,700,000, $20,511,419, $0, $0, $40,611,419
 Located: Yemassee = OSM substation 'Yemassee Substation' (SC); Ritter ~ Colleton County, SC (county centre) (midpoint)"
-Dominion Energy South Carolina,SC,Riverport Tap: Construct Tap,transmission line,,2025-12-31,,,,,34877427,False,True,0.6,Riverport,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,22,"Riverport Tap: Construct Tap
+Dominion Energy South Carolina,SC,Riverport Tap: Construct Tap,transmission line,,2025-12-31,,32.334,-81.032,,34877427,True,False,0.8,Riverport,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,22,"Riverport Tap: Construct Tap
 Project ID: 06367 A - C, H
 Description: Construct Okatie – Riverport 230 kV to feed new Distribution substation.
 Need: Load growth.
 Status: In Progress
 Planned In-Service Date: 12/31/25
 Estimated cost (Previous, 2024-2028, Total): $4,337,401, $1,900,181, $11,489,845, $50,000, $0, $0, $34,877,427
-No substation or place match; needs review."
+Located: Okatie = OSM substation 'Okatie Substation' (SC) (endpoints from the project description)"
 Dominion Energy South Carolina,SC,Jasper – Okatie 230 kV #2: Construct,transmission line,230.0,2025-12-31,,32.347,-81.078,32.361 -81.124;32.33376 -81.03249,23787423,False,False,0.95,Jasper - Okatie,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,23,"Jasper – Okatie 230 kV #2: Construct
 Project ID: 06367 D - G
 Description: Construct a 230 kV line with B1272 ACSR from Jasper to Okatie 230/115kV Substation. The line is estimated to be 6.5 miles long. This makes Jasper a Medium Impact substation and will require a new CIP Hut.
@@ -207,22 +207,22 @@ Status: Planned
 Planned In-Service Date: 12/31/29
 Estimated cost (Previous, 2024-2028, Total): $0, $0, $0, $500,000, $9,500,000, $10,000,000, $30,000,000
 Located: Ward = OSM substation 'Ward Substation' (SC)"
-Dominion Energy South Carolina,SC,Goose Creek Reservoir: Rebuild Transmission Line Crossings,transmission line,,2024-12-31,,,,,9655669,False,True,0.6,Goose Creek Reservoir,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,27,"Goose Creek Reservoir: Rebuild Transmission Line Crossings
+Dominion Energy South Carolina,SC,Goose Creek Reservoir: Rebuild Transmission Line Crossings,transmission line,,2024-12-31,,32.934,-79.974,,9655669,True,False,0.8,Goose Creek Reservoir,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,27,"Goose Creek Reservoir: Rebuild Transmission Line Crossings
 Project ID: 06810 G
 Description: Rebuilding the Williams Goose Creek 230 and 115 kV lines and the Williams - Faber Place 230 kV line across the Goose Creek Reservoir.
 Need: This project is required to address end of life and maintenance issues.
 Status: In Progress
 Planned In-Service Date: 12/31/24
 Estimated cost (Previous, 2024-2028, Total): $255,669, $9,400,000, $0, $0, $0, $0, $9,655,669
-No substation or place match; needs review."
-Dominion Energy South Carolina,SC,Summerville 115kV Loop: Rebuild,transmission line,115.0,2024-12-31,,,,,12475000,False,True,0.6,Summerville,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,28,"Summerville 115kV Loop: Rebuild
+Located: Williams = OSM substation 'Williams Substation' (SC); Faber Place = OSM substation 'Faber Place Substation' (SC) (midpoint) (endpoints from the project description)"
+Dominion Energy South Carolina,SC,Summerville 115kV Loop: Rebuild,transmission line,115.0,2024-12-31,,33.082,-80.405,,12475000,True,False,0.8,Summerville,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,28,"Summerville 115kV Loop: Rebuild
 Project ID: 06810 H
 Description: Replacing several wood pole sections on the Summerville 115 kV Loop that have reached the end of life.
 Need: This project is required to address end of life and maintenance issues.
 Status: In Progress
 Planned In-Service Date: 12/31/24
 Estimated cost (Previous, 2024-2028, Total): $2,475,000, $6,000,000, $4,000,000, $0, $0, $0, $12,475,000
-No substation or place match; needs review."
+Located: Summerville = Dorchester County, SC (county centre, curated)"
 Dominion Energy South Carolina,SC,St George - Sumter 230kV Tie: Rebuild Line from Santee Substation - Duke/Progress Energy Tie,transmission line,230.0,2025-12-31,,33.549,-80.458,33.199 -80.592;33.898 -80.324,4000000,False,False,0.95,St George - Sumter,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,29,"St George - Sumter 230kV Tie: Rebuild Line from Santee Substation - Duke/Progress Energy Tie
 Project ID: 6809 M
 Description: Rebuild Line from Santee Substation - Duke/Progress Energy Tie.
@@ -231,14 +231,14 @@ Status: Planned
 Planned In-Service Date: 12/31/2025
 Estimated cost (Previous, 2024-2028, Total): $0, $300,000, $3,700,000, $0, $0, $0, $4,000,000
 Located: St George = OSM substation 'Saint George Switching Station' (SC); Sumter = OSM substation 'Sumter Substation' (SC) (midpoint)"
-Dominion Energy South Carolina,SC,Coit – Gills Creek 115kV: Construct,transmission line,115.0,2024-12-31,,,,,2509602,False,True,0.6,Coit - Gills Creek,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,30,"Coit – Gills Creek 115kV: Construct
+Dominion Energy South Carolina,SC,Coit – Gills Creek 115kV: Construct,transmission line,115.0,2024-12-31,,34.029,-80.898,,2509602,True,False,0.8,Coit - Gills Creek,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,30,"Coit – Gills Creek 115kV: Construct
 Project ID: 5392 A-C
 Description: Convert the existing Coit - Gills Creek 33 kV Line to 115 kV. Approximately 1.25 miles. Construct Gills Creek Terminal at Coit Bus #1.
 Need: Load growth.
 Status: In Progress
 Planned In-Service Date: 12/31/2024
 Estimated cost (Previous, 2024-2028, Total): $330,954, $2,178,648, $0, $0, $0, $0, $2,509,602
-No substation or place match; needs review."
+Located: Coit = Richland County, SC (county centre, curated); Gills Creek = Richland County, SC (county centre, curated) (midpoint)"
 Dominion Energy South Carolina,SC,Hooks - Thurmond 115kV Tie: Rebuild,transmission line,115.0,2024-12-31,,33.66,-82.196,,2200080,True,False,0.8,Hooks - Thurmond,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,31,"Hooks - Thurmond 115kV Tie: Rebuild
 Project ID: 6810 A
 Description: Rebuilding section of line between Hooks and Thurmond. Approximately 2.3 miles. The line will be rebuilt on existing R/W using steel poles, 115 kV insulation, and 1272 ACSR conductor.
@@ -263,14 +263,14 @@ Status: In Progress
 Planned In-Service Date: 3/31/2026
 Estimated cost (Previous, 2024-2028, Total): $65,000, $360,000, $22,975,000, $285,000, $0, $0, $23,685,000
 No substation or place match; needs review."
-Dominion Energy South Carolina,SC,Dawson 230kV Sub and Fold-in: Construct and Rebuild,transmission line,230.0,2025-10-01,2026-10-01,,,,93538207,False,True,0.6,Dawson,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,34,"Dawson 230kV Sub and Fold-in: Construct and Rebuild
+Dominion Energy South Carolina,SC,Dawson 230kV Sub and Fold-in: Construct and Rebuild,transmission line,230.0,2025-10-01,2026-10-01,32.957,-80.318,,93538207,True,False,0.8,Dawson,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,34,"Dawson 230kV Sub and Fold-in: Construct and Rebuild
 Project ID: 6859
 Description: Construct Dawson 230kV substation. Fold in the existing Canadys – Church Creek and Canadys – Faber Place 230kV lines at the Dawson 230kV substation (phase 1). Rebuild Canadys – Dawson 230kV #1 and #2 with B1272 ACSR (phase 2).
 Need: Load growth.
 Status: In Progress
 Planned In-Service Date: 10/1/2025 (phase 1) and 10/1/2026 (phase 2)
 Estimated cost (Previous, 2024-2028, Total): $284,366, $8,014,000, $45,475,000, $39,764,841, $0, $0, $93,538,207
-No substation or place match; needs review."
+Located: Canadys = OSM substation 'Canadys Substation' (SC); Faber Place = OSM substation 'Faber Place Substation' (SC) (midpoint) (endpoints from the project description)"
 Dominion Energy South Carolina,SC,Urquhart – Toolebeck 115kV line: Rebuild,transmission line,115.0,2026-08-12,,33.484,-81.79,33.433 -81.911;33.535 -81.669,17520000,False,False,0.95,Urquhart - Toolebeck,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,35,"Urquhart – Toolebeck 115kV line: Rebuild
 Project ID: 6852
 Description: Upgrade the 477 ACSR portions of the Urquhart – Toolebeck 115 kV line to 1272 ACSR. Replace existing structures with Single Pole Double Circuit Structures. Approximately 12.5 miles.
@@ -286,7 +286,7 @@ Need: This project is needed to improve system performance and to meet NERC TPL 
 Status: Planned
 Planned In-Service Date: 5/1/2027
 Estimated cost (Previous, 2024-2028, Total): $0, $50,000, $250,000, $9,000,000, $10,000,000, $0, $19,300,000
-Located: Williams = OSM substation 'Williams Substation' (SC); Summerville ~ Dorchester County, SC (county centre) (nearest of 2) (midpoint)"
+Located: Williams = OSM substation 'Williams Substation' (SC); Summerville = Dorchester County, SC (county centre, curated) (midpoint)"
 Dominion Energy South Carolina,SC,Cainhoy 115 kV Tap: Construct,transmission line,115.0,2027-12-31,,32.941,-79.842,,21850000,False,False,0.95,Cainhoy,desc_2024-2028_projects_2m_and_above.pdf,https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf,37,"Cainhoy 115 kV Tap: Construct
 Project ID: 0147 C, K
 Description: Construct a 115 kV tap from Cainhoy to Clements Ferry. Approximately 2.8 miles. Construct terminal at Cainhoy.

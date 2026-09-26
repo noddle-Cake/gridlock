@@ -129,10 +129,23 @@ straight segment between them); matching measures closest points on it.
 - Located the same way as SERTP, plus `app/data/curated_substations.csv`: substations OSM
   doesn't have, each with its source (Okatie from Sperry's reference table; DESC's
   "Queensboro" is OSM's "Queensborough").
-- Result: DESC 11 placed on substations, 22 approximate, 11 for review; Georgia Power 39,
-  62 and 37. Every project in Sperry's reference table lands on the same substation Sperry
-  used (within ~0.5 km), except Hooks, Purrysburg and Ft Johnson, which neither OSM nor
-  Sperry could place.
+- `app/data/place_overrides.csv` (guide Part 2, "a similarly-named substation in the wrong
+  zone or county is a common false match"): per-utility corrections that win over the OSM
+  and place lookups, each with its reason. A row pins a name to a point or a county
+  centre, or blocks a wrong match so the name stays unplaced. It moved Georgia Power's
+  metro-Atlanta Adamsville, Grady, Atkinson, Jack McDonough and Factory Shoals, and Plant
+  Hammond (Floyd County), off same-named places by the SC border, and blocked Buzzard
+  Roost from matching Santee Cooper's Buzzard Roost Dam in SC. Those misplacements had
+  created 5 false DESC ↔ Georgia Power pairs.
+- A DESC project whose title names only a new site is placed, approximately and with no
+  route, on the line its description names ("Riverport Tap" is "Construct Okatie –
+  Riverport 230 kV").
+- Result: DESC 11 placed on substations, 31 approximate, 2 for review (Scout, Williams St);
+  Georgia Power 39, 63 and 36. Every project in Sperry's reference table lands on the same
+  substation Sperry used (within ~0.5 km), except Hooks, Purrysburg and Ft Johnson, which
+  neither OSM nor Sperry could place.
+- SERTP's own rows (for example GTC's Adamsville – Buzzard Roost) still carry the old
+  placements until `load_public_sources sertp` is re-run with overrides for those owners.
 - Georgia Power and SERTP's "Southern Company" rows are one planning entity
   (`services/owners.py`), so a project listed in both never pairs with itself.
 

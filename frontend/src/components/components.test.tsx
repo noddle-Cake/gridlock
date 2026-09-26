@@ -69,6 +69,35 @@ describe('WhyFlaggedPanel (Req 11)', () => {
     expect(screen.getByTestId('overlap-days')).toHaveTextContent('None')
   })
 
+  it('draws both build windows, hatching the stretch both are building', () => {
+    const windows = {
+      build_a: ['2026-01-01', '2026-06-30'] as [string, string],
+      build_b: ['2026-04-01', '2026-12-31'] as [string, string],
+      window_start: '2026-04-01',
+      window_end: '2026-06-30',
+    }
+    const { container, rerender } = render(
+      <WhyFlaggedPanel pair={pair(windows)} colorOf={colorOf} onGenerateBrief={vi.fn()} />,
+    )
+    const strip = screen.getByRole('region', { name: 'Build windows' })
+    const bars = container.querySelectorAll<HTMLElement>('.bw-bar')
+    expect(bars).toHaveLength(2)
+    expect(bars[0].style.background).toBe('rgb(47, 111, 223)') // project A's utility colour
+    expect(within(strip).getByTestId('bw-shared')).toHaveTextContent('Both building')
+
+    // Windows that never meet: two bars, no hatching.
+    const apart = { ...windows, build_b: ['2028-01-01', '2028-12-31'] as [string, string] }
+    rerender(
+      <WhyFlaggedPanel
+        pair={pair({ ...apart, window_start: null, window_end: null })}
+        colorOf={colorOf}
+        onGenerateBrief={vi.fn()}
+      />,
+    )
+    expect(container.querySelectorAll('.bw-bar')).toHaveLength(2)
+    expect(screen.queryByTestId('bw-shared')).toBeNull()
+  })
+
   it('says explicitly when no brief exists, and shows one when it does', () => {
     const { rerender } = render(
       <WhyFlaggedPanel pair={pair()} colorOf={colorOf} onGenerateBrief={vi.fn()} />,
@@ -78,6 +107,15 @@ describe('WhyFlaggedPanel (Req 11)', () => {
     rerender(<WhyFlaggedPanel pair={pair({ brief })} colorOf={colorOf} onGenerateBrief={vi.fn()} />)
     expect(screen.getByTestId('brief-text')).toHaveTextContent('Share a crane crew.')
     expect(screen.queryByTestId('no-brief')).toBeNull()
+    expect(screen.queryByText('template')).toBeNull()
+    rerender(
+      <WhyFlaggedPanel
+        pair={pair({ brief: { ...brief, source: 'template' } })}
+        colorOf={colorOf}
+        onGenerateBrief={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('template')).toBeInTheDocument()
   })
 
   it('requests a brief for the selected pair', async () => {

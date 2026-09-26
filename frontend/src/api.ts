@@ -38,9 +38,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T
 }
 
-export function thresholdQuery(radius: number, bands?: BandId[]): string {
+/** `utilities` keeps only pairs between those utilities; omit it for every pair. */
+export function thresholdQuery(radius: number, bands?: BandId[], utilities?: string[]): string {
   const params = new URLSearchParams({ radius: String(radius) })
   if (bands) params.set('bands', bands.join(','))
+  for (const u of utilities ?? []) params.append('utility', u)
   return params.toString()
 }
 
@@ -63,13 +65,17 @@ export const api = {
       body: JSON.stringify(patch),
     })
   },
-  overlaps: (radius: number, bands?: BandId[]): Promise<OverlapsResponse> =>
-    request(`/overlaps?${thresholdQuery(radius, bands)}`),
+  overlaps: (radius: number, bands?: BandId[], utilities?: string[]): Promise<OverlapsResponse> =>
+    request(`/overlaps?${thresholdQuery(radius, bands, utilities)}`),
   brief: (pairId: string, radius: number): Promise<CoordinationBrief> =>
     request(`/overlaps/${encodeURIComponent(pairId)}/brief?${thresholdQuery(radius)}`, {
       method: 'POST',
     }),
   lines: (): Promise<LineCollection> => request('/lines'),
-  exportUrl: (format: 'csv' | 'pdf', radius: number, bands?: BandId[]): string =>
-    `${API_BASE}/export?format=${format}&${thresholdQuery(radius, bands)}`,
+  exportUrl: (
+    format: 'csv' | 'pdf',
+    radius: number,
+    bands?: BandId[],
+    utilities?: string[],
+  ): string => `${API_BASE}/export?format=${format}&${thresholdQuery(radius, bands, utilities)}`,
 }

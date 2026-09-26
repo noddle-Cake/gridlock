@@ -50,6 +50,12 @@ _TAIL = re.compile(
     r"construct|fold-in|spdc)\b.*$", re.I,
 )
 _LINE_WORDS = re.compile(r"\b(line|tap|tie|loop|fold-in|rebuild|rebld|spdc|section)\b", re.I)
+# A named line in the description: "Construct Okatie – Riverport 230 kV to feed ...",
+# "Rebuild Canadys – Dawson 230kV #1": two capitalised names joined by a dash, then a voltage.
+_NAME = r"[A-Z][A-Za-z0-9.']*(?:\s+[A-Z][A-Za-z0-9.']*)*"
+_DESC_LINE = re.compile(rf"({_NAME})\s*[-–]\s*({_NAME})\s+\d{{2,3}}\s*kV")
+_LEAD_VERB = re.compile(r"^(?:(?:construct|rebuild|rebuilding|replace|replacing|convert|the)\s+)+",
+                        re.I)
 
 
 @dataclass
@@ -96,6 +102,16 @@ class DescEntry:
             if len(part) >= 3 and not part.lower().startswith(("construct", "rebuild")):
                 names.append(part)
         return list(dict.fromkeys(names))
+
+    @property
+    def description_endpoints(self) -> list[str]:
+        """Substations of the lines the description names, for projects whose title names
+        only a new site: 'Riverport Tap' is described as 'Construct Okatie – Riverport 230 kV'
+        -> ['Okatie', 'Riverport']."""
+        names = []
+        for pair in _DESC_LINE.findall(self.description):
+            names += [_LEAD_VERB.sub("", n).strip() for n in pair]
+        return list(dict.fromkeys(n for n in names if len(n) >= 3))
 
     @property
     def kind(self) -> str:

@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  type UIEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 
 import { ApiError, api } from './api'
 import { FilterMenu } from './components/FilterMenu'
@@ -11,13 +19,15 @@ import { UtilityFilter } from './components/UtilityFilter'
 import { focusHidden } from './lib/focus'
 import { WhyFlaggedPanel } from './components/WhyFlaggedPanel'
 import { ALL_BANDS, MAX_RADIUS_MILES, type BandId } from './lib/distanceBands'
-import { utilityColors } from './lib/format'
+import { PALETTE, utilityColors } from './lib/format'
 import { type ColorBy, colorLegend, projectColor } from './lib/mapStyle'
 import {
   type SortKey,
   type ViewBounds,
   bestPairFor,
   filterPairs,
+  filterProjects,
+  pairScope,
   pairsInView,
   sortPairs,
 } from './lib/pairs'
@@ -31,6 +41,8 @@ type Tab = 'radar' | 'review'
 
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([])
+  // The first project load decides the utility focus, which scopes the pair query.
+  const [projectsLoaded, setProjectsLoaded] = useState(false)
   const [pairs, setPairs] = useState<CoordinationPair[]>([])
   const [bands, setBands] = useState<BandId[]>(ALL_BANDS)
   const [confidenceThreshold, setConfidenceThreshold] = useState(DEFAULT_CONFIDENCE_THRESHOLD)
@@ -47,7 +59,8 @@ export default function App() {
   const [lines, setLines] = useState<LineCollection | null>(null)
   const [linesFailed, setLinesFailed] = useState(false)
   const [version, setVersion] = useState(0)
-  const [colorBy, setColorBy] = useState<ColorBy>('type')
+  // Company first: the point of the view is telling two utilities' plans apart.
+  const [colorBy, setColorBy] = useState<ColorBy>('utility')
   const scheme = useColorScheme()
   const requestSeq = useRef(0)
   const focused = useRef(false)
@@ -67,6 +80,7 @@ export default function App() {
         if (hidden) setHiddenUtilities(hidden)
       })
       .catch((e) => setError(describe(e)))
+      .finally(() => setProjectsLoaded(true))
   }, [version])
 
   // Existing transmission lines are a static backdrop: fetch once. A failure only hides
@@ -78,14 +92,29 @@ export default function App() {
       .catch(() => setLinesFailed(true))
   }, [])
 
-  // Re-query matching whenever a threshold control changes (Req 10.3, 10.4). The first load
-  // goes out at once; only later control changes are debounced.
+  const utilities = useMemo(
+    () => [...new Set(projects.map((p) => p.utility))].sort((a, b) => a.localeCompare(b)),
+    [projects],
+  )
+  // With only some utilities shown, the pair query asks for just theirs (all within one
+  // string so the effect below re-runs on a change of content, not of identity).
+  const scope = pairScope(utilities, hiddenUtilities)
+  const scopeKey = scope ? JSON.stringify(scope) : ''
+
+  // Re-query matching whenever a threshold control or the utility scope changes (Req 10.3,
+  // 10.4). The first load goes out at once; only later control changes are debounced.
   useEffect(() => {
+    if (!projectsLoaded) return
     const seq = ++requestSeq.current
+    const only: string[] | undefined = scopeKey ? JSON.parse(scopeKey) : undefined
     const timer = setTimeout(() => {
+      if (only?.length === 0) {
+        setPairs([]) // every utility hidden: nothing to ask for
+        return
+      }
       setLoadingPairs(true)
       api
-        .overlaps(MAX_RADIUS_MILES, bands)
+        .overlaps(MAX_RADIUS_MILES, bands, only)
         .then((res) => {
           if (seq !== requestSeq.current) return // a newer control value won
           setPairs(res.pairs)
@@ -95,18 +124,22 @@ export default function App() {
         .finally(() => seq === requestSeq.current && setLoadingPairs(false))
     }, seq === 1 ? 0 : REQUERY_DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [bands, version])
+  }, [bands, version, scopeKey, projectsLoaded])
 
-  // Only the busiest companies get their own colour; the rest share a neutral "other".
-  const colors = useMemo(() => utilityColors(projects.map((p) => p.utility)), [projects])
+  // Only the busiest companies get their own colour; the rest share a neutral "other". The
+  // utilities on screen take the most distinct colours when there are few enough of them.
+  const colors = useMemo(() => {
+    const shown = utilities.filter((u) => !hiddenUtilities.has(u))
+    const first = hiddenUtilities.size > 0 && shown.length <= PALETTE.length ? shown : []
+    return utilityColors(
+      projects.map((p) => p.utility),
+      first,
+    )
+  }, [projects, utilities, hiddenUtilities])
   // Map markers and panel swatches share one encoding, so a card always matches its dot.
   const colorOf = useCallback(
     (p: PairProject) => projectColor(p, colorBy, colors, scheme),
     [colorBy, colors, scheme],
-  )
-  const utilities = useMemo(
-    () => [...new Set(projects.map((p) => p.utility))].sort((a, b) => a.localeCompare(b)),
-    [projects],
   )
   const utilityCounts = useMemo(() => {
     const m = new Map<string, number>()
@@ -139,7 +172,12 @@ export default function App() {
   )
   const selectedPair = pairs.find((p) => p.id === selectedId) ?? null
   const hoveredPair = pairs.find((p) => p.id === hoveredId) ?? null
-  const reviewCount = projects.filter(
+  // Review follows the same utility and search filters as the radar.
+  const reviewProjects = useMemo(
+    () => filterProjects(projects, { query, hiddenUtilities }),
+    [projects, query, hiddenUtilities],
+  )
+  const reviewCount = reviewProjects.filter(
     (p) => !p.reviewed && (needsReview(p.confidence, confidenceThreshold) || p.requires_review),
   ).length
 
@@ -164,6 +202,18 @@ export default function App() {
   )
 
   const selectPair = useCallback((p: CoordinationPair) => setSelectedId(p.id), [])
+
+  // The list and the pair detail share one scrolling panel. A pair opens at its top, and
+  // "Back to list" returns to where the list was instead of the detail's scroll offset.
+  const panelRef = useRef<HTMLElement>(null)
+  const listScroll = useRef(0)
+  useLayoutEffect(() => {
+    const el = panelRef.current
+    if (el) el.scrollTop = selectedId ? 0 : listScroll.current
+  }, [selectedId])
+  const onPanelScroll = useCallback((e: UIEvent<HTMLElement>) => {
+    if (!selectedRef.current) listScroll.current = e.currentTarget.scrollTop
+  }, [])
 
   const index = selectedPair ? listPairs.findIndex((p) => p.id === selectedPair.id) : -1
   function step(d: number) {
@@ -232,10 +282,10 @@ export default function App() {
           </button>
         </nav>
         <div className="exports">
-          <a href={api.exportUrl('csv', MAX_RADIUS_MILES, bands)} download>
+          <a href={api.exportUrl('csv', MAX_RADIUS_MILES, bands, scope)} download>
             Export CSV
           </a>
-          <a href={api.exportUrl('pdf', MAX_RADIUS_MILES, bands)} download>
+          <a href={api.exportUrl('pdf', MAX_RADIUS_MILES, bands, scope)} download>
             Export PDF
           </a>
         </div>
@@ -302,7 +352,7 @@ export default function App() {
               onBoundsChange={onBoundsChange}
             />
           </div>
-          <aside className="panel" aria-label="Pairs">
+          <aside className="panel" aria-label="Pairs" ref={panelRef} onScroll={onPanelScroll}>
             {selectedPair ? (
               <div className="detail">
                 <nav className="detail-nav" aria-label="Pair navigation">
@@ -364,7 +414,7 @@ export default function App() {
       ) : (
         <main className="review-layout">
           <ReviewTable
-            projects={projects}
+            projects={reviewProjects}
             threshold={confidenceThreshold}
             colors={colors}
             onPatch={patchProject}

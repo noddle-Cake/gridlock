@@ -176,11 +176,15 @@ async def get_overlaps(
     request: Request,
     radius: str | None = Query(default=None),
     bands: str | None = Query(default=None, description="Comma-separated distance bands"),
+    utility: list[str] | None = Query(
+        default=None, description="Keep only pairs between these utilities (repeatable)"
+    ),
 ) -> OverlapsResponse:
     radius_v = matching.parse_radius(radius)
     bands_v = matching.parse_bands(bands)
+    utilities = matching.parse_utilities(utility)
     async with _state(request).pool.acquire() as conn:
-        pairs = await matching.overlaps(conn, radius_v, bands=bands_v)
+        pairs = await matching.overlaps(conn, radius_v, bands=bands_v, utilities=utilities)
     return OverlapsResponse(radius=radius_v, pairs=pairs)
 
 
@@ -198,12 +202,13 @@ async def create_brief(
     if pair is None:
         raise PairNotFoundError(f"Coordination pair {pair_id} was not found.")
 
-    text = await state.brief_generator.generate(pair)  # raises 504 / 502; pair untouched
+    # raises 504 / 502 (pair untouched); a template when no model is configured
+    text, source = await state.brief_generator.draft(pair)
 
     async with state.pool.acquire() as conn:
         stored = await repo.upsert_brief(
             conn, pair_id=pair.id, a_id=pair.project_a.id, b_id=pair.project_b.id, text=text,
-            miles=pair.miles, overlap_days=pair.overlap_days, radius=radius_v,
+            miles=pair.miles, overlap_days=pair.overlap_days, radius=radius_v, source=source,
         )
     return stored.to_dto()
 
@@ -258,6 +263,9 @@ async def export(
     format: str = Query(default="csv"),
     radius: str | None = Query(default=None),
     bands: str | None = Query(default=None, description="Comma-separated distance bands"),
+    utility: list[str] | None = Query(
+        default=None, description="Keep only pairs between these utilities (repeatable)"
+    ),
 ) -> Response:
     fmt = format.lower()
     if fmt not in ("csv", "pdf"):
@@ -265,8 +273,9 @@ async def export(
                                     fields=["format"])
     radius_v = matching.parse_radius(radius)
     bands_v = matching.parse_bands(bands)
+    utilities = matching.parse_utilities(utility)
     async with _state(request).pool.acquire() as conn:
-        pairs = await matching.overlaps(conn, radius_v, bands=bands_v)
+        pairs = await matching.overlaps(conn, radius_v, bands=bands_v, utilities=utilities)
     records = export_service.to_records(pairs)
     if fmt == "csv":
         return Response(

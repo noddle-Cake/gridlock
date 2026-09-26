@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -75,6 +75,19 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     expect(screen.getByRole('region', { name: 'Potential coordination opportunities' })).toBeInTheDocument()
   })
 
+  it('opens a pair at its top and returns to the same place in the list', async () => {
+    render(<App />)
+    const card = await screen.findByRole('button', { name: /Hanover breakers/ })
+    const panel = screen.getByRole('complementary', { name: 'Pairs' })
+    panel.scrollTop = 120
+    fireEvent.scroll(panel)
+    await userEvent.click(card)
+    expect(panel.scrollTop).toBe(0)
+    panel.scrollTop = 400 // read far down the detail
+    await userEvent.click(screen.getByRole('button', { name: /Back to list/ }))
+    expect(panel.scrollTop).toBe(120)
+  })
+
   it('filters the list by search text', async () => {
     render(<App />)
     await screen.findByRole('button', { name: /Hanover breakers/ })
@@ -85,19 +98,43 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     expect(screen.getByRole('button', { name: /Hanover breakers/ })).toBeInTheDocument()
   })
 
-  it('opens on DESC ↔ Georgia Power when both are loaded', async () => {
-    const desc = project({ id: 7, utility: 'Dominion Energy South Carolina', name: 'Jasper – Okatie' })
+  it('opens on Dominion SC ↔ Georgia Power when both are loaded', async () => {
+    // Low confidence, so both would be listed in Review if it ignored the focus.
+    const desc = project({
+      id: 7,
+      utility: 'Dominion Energy South Carolina',
+      name: 'Jasper – Okatie',
+      confidence: 0.5,
+    })
     const gpc = project({ id: 8, utility: 'Georgia Power', name: 'McIntosh reactors' })
     fetchMock.mockImplementation((url: string) =>
       url.startsWith('/api/projects')
-        ? jsonResponse([project(), desc, gpc])
+        ? jsonResponse([project({ confidence: 0.4 }), desc, gpc])
         : url.startsWith('/api/overlaps')
           ? jsonResponse({ radius: 25, pad: 365, max_overlap_days: 365, pairs: [pair()] })
           : jsonResponse({ type: 'FeatureCollection', features: [] }),
     )
     render(<App />)
-    expect(await screen.findByText('DESC ↔ Georgia Power')).toBeInTheDocument()
+    expect(await screen.findByText('Dominion SC ↔ Georgia Power')).toBeInTheDocument()
     // The Keystone/Chesapeake fixture pair is hidden by the focus.
     expect(screen.queryByRole('button', { name: /Hanover breakers/ })).toBeNull()
+
+    // Only the two utilities' pairs are asked for, from the very first request.
+    await vi.waitFor(() => expect(overlapCalls().length).toBeGreaterThan(0))
+    for (const url of overlapCalls()) {
+      expect(new URL(url, 'http://x').searchParams.getAll('utility')).toEqual([
+        'Dominion Energy South Carolina',
+        'Georgia Power',
+      ])
+    }
+    expect(screen.getByRole('link', { name: 'Export CSV' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('utility=Georgia+Power'),
+    )
+
+    // Review follows the focus too: the Keystone project is out of scope.
+    await userEvent.click(screen.getByRole('button', { name: /Review/ }))
+    expect(screen.queryByText('Hanover breakers')).toBeNull()
+    expect(screen.getByText('Jasper – Okatie')).toBeInTheDocument()
   })
 })
