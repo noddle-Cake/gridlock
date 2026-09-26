@@ -1,7 +1,7 @@
 import 'leaflet/dist/leaflet.css'
 
 import type { GeoJsonObject } from 'geojson'
-import type { LatLngBoundsExpression, Layer } from 'leaflet'
+import type { LatLngBoundsExpression, LatLngExpression, Layer, Map as LeafletMap } from 'leaflet'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CircleMarker,
@@ -15,22 +15,88 @@ import {
 
 import { lineBounds, lineOwners, lineStyle, lineTooltip, UNKNOWN_OWNER } from '../lib/lines'
 import { markerStyle } from '../lib/mapStyle'
+import type { ViewBounds } from '../lib/pairs'
 import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE } from '../lib/powerGrid'
 import { enableSmoothWheelZoom } from '../lib/smoothWheelZoom'
 import type { CoordinationPair, LineCollection, LineFeature, Project } from '../types'
 import { PowerGridLayer } from './PowerGridLayer'
 
-function FitBounds({ bounds }: { bounds: LatLngBoundsExpression | null }) {
+const FIT = { padding: [40, 40] as [number, number], maxZoom: 11 }
+
+/**
+ * Frames all projects on load and glides to a pair when one is selected. Leaving the
+ * pair returns to wherever the planner was looking before, like closing a listing.
+ */
+function ViewController({
+  allBounds,
+  pairBounds,
+}: {
+  allBounds: LatLngBoundsExpression | null
+  pairBounds: LatLngBoundsExpression | null
+}) {
   const map = useMap()
   const fitted = useRef(false)
+  const prev = useRef<{ all: typeof allBounds; pair: typeof pairBounds }>({ all: null, pair: null })
+  const saved = useRef<{ center: LatLngExpression; zoom: number } | 'all' | null>(null)
+
   useEffect(() => {
-    if (!bounds) return
-    const opts = { padding: [40, 40] as [number, number], maxZoom: 11 }
+    const was = prev.current
+    prev.current = { all: allBounds, pair: pairBounds }
+    const glide = { ...FIT, duration: 0.8 }
+
+    if (pairBounds !== was.pair) {
+      if (pairBounds) {
+        saved.current ??= { center: map.getCenter(), zoom: map.getZoom() }
+        map.flyToBounds(pairBounds, glide)
+      } else if (saved.current === 'all' || allBounds !== was.all) {
+        if (allBounds) map.flyToBounds(allBounds, glide)
+        saved.current = null
+      } else if (saved.current) {
+        map.flyTo(saved.current.center, saved.current.zoom, { duration: 0.8 })
+        saved.current = null
+      }
+      return
+    }
+    if (!allBounds || allBounds === was.all) return
+    if (pairBounds) {
+      // Data changed underneath the open pair: refit everything once it closes.
+      saved.current = 'all'
+      return
+    }
     // Snap on first load; glide between views after that.
-    if (fitted.current) map.flyToBounds(bounds, { ...opts, duration: 0.8 })
-    else map.fitBounds(bounds, { ...opts, animate: false })
+    if (fitted.current) map.flyToBounds(allBounds, glide)
+    else map.fitBounds(allBounds, { ...FIT, animate: false })
     fitted.current = true
-  }, [map, bounds])
+  }, [map, allBounds, pairBounds])
+  return null
+}
+
+/**
+ * Reports the visible extent after every pan/zoom. The listener is bound once: re-binding
+ * on each render would leave a gap in which the load-time fit's moveend goes unheard.
+ */
+function ReportBounds({ onChange }: { onChange?: (b: ViewBounds) => void }) {
+  const map = useMap()
+  const onChangeRef = useRef(onChange)
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
+  useEffect(() => {
+    function report() {
+      const b = map.getBounds()
+      onChangeRef.current?.({
+        south: b.getSouth(),
+        west: b.getWest(),
+        north: b.getNorth(),
+        east: b.getEast(),
+      })
+    }
+    map.on('moveend', report)
+    report()
+    return () => {
+      map.off('moveend', report)
+    }
+  }, [map])
   return null
 }
 
@@ -44,22 +110,42 @@ interface Props {
   projects: Project[]
   pairs: CoordinationPair[]
   selectedPair: CoordinationPair | null
+  hoveredPair?: CoordinationPair | null
   colors: Record<string, string>
   lines?: LineCollection | null
   linesFailed?: boolean
   onSelectProject: (p: Project) => void
+  onSelectPair?: (pair: CoordinationPair) => void
+  onHoverProject?: (p: Project | null) => void
+  onBoundsChange?: (b: ViewBounds) => void
 }
 
 export function MapView({
   projects,
   pairs,
   selectedPair,
+  hoveredPair = null,
   colors,
   lines = null,
   linesFailed = false,
   onSelectProject,
+  onSelectPair,
+  onHoverProject,
+  onBoundsChange,
 }: Props) {
   const [showLines, setShowLines] = useState(true)
+  const [map, setMap] = useState<LeafletMap | null>(null)
+  const wrap = useRef<HTMLDivElement>(null)
+
+  // Leaflet only watches the window; the split layout resizes the map on its own
+  // (timeline dock, panel width), so redraw whenever the container changes size.
+  useEffect(() => {
+    if (!map || !wrap.current || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => map.invalidateSize({ pan: false }))
+    ro.observe(wrap.current)
+    return () => ro.disconnect()
+  }, [map])
+
   const owners = useMemo(() => (lines ? lineOwners(lines) : []), [lines])
   const projectUtilities = useMemo(
     () => [...new Set(projects.map((p) => p.utility))].sort((a, b) => a.localeCompare(b)),
@@ -72,6 +158,9 @@ export function MapView({
   )
   const selectedIds = new Set(
     selectedPair ? [selectedPair.project_a.id, selectedPair.project_b.id] : [],
+  )
+  const hoveredIds = new Set(
+    hoveredPair ? [hoveredPair.project_a.id, hoveredPair.project_b.id] : [],
   )
 
   const allBounds = useMemo<LatLngBoundsExpression | null>(() => {
@@ -96,12 +185,13 @@ export function MapView({
   // Draw unselected, then paired, then selected so highlighted markers sit on top.
   const ordered = [...placed].sort((a, b) => rank(a) - rank(b))
   function rank(p: Project) {
-    return selectedIds.has(p.id) ? 2 : pairedIds.has(p.id) ? 1 : 0
+    return selectedIds.has(p.id) ? 3 : hoveredIds.has(p.id) ? 2 : pairedIds.has(p.id) ? 1 : 0
   }
 
   return (
-    <div className="map-wrap">
+    <div className="map-wrap" ref={wrap}>
       <MapContainer
+        ref={setMap}
         center={[39.8, -77.1]}
         zoom={9}
         zoomSnap={0}
@@ -110,7 +200,8 @@ export function MapView({
       >
         <SmoothWheelZoom />
         <PowerGridLayer />
-        <FitBounds bounds={pairBounds ?? allBounds} />
+        <ViewController allBounds={allBounds} pairBounds={pairBounds} />
+        <ReportBounds onChange={onBoundsChange} />
         {/* Existing lines sit in their own pane under the project markers. */}
         <Pane name="reference-lines" style={{ zIndex: 350 }}>
           {lines && showLines ? (
@@ -128,6 +219,7 @@ export function MapView({
           const { project_a: a, project_b: b } = pair
           if (a.lat == null || b.lat == null) return null
           const selected = selectedPair?.id === pair.id
+          const hovered = hoveredPair?.id === pair.id
           return (
             <Polyline
               key={pair.id}
@@ -137,17 +229,22 @@ export function MapView({
               ]}
               pathOptions={{
                 color: selected ? '#111' : '#f08c00',
-                weight: selected ? 3 : 1.5,
-                opacity: selected ? 0.9 : 0.45,
-                dashArray: selected ? undefined : '3 5',
+                weight: selected || hovered ? 3.5 : 1.5,
+                opacity: selected || hovered ? 0.95 : 0.45,
+                dashArray: selected || hovered ? undefined : '3 5',
               }}
-            />
+              eventHandlers={onSelectPair ? { click: () => onSelectPair(pair) } : undefined}
+            >
+              <Tooltip sticky>
+                {pair.miles.toFixed(1)} mi · {pair.overlap_days} days overlap
+              </Tooltip>
+            </Polyline>
           )
         })}
         {ordered.map((p) => {
           const style = markerStyle(p, colors[p.utility] ?? '#555', {
             paired: pairedIds.has(p.id),
-            selected: selectedIds.has(p.id),
+            selected: selectedIds.has(p.id) || hoveredIds.has(p.id),
           })
           return (
             <CircleMarker
@@ -155,7 +252,11 @@ export function MapView({
               center={[p.lat!, p.lng!]}
               radius={style.radius}
               pathOptions={style}
-              eventHandlers={{ click: () => onSelectProject(p) }}
+              eventHandlers={{
+                click: () => onSelectProject(p),
+                mouseover: () => onHoverProject?.(p),
+                mouseout: () => onHoverProject?.(null),
+              }}
             >
               <Tooltip>
                 <strong>{p.name || 'Unnamed project'}</strong>
@@ -173,70 +274,82 @@ export function MapView({
           )
         })}
       </MapContainer>
-      <div className="map-legend" aria-label="Map legend">
-        {projectUtilities.map((u) => (
-          <span key={u} className="legend-item">
-            <span className="swatch" style={{ background: colors[u] ?? '#555' }} />
-            {u}
-          </span>
-        ))}
-        <span className="legend-item">
-          <span className="swatch swatch-paired" /> in a flagged pair
-        </span>
-        <span className="legend-item">
-          <span className="swatch swatch-approx" /> approximate location
-        </span>
+      <div className="map-notes">
+        {linesFailed ? <p className="map-note">Existing transmission lines could not be loaded.</p> : null}
+        {projects.length > placed.length ? (
+          <p className="map-note">
+            {projects.length - placed.length} project(s) have no location yet — see Review.
+          </p>
+        ) : null}
       </div>
-      <div className="map-legend grid-legend" aria-label="Power grid legend">
-        <span>Grid lines (kV):</span>
-        {[...VOLTAGE_SCALE].reverse().map(([kv, c]) => (
-          <span key={kv} className="legend-item">
-            <span className="swatch swatch-line" style={{ background: c }} />
-            {kv}+
+      {map && allBounds ? (
+        <button
+          type="button"
+          className="map-fit"
+          onClick={() => map.flyToBounds(allBounds, { ...FIT, duration: 0.8 })}
+        >
+          Fit all
+        </button>
+      ) : null}
+      <details className="legend-card">
+        <summary>Legend</summary>
+        <div className="map-legend" aria-label="Map legend">
+          {projectUtilities.map((u) => (
+            <span key={u} className="legend-item">
+              <span className="swatch" style={{ background: colors[u] ?? '#555' }} />
+              {u}
+            </span>
+          ))}
+          <span className="legend-item">
+            <span className="swatch swatch-paired" /> in a flagged pair
           </span>
-        ))}
-        <span className="legend-item">
-          <span className="swatch swatch-line" style={{ background: LOW_VOLTAGE_COLOR }} />
-          lower / unknown
-        </span>
-        <span className="legend-item">
-          <span className="swatch swatch-substation" /> substation
-        </span>
-        <span className="legend-item">
-          <span className="swatch swatch-plant" /> power plant
-        </span>
-      </div>
-      {lines && owners.length ? (
-        <div className="map-legend lines-legend" aria-label="Existing transmission lines">
-          <label className="legend-item">
-            <input
-              type="checkbox"
-              checked={showLines}
-              onChange={(e) => setShowLines(e.target.checked)}
-            />
-            Existing lines (HIFLD)
-          </label>
-          {showLines
-            ? owners.map(({ owner, count }) => (
-                <span key={owner ?? UNKNOWN_OWNER} className="legend-item">
-                  <span
-                    className="swatch swatch-line"
-                    style={{ background: owner ? (colors[owner] ?? '#555') : undefined }}
-                  />
-                  {owner ?? UNKNOWN_OWNER} ({count})
-                </span>
-              ))
-            : null}
+          <span className="legend-item">
+            <span className="swatch swatch-approx" /> approximate location
+          </span>
         </div>
-      ) : null}
-      {linesFailed ? (
-        <p className="map-note">Existing transmission lines could not be loaded.</p>
-      ) : null}
-      {projects.length > placed.length ? (
-        <p className="map-note">
-          {projects.length - placed.length} project(s) have no location yet — see Review.
-        </p>
-      ) : null}
+        <div className="map-legend grid-legend" aria-label="Power grid legend">
+          <span>Grid lines (kV):</span>
+          {[...VOLTAGE_SCALE].reverse().map(([kv, c]) => (
+            <span key={kv} className="legend-item">
+              <span className="swatch swatch-line" style={{ background: c }} />
+              {kv}+
+            </span>
+          ))}
+          <span className="legend-item">
+            <span className="swatch swatch-line" style={{ background: LOW_VOLTAGE_COLOR }} />
+            lower / unknown
+          </span>
+          <span className="legend-item">
+            <span className="swatch swatch-substation" /> substation
+          </span>
+          <span className="legend-item">
+            <span className="swatch swatch-plant" /> power plant
+          </span>
+        </div>
+        {lines && owners.length ? (
+          <div className="map-legend lines-legend" aria-label="Existing transmission lines">
+            <label className="legend-item">
+              <input
+                type="checkbox"
+                checked={showLines}
+                onChange={(e) => setShowLines(e.target.checked)}
+              />
+              Existing lines (HIFLD)
+            </label>
+            {showLines
+              ? owners.map(({ owner, count }) => (
+                  <span key={owner ?? UNKNOWN_OWNER} className="legend-item">
+                    <span
+                      className="swatch swatch-line"
+                      style={{ background: owner ? (colors[owner] ?? '#555') : undefined }}
+                    />
+                    {owner ?? UNKNOWN_OWNER} ({count})
+                  </span>
+                ))
+              : null}
+          </div>
+        ) : null}
+      </details>
     </div>
   )
 }
