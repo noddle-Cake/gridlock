@@ -3,13 +3,15 @@
 `scripts.load_public_sources` writes one citation CSV per source to
 `source_docs/extracted/`. Those CSVs hold everything a project row needs, so a deployed
 instance (AWS Lightsail) gets the same records without the raw PDFs/XLSX, network
-lookups or an LLM: on startup each source whose plan isn't in the database yet is
-inserted from its CSV. Re-running the loader script replaces the same plan.
+lookups or an LLM: on startup each source whose plan is missing, or was loaded from a
+different version of its CSV (tracked by SHA-256), is (re)inserted from the CSV.
+Re-running the loader script replaces the same plan.
 """
 
 from __future__ import annotations
 
 import csv
+import hashlib
 import logging
 from dataclasses import dataclass
 from datetime import date
@@ -93,27 +95,39 @@ def page_range(projects: list[repo.NewProject]) -> str | None:
     return ",".join(runs)
 
 
-async def save(conn: asyncpg.Connection, source: Source, projects: list[repo.NewProject]) -> str:
+def file_sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+async def save(
+    conn: asyncpg.Connection, source: Source, projects: list[repo.NewProject],
+    snapshot_sha: str | None = None,
+) -> str:
     return await replace_source(
         conn, label=source.label, source_url=source.source_url, filename=source.filename,
         detected_format=source.detected_format, projects=projects,
         page_range=page_range(projects) if source.detected_format == "pdf" else None,
+        snapshot_sha=snapshot_sha,
     )
 
 
-async def load_snapshots_if_missing(pool: asyncpg.Pool, directory: Path = EXTRACTED_DIR) -> None:
+async def load_snapshots(pool: asyncpg.Pool, directory: Path = EXTRACTED_DIR) -> None:
+    """Insert each source whose plan is missing, or whose committed CSV changed since it
+    was loaded (e.g. the EIA-860M scope went from the Southeast to nationwide). A reload
+    replaces that source's projects; briefs on them are dropped with them."""
     async with pool.acquire() as conn:
         for source in SOURCES:
             path = directory / source.export
             if not path.exists():
                 log.warning("public-source snapshot missing: %s", path)
                 continue
+            sha = file_sha(path)
             loaded = await conn.fetchval(
-                "SELECT 1 FROM plans WHERE source_url = $1 AND filename = $2",
+                "SELECT snapshot_sha FROM plans WHERE source_url = $1 AND filename = $2",
                 source.source_url, source.filename + LOADER_SUFFIX,
             )
-            if loaded:
+            if loaded == sha:
                 continue
             projects = read_export(path)
-            await save(conn, source, projects)
+            await save(conn, source, projects, sha)
             log.info("loaded %d projects from %s", len(projects), path.name)

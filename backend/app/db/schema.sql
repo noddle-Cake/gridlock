@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS plans (
 
 -- Added after the first release; ADD COLUMN keeps existing databases working.
 ALTER TABLE plans ADD COLUMN IF NOT EXISTS page_range text;  -- e.g. "18-45"; NULL = all pages
+-- SHA-256 of the committed snapshot CSV a loader plan came from (app/sources/snapshot.py);
+-- startup reloads the source when the committed file changes. NULL for uploads.
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS snapshot_sha text;
 
 CREATE TABLE IF NOT EXISTS projects (
   id serial PRIMARY KEY,

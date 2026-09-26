@@ -20,8 +20,8 @@ from app.services.owners import canonical_utility
 SOURCE_URL = "https://www.eia.gov/electricity/data/eia860m/xls/august_generator2026.xlsx"
 SHEET = "Planned"
 HEADER_ROW = 3  # rows 1-2 are a title and a blank line
-# SERTP footprint + Florida.
-DEFAULT_STATES = ["AL", "GA", "MS", "FL", "TN", "KY", "NC", "SC"]
+# SERTP footprint + Florida, the scope before the load went nationwide.
+SOUTHEAST_STATES = ["AL", "GA", "MS", "FL", "TN", "KY", "NC", "SC"]
 
 
 @dataclass

@@ -53,7 +53,7 @@ def create_app(
                     log.exception("could not load the HIFLD transmission-line snapshot")
             if settings.autoload_public_sources:
                 try:
-                    await public_sources.load_snapshots_if_missing(app.state.pool)
+                    await public_sources.load_snapshots(app.state.pool)
                 except Exception:  # optional data; never block startup
                     log.exception("could not load the EIA-860M / SERTP snapshots")
         try:
