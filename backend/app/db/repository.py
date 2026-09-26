@@ -76,6 +76,9 @@ class CandidateRow:
     time_gap_days: int | None
     window_start: date | None  # shared padded window; None when there isn't one
     window_end: date | None
+    # Both projects routed: km of the shorter overlap of each line with a 1.6 km corridor
+    # around the other (a right-of-way the two could share). None when not both are lines.
+    shared_km: float | None = None
 
 
 @dataclass
@@ -279,7 +282,15 @@ SELECT a.id AS a_id, b.id AS b_id,
        CASE WHEN a.s IS NOT NULL AND b.s IS NOT NULL
             THEN GREATEST(a.s - b.e, b.s - a.e, 0) END AS time_gap_days,
        GREATEST(a.s, b.s) - $2::int AS window_start,
-       LEAST(a.e, b.e) + $2::int AS window_end
+       LEAST(a.e, b.e) + $2::int AS window_end,
+       CASE WHEN pa.route IS NOT NULL AND pb.route IS NOT NULL
+            THEN CASE WHEN ST_DWithin(pa.route, pb.route, {row_m})
+                      THEN LEAST(
+                        ST_Length(ST_Intersection(pa.route, ST_Buffer(pb.route, {row_m}))),
+                        ST_Length(ST_Intersection(pb.route, ST_Buffer(pa.route, {row_m}))))
+                        / 1000
+                      ELSE 0 END
+       END AS shared_km
 FROM projects pa
 CROSS JOIN LATERAL (SELECT pa.id, COALESCE(pa.start_date, pa.end_date) AS s,
                            COALESCE(pa.end_date, pa.start_date) AS e) a
@@ -290,7 +301,7 @@ CROSS JOIN LATERAL (SELECT pb.id, COALESCE(pb.start_date, pb.end_date) AS s,
 WHERE ST_DWithin({shape_a}, {shape_b}, $1)                 -- Req 6.3; NULL shape -> Req 6.8
   {extra}
 ORDER BY miles
-""".replace("{mpm}", str(METERS_PER_MILE)).replace(
+""".replace("{mpm}", str(METERS_PER_MILE)).replace("{row_m}", "1600").replace(
     "{shape_a}", "COALESCE(pa.route::geography, pa.geom::geography)").replace(
     "{shape_b}", "COALESCE(pb.route::geography, pb.geom::geography)")
 # Geography is the primary signal: timing never excludes a pair, it only ranks it. Undated
@@ -310,6 +321,7 @@ def _candidate_from_record(r: asyncpg.Record) -> CandidateRow:
         overlap_days=0 if start is None else (end - start).days + 1,
         time_gap_days=r["time_gap_days"],
         window_start=start, window_end=end,
+        shared_km=None if r["shared_km"] is None else float(r["shared_km"]),
     )
 
 

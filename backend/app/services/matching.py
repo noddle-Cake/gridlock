@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.errors import InvalidParameterError
 from app.db import repository as repo
 from app.models.dto import CoordinationPairDTO, ProjectDTO
+from app.services.impact import estimate
 from app.services.owners import planning_entity
 from app.services.scoring import score_pair
 
@@ -130,11 +131,15 @@ def _build_pair(
         radius=radius, max_overlap=max_overlap,
     )
     band = distance_band(row.miles)
+    pair_tier = tier(band)
+    shared = None if row.shared_km is None else round(row.shared_km, 2)
     return CoordinationPairDTO(
         id=pair_id(a.id, b.id), project_a=a, project_b=b,
-        miles=round(row.miles, 3), band=band, tier=tier(band), overlap_days=row.overlap_days,
+        miles=round(row.miles, 3), band=band, tier=pair_tier, overlap_days=row.overlap_days,
         time_gap_days=row.time_gap_days, window_start=row.window_start,
-        window_end=row.window_end, scores=scores,
+        window_end=row.window_end, shared_km=shared, scores=scores,
+        impact=estimate(tier=pair_tier, a=a, b=b, shared_km=shared,
+                        windows_overlap=row.overlap_days > 0),
     )
 
 

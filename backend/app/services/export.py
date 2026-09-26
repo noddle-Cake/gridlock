@@ -12,7 +12,7 @@ from app.models.dto import CoordinationPairDTO
 CSV_COLUMNS = [
     "pair_id", "utility_a", "project_a", "type_a", "utility_b", "project_b", "type_b",
     "distance_miles", "time_gap_days", "window_start", "window_end", "overlap_days",
-    "composite_score", "brief",
+    "composite_score", "value_low_usd", "value_high_usd", "value_if_aligned_high_usd", "brief",
 ]
 
 
@@ -31,6 +31,9 @@ class ExportRecord:
     window_end: str
     overlap_days: int
     composite_score: float
+    value_low_usd: str
+    value_high_usd: str
+    value_if_aligned_high_usd: str
     brief: str
 
     def row(self) -> list[str]:
@@ -60,6 +63,9 @@ def to_records(pairs: list[CoordinationPairDTO]) -> list[ExportRecord]:
             window_start=p.window_start.isoformat() if p.window_start else "",
             window_end=p.window_end.isoformat() if p.window_end else "",
             overlap_days=p.overlap_days, composite_score=round(p.scores.composite, 3),
+            value_low_usd=str(p.impact.total_low) if p.impact else "",
+            value_high_usd=str(p.impact.total_high) if p.impact else "",
+            value_if_aligned_high_usd=str(p.impact.if_aligned_high) if p.impact else "",
             brief=p.brief.text if p.brief else "",
         )
         for p in pairs

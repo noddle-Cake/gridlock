@@ -63,6 +63,28 @@ export interface CoordinationBrief {
   stale: boolean
 }
 
+export interface ImpactItem {
+  label: string
+  low: number
+  high: number
+  basis: string
+  acres: number | null
+  /** Only realised if the build windows overlap. */
+  needs_timing: boolean
+}
+
+/** Rough, assumption-based coordination value in USD (backend services/impact.py). */
+export interface Impact {
+  items: ImpactItem[]
+  total_low: number
+  total_high: number
+  if_aligned_low: number
+  if_aligned_high: number
+  windows_overlap: boolean
+  acres: number | null
+  assumptions: string[]
+}
+
 export interface CoordinationPair {
   id: string
   project_a: Project
@@ -78,7 +100,10 @@ export interface CoordinationPair {
   time_gap_days: number | null
   window_start: string | null
   window_end: string | null
+  /** km of shared corridor when both projects are routed lines. */
+  shared_km?: number | null
   scores: ScoreFactors
+  impact?: Impact | null
   brief: CoordinationBrief | null
 }
 

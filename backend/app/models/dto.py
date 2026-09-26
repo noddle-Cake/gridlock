@@ -85,6 +85,28 @@ class CoordinationBriefDTO(BaseModel):
     stale: bool = False
 
 
+class ImpactItemDTO(BaseModel):
+    label: str
+    low: int  # USD
+    high: int
+    basis: str
+    acres: float | None = None
+    needs_timing: bool = False  # only realised if the build windows overlap
+
+
+class ImpactDTO(BaseModel):
+    """Rough coordination value (services/impact.py). Assumption-based ranges in USD."""
+
+    items: list[ImpactItemDTO]
+    total_low: int  # items realisable on the current schedules
+    total_high: int
+    if_aligned_low: int  # every item, if the schedules were aligned
+    if_aligned_high: int
+    windows_overlap: bool
+    acres: float | None = None  # right-of-way land that could be shared
+    assumptions: list[str] = []
+
+
 class CoordinationPairDTO(BaseModel):
     id: str
     project_a: ProjectDTO
@@ -97,7 +119,9 @@ class CoordinationPairDTO(BaseModel):
     time_gap_days: int | None = None  # days between the schedules; None when undated
     window_start: date | None = None
     window_end: date | None = None
+    shared_km: float | None = None  # km of shared corridor when both are routed lines
     scores: ScoreFactorsDTO
+    impact: ImpactDTO | None = None
     brief: CoordinationBriefDTO | None = None
 
 

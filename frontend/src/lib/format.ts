@@ -56,6 +56,18 @@ export function rangeLabel(
   return a === b ? a : `${a} – ${b}`
 }
 
+/** "$340k", "$1.2M". */
+export function usd(x: number): string {
+  if (x >= 1_000_000) return `$${(x / 1_000_000).toFixed(x >= 10_000_000 ? 0 : 1)}M`
+  if (x >= 1_000) return `$${Math.round(x / 1_000)}k`
+  return `$${Math.round(x)}`
+}
+
+/** "$340k–$1.0M". */
+export function usdRange(low: number, high: number): string {
+  return low === high ? usd(low) : `${usd(low)}–${usd(high)}`
+}
+
 export function pct(x: number): string {
   return `${Math.round(x * 100)}%`
 }

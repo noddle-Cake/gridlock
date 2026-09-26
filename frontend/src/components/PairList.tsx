@@ -1,5 +1,5 @@
 import { milesToKm, TIERS } from '../lib/distanceBands'
-import { pct, rangeLabel, timingLabel } from '../lib/format'
+import { pct, rangeLabel, timingLabel, usdRange } from '../lib/format'
 import { SORT_LABELS, type SortKey, scoreBand } from '../lib/pairs'
 import type { CoordinationPair, Project } from '../types'
 
@@ -136,6 +136,13 @@ export function PairList({
                 {tier ? (
                   <span className={`tier tier-${pair.tier}`} title={tier.detail}>
                     {tier.label} <span className="tier-detail">· {tier.detail}</span>
+                  </span>
+                ) : null}
+                {pair.impact && pair.impact.if_aligned_high > 0 ? (
+                  <span className="card-value" title="Rough, assumption-based estimate">
+                    {pair.impact.total_high > 0
+                      ? `≈ ${usdRange(pair.impact.total_low, pair.impact.total_high)} coordination value`
+                      : `≈ ${usdRange(pair.impact.if_aligned_low, pair.impact.if_aligned_high)} if schedules aligned`}
                   </span>
                 ) : null}
                 <ProjectLine p={a} color={colors[a.utility] ?? '#555'} />
