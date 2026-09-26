@@ -64,93 +64,55 @@ jobs:
     needs: [backend, frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write   # OIDC login to AWS; no long-lived keys in GitHub
-      contents: read
     environment:
       name: production
-      url: ${{ steps.deploy.outputs.url }}
+      url: ${{ steps.url.outputs.url }}
     env:
-      AWS_REGION: us-east-1
-      SERVICE: gridlock
+      HOST: ${{ secrets.DEPLOY_HOST }}
+      TAG: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-      - name: Install lightsailctl
-        run: |
-          sudo curl -fsSL https://s3.us-west-2.amazonaws.com/lightsailctl/latest/linux-amd64/lightsailctl \
-            -o /usr/local/bin/lightsailctl
-          sudo chmod +x /usr/local/bin/lightsailctl
 
-      - name: Create container service (first deploy only)
+      - id: url
         run: |
-          if ! aws lightsail get-container-services --service-name "$SERVICE" >/dev/null 2>&1; then
-            aws lightsail create-container-service --service-name "$SERVICE" --power micro --scale 1
+          if [ -n "${{ vars.SITE_ADDRESS }}" ]; then
+            echo "url=https://${{ vars.SITE_ADDRESS }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=http://$HOST" >> "$GITHUB_OUTPUT"
           fi
-          for i in $(seq 60); do
-            state=$(aws lightsail get-container-services --service-name "$SERVICE" \
-              --query 'containerServices[0].state' --output text)
-            echo "service state: $state"
-            [ "$state" = READY ] || [ "$state" = RUNNING ] && exit 0
-            sleep 10
-          done
-          exit 1
 
-      - name: Build and push image
-        run: |
-          docker build -f backend/Dockerfile -t "$SERVICE:${{ github.sha }}" .
-          aws lightsail push-container-image --service-name "$SERVICE" --label app \
-            --image "$SERVICE:${{ github.sha }}"
-
-      - id: deploy
-        name: Deploy
+      - name: Configure SSH
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
-          image=$(aws lightsail get-container-images --service-name "$SERVICE" \
-            --query 'containerImages[0].image' --output text)   # newest first
-          jq -n --arg image "$image" '{
-            app: {
-              image: $image,
-              ports: {"8000": "HTTP"},
-              environment: {
-                DATABASE_URL: env.DATABASE_URL,
-                GEMINI_API_KEY: env.GEMINI_API_KEY,
-                GEOCODER: "nominatim"
-              }
-            }
-          }' > containers.json
-          version=$(aws lightsail create-container-service-deployment --service-name "$SERVICE" \
-            --containers file://containers.json \
-            --public-endpoint '{"containerName":"app","containerPort":8000,
-              "healthCheck":{"path":"/api/health","successCodes":"200"}}' \
-            --query 'containerService.nextDeployment.version' --output text)
-          rm containers.json
-          echo "deploying $image as version $version"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          printf 'Host prod\n  HostName %s\n  User ubuntu\n  IdentityFile ~/.ssh/id_deploy\n' "$HOST" > ~/.ssh/config
 
-          for i in $(seq 90); do
-            read -r cur next url < <(aws lightsail get-container-services --service-name "$SERVICE" \
-              --query 'containerServices[0].[currentDeployment.version,nextDeployment.state,url]' \
-              --output text)
-            echo "current=$cur next=$next"
-            if [ "$next" = FAILED ]; then
-              echo "::error::Deployment $version failed its health check; previous version still live"
-              exit 1
-            fi
-            if [ "$cur" = "$version" ] && [ "$next" = None ]; then
-              echo "url=${url%/}" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::Timed out waiting for deployment $version"
-          exit 1
+      - name: Build image
+        run: docker build -f backend/Dockerfile -t "gridlock:$TAG" .
+
+      - name: Upload image and stack
+        run: |
+          ssh prod 'mkdir -p ~/gridlock'
+          scp deploy/docker-compose.yml deploy/Caddyfile deploy/remote-deploy.sh prod:gridlock/
+          docker save "gridlock:$TAG" | gzip | ssh prod 'gunzip | docker load'
+
+      - name: Deploy
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
+        run: |
+          printf 'APP_TAG=%s\nPOSTGRES_PASSWORD=%s\nGEMINI_API_KEY=%s\nSITE_ADDRESS=%s\n' \
+            "$TAG" "$POSTGRES_PASSWORD" "$GEMINI_API_KEY" "$SITE_ADDRESS" \
+            | ssh prod 'umask 077 && cat > ~/gridlock/.env.new'
+          ssh prod '~/gridlock/remote-deploy.sh'
 
       - name: Smoke test
         run: |
-          curl -fsS --retry 5 --retry-delay 5 --retry-all-errors "${{ steps.deploy.outputs.url }}/api/health"
-          curl -fsS "${{ steps.deploy.outputs.url }}/" | grep -q '<div id="root">'
+          url="${{ steps.url.outputs.url }}"
+          curl -fsS --retry 12 --retry-delay 5 --retry-all-errors "$url/api/health"
+          curl -fsS "$url/" | grep -q '<div id="root">'

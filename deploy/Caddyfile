@@ -1,0 +1,6 @@
+# SITE_ADDRESS set to a hostname (e.g. 3-90-12-34.sslip.io or gridlock.example.com)
+# gets an automatic Let's Encrypt certificate; unset, Compose passes :80 (plain HTTP).
+{$SITE_ADDRESS} {
+	encode gzip
+	reverse_proxy app:8000
+}

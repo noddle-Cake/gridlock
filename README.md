@@ -41,7 +41,7 @@ pre-extracted projects so the rest of the demo loop works offline.
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `DATABASE_URL` | `postgresql://gridlock:gridlock@localhost:5432/gridlock` | Tiger Data connection string in prod |
+| `DATABASE_URL` | `postgresql://gridlock:gridlock@localhost:5432/gridlock` | Set by `deploy/docker-compose.yml` in prod |
 | `GEMINI_API_KEY` | — | Extraction + briefs |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | |
 | `GEOCODER` | `nominatim` | `none` = offline county gazetteer only |
@@ -81,12 +81,18 @@ tagged `Feature: gridlock, Property N`. P1, P2, P13, P14 run against real PostGI
 - **frontend** — `oxlint`, `vitest`, `vite build`
 - **deploy** — only on `master` and only if both pass: builds one image
   ([`backend/Dockerfile`](backend/Dockerfile): FastAPI at `/api` + the React build at `/`,
-  entrypoint `app.serve:app`), pushes it to the AWS Lightsail container service `gridlock`
-  (us-east-1, created on first deploy), waits for the health check, then smoke-tests the URL.
-  A deploy that fails its health check leaves the previous version live.
+  entrypoint `app.serve:app`), copies it over SSH to a single AWS Lightsail instance, and
+  restarts the [`deploy/`](deploy) Compose stack (app + Postgres/PostGIS + Caddy for HTTPS).
+  If the new app never turns healthy the previous version is restored; then the public URL
+  is smoke-tested.
 
-Required repo secrets: `AWS_ROLE_ARN` (IAM role GitHub Actions assumes via OIDC),
-`DATABASE_URL` (Tiger Data / any Postgres with PostGIS available), `GEMINI_API_KEY`.
+Repo secrets: `DEPLOY_HOST` (instance static IP), `DEPLOY_SSH_KEY` (private key whose public
+half is in the instance's `authorized_keys`), `POSTGRES_PASSWORD` (URL-safe; only applied
+when the DB volume is first created), `GEMINI_API_KEY`. Optional repo variable
+`SITE_ADDRESS` (e.g. `3-90-12-34.sslip.io` or a real domain pointed at the IP) turns on
+automatic HTTPS; without it the site is plain HTTP on the IP. The database lives in the
+`gridlock_pgdata` Docker volume on the instance — enable Lightsail automatic snapshots for
+backups.
 
 ## Design notes and deviations
 
