@@ -71,7 +71,8 @@ def main() -> None:
 
     rows.sort(key=lambda r: (r["state"], r["name"].lower(), r["lat"], r["lng"]))
     with OUT_PATH.open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["state", "name", "power", "operator", "lat", "lng"])
+        w = csv.DictWriter(f, fieldnames=["state", "name", "power", "operator", "lat", "lng"],
+                           lineterminator="\n")
         w.writeheader()
         w.writerows(rows)
     print(f"wrote {len(rows)} rows -> {OUT_PATH}")
