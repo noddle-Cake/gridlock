@@ -1,9 +1,10 @@
 import type { LatLngBoundsExpression, PathOptions } from 'leaflet'
 
 import type { LineCollection, LineFeature } from '../types'
+import { escapeHtml as esc } from './format'
+import { voltageColor } from './powerGrid'
 
 export const UNKNOWN_OWNER = 'Owner not published'
-const UNKNOWN_COLOR = '#868e96'
 
 /** Thin for sub-transmission, heavier for the 230 kV+ backbone. */
 export function lineWeight(kv: number | null): number {
@@ -14,32 +15,19 @@ export function lineWeight(kv: number | null): number {
   return 1
 }
 
-export function lineStyle(f: LineFeature, colors: Record<string, string>): PathOptions {
-  const owner = f.properties.owner_norm
+/**
+ * Coloured by voltage on the power-grid layer's scale, so an existing line reads the same
+ * on both layers and project colours stay free for projects. The owner is in the tooltip.
+ */
+export function lineStyle(f: LineFeature): PathOptions {
+  const kv = f.properties.voltage_kv
   return {
-    color: owner ? (colors[owner] ?? UNKNOWN_COLOR) : UNKNOWN_COLOR,
-    weight: lineWeight(f.properties.voltage_kv),
-    opacity: 0.6,
-    dashArray: owner ? undefined : '2 4',
+    color: voltageColor(kv),
+    weight: lineWeight(kv),
+    opacity: 0.7,
+    dashArray: f.properties.owner_norm ? undefined : '2 4',
   }
 }
-
-/** Owners by line count, most first; lines without an owner last. */
-export function lineOwners(lines: LineCollection): { owner: string | null; count: number }[] {
-  const counts = new Map<string | null, number>()
-  for (const f of lines.features) {
-    const o = f.properties.owner_norm
-    counts.set(o, (counts.get(o) ?? 0) + 1)
-  }
-  return [...counts]
-    .map(([owner, count]) => ({ owner, count }))
-    .sort((a, b) =>
-      a.owner == null ? 1 : b.owner == null ? -1 : b.count - a.count || a.owner.localeCompare(b.owner),
-    )
-}
-
-const esc = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
 /** Tooltip HTML (Leaflet's bindTooltip takes a string), with every field escaped. */
 export function lineTooltip(f: LineFeature): string {

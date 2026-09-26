@@ -1,4 +1,4 @@
-import type { CoordinationPair, Project } from '../types'
+import type { CoordinationPair, PairProject } from '../types'
 
 export type SortKey = 'score' | 'distance' | 'overlap' | 'start'
 
@@ -22,7 +22,7 @@ export interface PairFilter {
   hiddenUtilities: ReadonlySet<string>
 }
 
-function matches(p: Project, q: string): boolean {
+function matches(p: PairProject, q: string): boolean {
   return [p.name, p.utility, p.location_ref, p.type, p.state].some((f) =>
     f?.toLowerCase().includes(q),
   )
@@ -39,7 +39,7 @@ export function filterPairs(pairs: CoordinationPair[], f: PairFilter): Coordinat
   )
 }
 
-function placedIn(p: Project, b: ViewBounds): boolean {
+function placedIn(p: PairProject, b: ViewBounds): boolean {
   return (
     p.lat != null &&
     p.lng != null &&
@@ -84,7 +84,7 @@ export function sortPairs(pairs: CoordinationPair[], key: SortKey): Coordination
 }
 
 /** The highest-scoring pair a project belongs to, if any. */
-export function bestPairFor(p: Project, pairs: CoordinationPair[]): CoordinationPair | null {
+export function bestPairFor(p: PairProject, pairs: CoordinationPair[]): CoordinationPair | null {
   let best: CoordinationPair | null = null
   for (const pair of pairs) {
     if (pair.project_a.id !== p.id && pair.project_b.id !== p.id) continue

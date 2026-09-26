@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { ApiError } from '../api'
 import { type Draft, toDraft, diffDraft } from '../lib/draft'
-import { pct, rangeLabel } from '../lib/format'
+import { OTHER_COLOR, pct, rangeLabel } from '../lib/format'
 import { needsReview } from '../lib/review'
 import type { Project, ProjectPatch, ProjectType } from '../types'
 import { SourceLink } from './SourceLink'
@@ -135,7 +135,7 @@ export function ReviewTable({ projects, threshold, colors, onPatch }: Props) {
                     {!low && !p.requires_review ? <span className="badge badge-ok">ok</span> : null}
                   </td>
                   <td>
-                    <span className="swatch" style={{ background: colors[p.utility] }} />
+                    <span className="swatch" style={{ background: colors[p.utility] ?? OTHER_COLOR }} />
                     {p.utility}
                   </td>
                   {isEditing ? (

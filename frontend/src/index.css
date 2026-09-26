@@ -412,6 +412,46 @@ a {
   margin-right: 0;
 }
 
+.check-list-search {
+  width: 100%;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.check-list-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.check-list-actions:empty {
+  display: none;
+}
+
+/* Hundreds of companies: scroll the rows, keep search and actions in view. */
+.check-list-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.check-list-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.check-list-count,
+.color-legend-count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .link-button {
   align-self: flex-start;
   border: 0;
@@ -691,11 +731,68 @@ a {
   color: var(--ink-2);
 }
 
-/* Utility and line-owner lists can run to 100+ companies; scroll them in place. */
-.legend-card .utility-legend,
-.legend-card .lines-legend {
-  max-height: 132px;
-  overflow-y: auto;
+/* Colour-by card: the encoding switch over a short legend with project counts. */
+.color-card {
+  width: 230px;
+  flex: none;
+}
+
+.color-by {
+  display: flex;
+  margin: 0 10px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.color-by button {
+  flex: 1;
+  padding: 3px 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-2);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.color-by button + button {
+  border-left: 1px solid var(--line);
+}
+
+.color-by button.active {
+  color: var(--accent-ink);
+  background: var(--accent);
+  font-weight: 600;
+}
+
+.color-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--ink-2);
+}
+
+.color-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.color-legend .swatch {
+  margin-right: 0;
+}
+
+.color-legend-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .legend-item {
@@ -720,7 +817,7 @@ a {
 
 .swatch-paired {
   background: var(--ink-2);
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px #f08c00;
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--ink);
 }
 
 .swatch-approx {
@@ -749,8 +846,17 @@ a {
   background: repeating-linear-gradient(90deg, #868e96 0 3px, transparent 3px 6px);
 }
 
-.lines-legend input {
-  margin: 0;
+.show-more {
+  display: block;
+  width: 100%;
+  margin: 4px 0 16px;
+  padding: 8px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.swatch-pair-line {
+  background: repeating-linear-gradient(90deg, var(--ink-2) 0 3px, transparent 3px 6px);
 }
 
 .timeline .vis-timeline {

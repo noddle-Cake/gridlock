@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import { project } from '../test/fixtures'
 import { diffDraft, toDraft } from './draft'
-import { dateLabel, rangeLabel, utilityColors } from './format'
-import { markerStyle } from './mapStyle'
+import { OTHER_COLOR, PALETTE, dateLabel, rangeLabel, utilityColors } from './format'
+import { colorLegend, markerStyle, projectColor } from './mapStyle'
 import { timelineItems } from './timelineItems'
 
 describe('markerStyle (Req 9.1, 9.3, 9.4)', () => {
@@ -61,6 +61,46 @@ describe('format helpers', () => {
 
   it('assigns stable colors regardless of order', () => {
     expect(utilityColors(['B', 'A'])).toEqual(utilityColors(['A', 'B', 'A']))
+  })
+
+  it('colors only the busiest companies and never reuses a hue', () => {
+    // 20 companies; "Big" has the most projects.
+    const names = ['Big', 'Big', 'Big', ...Array.from({ length: 19 }, (_, i) => `Co ${i}`)]
+    const colors = utilityColors(names)
+    expect(Object.keys(colors)).toHaveLength(PALETTE.length)
+    expect(colors.Big).toBeDefined()
+    expect(new Set(Object.values(colors)).size).toBe(PALETTE.length)
+  })
+})
+
+describe('project color encodings', () => {
+  const gen = project({ id: 1, type: 'generation', utility: 'A', start_date: '2026-03-01' })
+  const line = project({ id: 2, type: 'transmission line', utility: 'B', start_date: '2031-01-01' })
+  const bare = project({ id: 3, type: null, utility: 'C', start_date: null, end_date: null })
+  const colors = { A: '#123456' }
+
+  it('colors by type, company (top-N or other) and start year', () => {
+    expect(projectColor(gen, 'type', colors)).not.toBe(projectColor(line, 'type', colors))
+    expect(projectColor(bare, 'type', colors)).toBe(OTHER_COLOR)
+    expect(projectColor(gen, 'utility', colors)).toBe('#123456')
+    expect(projectColor(line, 'utility', colors)).toBe(OTHER_COLOR)
+    expect(projectColor(gen, 'year', colors)).not.toBe(projectColor(line, 'year', colors))
+    expect(projectColor(bare, 'year', colors)).toBe(OTHER_COLOR)
+  })
+
+  it('builds a legend with counts and an "other" row, dropping empty categories', () => {
+    expect(colorLegend([gen, line, bare], 'type', colors)).toEqual([
+      { label: 'Generation', color: projectColor(gen, 'type', colors), count: 1 },
+      { label: 'Transmission line', color: projectColor(line, 'type', colors), count: 1 },
+      { label: 'Type unknown', color: OTHER_COLOR, count: 1 },
+    ])
+    const byCompany = colorLegend([gen, line, bare], 'utility', colors)
+    expect(byCompany.map((r) => [r.label, r.count])).toEqual([
+      ['A', 1],
+      ['Other (2 companies)', 2],
+    ])
+    const byYear = colorLegend([gen, line, bare], 'year', colors).map((r) => r.label)
+    expect(byYear).toEqual(['2026 or earlier', '2030+', 'Undated'])
   })
 })
 

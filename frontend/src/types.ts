@@ -61,10 +61,13 @@ export interface CoordinationBrief {
   stale: boolean
 }
 
+/** Projects as embedded in a pair: GET /overlaps leaves out the source excerpt. */
+export type PairProject = Omit<Project, 'raw_excerpt'>
+
 export interface CoordinationPair {
   id: string
-  project_a: Project
-  project_b: Project
+  project_a: PairProject
+  project_b: PairProject
   miles: number
   /** Days both build windows share; 0 when they don't meet or a date is unknown. */
   overlap_days: number

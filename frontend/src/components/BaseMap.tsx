@@ -25,6 +25,7 @@ import {
   stateBorders,
   textWidth,
 } from '../lib/basemap'
+import { useColorScheme } from '../lib/useColorScheme'
 
 // Outlines and roads sit under the power-grid tiles (tilePane is 200); names sit above the grid
 // and existing-lines pane (350) but under project markers (overlayPane, 400).
@@ -56,19 +57,6 @@ function useBasemapFile<T>(file: string, needed: boolean): T | null {
     }
   }, [file, needed, data])
   return data
-}
-
-function useColorScheme(): 'light' | 'dark' {
-  const query = '(prefers-color-scheme: dark)'
-  const [dark, setDark] = useState(() => window.matchMedia?.(query).matches ?? false)
-  useEffect(() => {
-    const mq = window.matchMedia?.(query)
-    if (!mq) return
-    const on = (e: MediaQueryListEvent) => setDark(e.matches)
-    mq.addEventListener('change', on)
-    return () => mq.removeEventListener('change', on)
-  }, [])
-  return dark ? 'dark' : 'light'
 }
 
 /** Canvas colours come from the --map-* CSS tokens so light and dark themes stay in one place. */
