@@ -15,7 +15,7 @@ describe('WhyFlaggedPanel (Req 11)', () => {
     render(<WhyFlaggedPanel pair={pair()} colors={colors} onGenerateBrief={vi.fn()} />)
     expect(screen.getByText('Hanover breakers')).toBeInTheDocument()
     expect(screen.getByText('Westminster breakers')).toBeInTheDocument()
-    expect(screen.getByTestId('miles')).toHaveTextContent('15.6')
+    expect(screen.getByTestId('km')).toHaveTextContent('25.1') // 15.62 mi
     expect(screen.getByTestId('overlap-days')).toHaveTextContent('213')
     const factors = screen.getByRole('table', { name: 'Score factors' })
     for (const label of ['Distance', 'Time overlap', 'Same project type', 'Voltage similarity', 'Composite']) {
@@ -81,24 +81,51 @@ describe('ReviewTable (Req 3.3, 13.1-13.3)', () => {
 
 describe('ThresholdControls (Req 10.1, 10.2)', () => {
   it('reports slider changes', () => {
-    const onRadius = vi.fn()
     const onPad = vi.fn()
     render(
       <ThresholdControls
-        radius={25}
+        bands={['touching', '1.6', '8', '25', '40']}
         pad={30}
         confidenceThreshold={0.7}
-        onRadius={onRadius}
+        onBands={vi.fn()}
         onPad={onPad}
         onConfidenceThreshold={vi.fn()}
       />,
     )
-    const radius = screen.getByLabelText('Distance radius (miles)') as HTMLInputElement
     const pad = screen.getByLabelText('Date padding (days)') as HTMLInputElement
-    fireEvent.change(radius, { target: { value: '40' } })
     fireEvent.change(pad, { target: { value: '90' } })
-    expect(onRadius).toHaveBeenCalledWith(40)
     expect(onPad).toHaveBeenCalledWith(90)
+  })
+
+  it('toggles non-overlapping distance bands from the dropdown', async () => {
+    const onBands = vi.fn()
+    render(
+      <ThresholdControls
+        bands={['touching', '8', '40']}
+        pad={30}
+        confidenceThreshold={0.7}
+        onBands={onBands}
+        onPad={vi.fn()}
+        onConfidenceThreshold={vi.fn()}
+      />,
+    )
+    expect(screen.getByText(/Distance apart:/).parentElement).toHaveTextContent(
+      'Touching / crossing, 1.6–8 km, 25–40 km',
+    )
+    await userEvent.click(screen.getByText(/Distance apart:/))
+    const options = screen.getAllByRole('checkbox').map((c) => c.parentElement?.textContent)
+    expect(options).toEqual([
+      'Touching / crossing',
+      'Under 1.6 km',
+      '1.6–8 km',
+      '8–25 km',
+      '25–40 km',
+    ])
+
+    await userEvent.click(screen.getByRole('checkbox', { name: '8–25 km' }))
+    expect(onBands).toHaveBeenLastCalledWith(['touching', '8', '25', '40'])
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Touching / crossing' }))
+    expect(onBands).toHaveBeenLastCalledWith(['8', '40'])
   })
 })
 

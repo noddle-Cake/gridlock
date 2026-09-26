@@ -144,6 +144,7 @@ def api_client():
     from app.main import create_app
 
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+    os.environ["AUTOLOAD_PUBLIC_SOURCES"] = "false"  # API tests start from an empty dataset
     get_settings.cache_clear()
     run_db(lambda conn: asyncio.sleep(0))  # reset schema + data
 

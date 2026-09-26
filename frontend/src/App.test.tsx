@@ -4,9 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { pair, project } from './test/fixtures'
 
-// Leaflet and vis-timeline need a real layout engine; stub the views.
+// Leaflet needs a real layout engine; stub the map.
 vi.mock('./components/MapView', () => ({ MapView: () => <div data-testid="map" /> }))
-vi.mock('./components/TimelineView', () => ({ TimelineView: () => <div data-testid="timeline" /> }))
 
 import App from './App'
 
@@ -22,12 +21,13 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
       if (url.startsWith('/api/projects')) return jsonResponse([project(), pair().project_b])
       if (url.startsWith('/api/overlaps')) {
         const params = new URL(url, 'http://x').searchParams
-        const radius = Number(params.get('radius'))
+        // The fixture pair is ~25.1 km apart: the 25-40 km band.
+        const bands = params.get('bands')?.split(',') ?? []
         return jsonResponse({
-          radius,
+          radius: Number(params.get('radius')),
           pad: Number(params.get('pad')),
           max_overlap_days: 365,
-          pairs: radius >= 10 ? [pair()] : [],
+          pairs: bands.includes('40') ? [pair()] : [],
         })
       }
       if (url.startsWith('/api/lines')) return jsonResponse({ type: 'FeatureCollection', features: [] })
@@ -42,19 +42,33 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     return fetchMock.mock.calls.map((c) => c[0] as string).filter((u) => u.includes('/overlaps'))
   }
 
-  it('re-queries overlaps with the new radius and pad when sliders move', async () => {
+  it('re-queries overlaps with the ticked bands and pad', async () => {
     render(<App />)
     await screen.findByText('Hanover breakers')
-    expect(overlapCalls().at(-1)).toContain('radius=25&pad=30')
+    const params = () => new URL(overlapCalls().at(-1)!, 'http://x').searchParams
+    expect(params().get('bands')).toBe('touching,1.6,8,25,40')
+    expect(Number(params().get('radius'))).toBeCloseTo(24.855, 3) // 40 km
+    expect(params().get('pad')).toBe('30')
 
-    const radius = screen.getByLabelText('Distance radius (miles)') as HTMLInputElement
-    fireEvent.change(radius, { target: { value: '5' } })
-    await vi.waitFor(() => expect(overlapCalls().at(-1)).toContain('radius=5&pad=30'))
+    await userEvent.click(screen.getByText(/Distance apart:/))
+    await userEvent.click(screen.getByRole('checkbox', { name: '25–40 km' }))
+    await vi.waitFor(() => expect(params().get('bands')).toBe('touching,1.6,8,25'))
     await screen.findByText(/No project pairs at these thresholds/)
+    expect(screen.getByRole('link', { name: 'Export CSV' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('bands=touching%2C1.6%2C8%2C25'),
+    )
 
     const pad = screen.getByLabelText('Date padding (days)') as HTMLInputElement
     fireEvent.change(pad, { target: { value: '120' } })
-    await vi.waitFor(() => expect(overlapCalls().at(-1)).toContain('radius=5&pad=120'))
+    await vi.waitFor(() => expect(params().get('pad')).toBe('120'))
+    expect(params().get('bands')).toBe('touching,1.6,8,25')
+  })
+
+  it('no longer shows the timeline under the map', async () => {
+    render(<App />)
+    await screen.findByText('Hanover breakers')
+    expect(document.querySelector('.timeline')).toBeNull()
   })
 
   it('shows the why-flagged panel for a selected pair', async () => {
@@ -65,7 +79,7 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Back to list/ }))
     expect(screen.queryByRole('region', { name: 'Why flagged' })).toBeNull()
-    expect(screen.getByRole('region', { name: 'Flagged pairs' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Potential coordination opportunities' })).toBeInTheDocument()
   })
 
   it('filters the list by search text', async () => {

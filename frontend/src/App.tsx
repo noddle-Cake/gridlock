@@ -5,11 +5,11 @@ import { FilterMenu } from './components/FilterMenu'
 import { MapView } from './components/MapView'
 import { PairList } from './components/PairList'
 import { ReviewTable } from './components/ReviewTable'
-import { DEFAULT_PAD, DEFAULT_RADIUS, ThresholdControls } from './components/ThresholdControls'
-import { TimelineView } from './components/TimelineView'
+import { DEFAULT_PAD, ThresholdControls } from './components/ThresholdControls'
 import { UploadPanel } from './components/UploadPanel'
 import { UtilityFilter } from './components/UtilityFilter'
 import { WhyFlaggedPanel } from './components/WhyFlaggedPanel'
+import { ALL_BANDS, MAX_RADIUS_MILES, type BandId } from './lib/distanceBands'
 import { utilityColors } from './lib/format'
 import {
   type SortKey,
@@ -29,7 +29,7 @@ type Tab = 'radar' | 'review'
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([])
   const [pairs, setPairs] = useState<CoordinationPair[]>([])
-  const [radius, setRadius] = useState(DEFAULT_RADIUS)
+  const [bands, setBands] = useState<BandId[]>(ALL_BANDS)
   const [pad, setPad] = useState(DEFAULT_PAD)
   const [confidenceThreshold, setConfidenceThreshold] = useState(DEFAULT_CONFIDENCE_THRESHOLD)
   const [selectedId, setSelectedId] = useState<string | null>(pairFromHash)
@@ -39,7 +39,6 @@ export default function App() {
   const [sort, setSort] = useState<SortKey>('score')
   const [limitToView, setLimitToView] = useState(true)
   const [viewBounds, setViewBounds] = useState<ViewBounds | null>(null)
-  const [showTimeline, setShowTimeline] = useState(true)
   const [tab, setTab] = useState<Tab>('radar')
   const [loadingPairs, setLoadingPairs] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -66,15 +65,15 @@ export default function App() {
       .catch(() => setLinesFailed(true))
   }, [])
 
-  // Re-query matching whenever a threshold slider moves (Req 10.3, 10.4).
+  // Re-query matching whenever a threshold control changes (Req 10.3, 10.4).
   useEffect(() => {
     const seq = ++requestSeq.current
     const timer = setTimeout(() => {
       setLoadingPairs(true)
       api
-        .overlaps(radius, pad)
+        .overlaps(MAX_RADIUS_MILES, pad, bands)
         .then((res) => {
-          if (seq !== requestSeq.current) return // a newer slider value won
+          if (seq !== requestSeq.current) return // a newer control value won
           setPairs(res.pairs)
           setError(null)
         })
@@ -82,7 +81,7 @@ export default function App() {
         .finally(() => seq === requestSeq.current && setLoadingPairs(false))
     }, REQUERY_DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [radius, pad, version])
+  }, [bands, pad, version])
 
   // One color per company across planned projects and existing-line owners, so a
   // utility reads the same on both layers.
@@ -164,7 +163,7 @@ export default function App() {
   }, [selectedId])
 
   async function generateBrief(pair: CoordinationPair) {
-    const brief = await api.brief(pair.id, radius, pad)
+    const brief = await api.brief(pair.id, MAX_RADIUS_MILES, pad)
     setPairs((prev) => prev.map((p) => (p.id === pair.id ? { ...p, brief } : p)))
     return brief
   }
@@ -205,10 +204,10 @@ export default function App() {
           </button>
         </nav>
         <div className="exports">
-          <a href={api.exportUrl('csv', radius, pad)} download>
+          <a href={api.exportUrl('csv', MAX_RADIUS_MILES, pad, bands)} download>
             Export CSV
           </a>
-          <a href={api.exportUrl('pdf', radius, pad)} download>
+          <a href={api.exportUrl('pdf', MAX_RADIUS_MILES, pad, bands)} download>
             Export PDF
           </a>
         </div>
@@ -230,10 +229,10 @@ export default function App() {
         </label>
         <div className="chips">
           <ThresholdControls
-            radius={radius}
+            bands={bands}
             pad={pad}
             confidenceThreshold={confidenceThreshold}
-            onRadius={setRadius}
+            onBands={setBands}
             onPad={setPad}
             onConfidenceThreshold={setConfidenceThreshold}
           />
@@ -271,28 +270,6 @@ export default function App() {
               onHoverProject={hoverProject}
               onBoundsChange={onBoundsChange}
             />
-            <section className={`timeline-dock${showTimeline ? '' : ' collapsed'}`}>
-              <button
-                type="button"
-                className="dock-toggle"
-                aria-expanded={showTimeline}
-                onClick={() => setShowTimeline((v) => !v)}
-              >
-                <span className="dock-title">Schedule</span>
-                <span className="muted">
-                  {showTimeline ? 'Hide timeline' : 'Show timeline'}
-                </span>
-              </button>
-              <div className="timeline-body" hidden={!showTimeline}>
-                <TimelineView
-                  projects={shownProjects}
-                  pairs={shownPairs}
-                  selectedPair={selectedPair}
-                  colors={colors}
-                  onSelectProject={selectProject}
-                />
-              </div>
-            </section>
           </div>
           <aside className="panel" aria-label="Pairs">
             {selectedPair ? (

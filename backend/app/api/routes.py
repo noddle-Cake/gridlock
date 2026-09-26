@@ -171,10 +171,12 @@ async def get_overlaps(
     request: Request,
     radius: str | None = Query(default=None),
     pad: str | None = Query(default=None),
+    bands: str | None = Query(default=None, description="Comma-separated distance bands"),
 ) -> OverlapsResponse:
     radius_v, pad_v = matching.parse_thresholds(radius, pad)
+    bands_v = matching.parse_bands(bands)
     async with _state(request).pool.acquire() as conn:
-        pairs = await matching.overlaps(conn, radius_v, pad_v)
+        pairs = await matching.overlaps(conn, radius_v, pad_v, bands=bands_v)
     return OverlapsResponse(
         radius=radius_v, pad=pad_v, max_overlap_days=get_settings().max_overlap_days,
         pairs=pairs,
@@ -256,14 +258,16 @@ async def export(
     format: str = Query(default="csv"),
     radius: str | None = Query(default=None),
     pad: str | None = Query(default=None),
+    bands: str | None = Query(default=None, description="Comma-separated distance bands"),
 ) -> Response:
     fmt = format.lower()
     if fmt not in ("csv", "pdf"):
         raise InvalidParameterError("format must be 'csv' or 'pdf'.", field="format",
                                     fields=["format"])
     radius_v, pad_v = matching.parse_thresholds(radius, pad)
+    bands_v = matching.parse_bands(bands)
     async with _state(request).pool.acquire() as conn:
-        pairs = await matching.overlaps(conn, radius_v, pad_v)
+        pairs = await matching.overlaps(conn, radius_v, pad_v, bands=bands_v)
     records = export_service.to_records(pairs)
     if fmt == "csv":
         return Response(

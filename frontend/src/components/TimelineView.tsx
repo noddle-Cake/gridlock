@@ -32,7 +32,6 @@ export function TimelineView({ projects, pairs, selectedPair, colors, onSelectPr
     selectRef.current = onSelectProject
   }, [onSelectProject])
   const byId = useRef(new Map<number, Project>())
-  const fitted = useRef(false)
 
   useEffect(() => {
     if (!container.current) return
@@ -75,11 +74,6 @@ export function TimelineView({ projects, pairs, selectedPair, colors, onSelectPr
     )
     items.current.clear()
     items.current.add(next.map((i) => ({ ...i, content: escapeHtml(i.content) })))
-    // Open on the planned work rather than on today's (usually empty) week.
-    if (!fitted.current && next.length && timeline.current) {
-      timeline.current.fit({ animation: false })
-      fitted.current = true
-    }
   }, [projects, pairs, selectedPair, colors])
 
   // Separate from the data effect so refreshes don't restart the zoom animation.

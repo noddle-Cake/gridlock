@@ -12,6 +12,7 @@ from hypothesis import strategies as st
 from app.core.config import get_settings
 from app.db import repository as repo
 from app.models.enums import ProjectType
+from app.services import matching
 from app.services.geocoding import Candidate
 from tests.test_ingestion import CSV, PNG
 
@@ -163,6 +164,38 @@ def test_overlaps_invalid_params(api_client, query, fields):
     assert r.json()["error"]["fields"] == fields
 
 
+@pytest.mark.parametrize(
+    ("km", "band"),
+    [(0, "touching"), (0.0005, "touching"), (0.5, "1.6"), (1.6, "8"), (7.99, "8"),
+     (8, "25"), (24.9, "25"), (25, "40"), (39.9, "40"), (40, None), (60, None)],
+)
+def test_distance_band_edges_do_not_overlap(km, band):
+    assert matching.distance_band(km / matching.KM_PER_MILE) == band
+
+
+def test_overlaps_bands_filter(api_client):
+    seed(two_nearby())
+    radius = 40 / matching.KM_PER_MILE
+
+    def get(query: str) -> list[dict]:
+        return api_client.get(f"/overlaps?radius={radius}&{query}").json()["pairs"]
+
+    (pair,) = get("bands=touching,1.6,8,25,40")
+    assert 8 <= pair["miles"] * matching.KM_PER_MILE < 25  # ~24.5 km: the 8-25 km band
+    assert [p["id"] for p in get("bands=25")] == ["1-2"]
+    assert [p["id"] for p in get("bands=touching,25,40")] == ["1-2"]
+    assert get("bands=touching,1.6,8,40") == []
+    assert get("bands=") == []
+    csv = api_client.get(f"/export?format=csv&radius={radius}&bands=40").text
+    assert len(csv.strip().splitlines()) == 1  # header only
+
+
+def test_overlaps_unknown_band(api_client):
+    r = api_client.get("/overlaps?bands=8,100")
+    assert r.status_code == 422
+    assert r.json()["error"]["fields"] == ["bands"]
+
+
 # ---------------------------------------------------------------- PATCH /projects/{id}
 
 
@@ -203,7 +236,9 @@ def test_patch_geom_edit_invalidates_brief(api_client):
 invalid_values = st.sampled_from([
     {"voltage_kv": 0}, {"voltage_kv": 5000}, {"voltage_kv": "high"},
     {"confidence": 1.5}, {"confidence": -0.1}, {"type": "battery"},
-    {"lat": 95, "lng": 0}, {"lat": 10}, {"start_date": "not-a-date"},
+    # A lone coordinate is invalid; lng (not lat) so it never completes {"lat": 95, ...}
+    # into a valid pair when merged.
+    {"lat": 95, "lng": 0}, {"lng": 10}, {"start_date": "not-a-date"},
     {"source_page": 0}, {"raw_excerpt": "x" * 2001}, {"bogus_field": 1},
     {"utility": ""}, {"reviewed": None}, {"start_date": "2030-01-01", "end_date": "2029-01-01"},
 ])

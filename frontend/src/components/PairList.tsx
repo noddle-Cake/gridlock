@@ -1,3 +1,4 @@
+import { milesToKm } from '../lib/distanceBands'
 import { pct, rangeLabel } from '../lib/format'
 import { SORT_LABELS, type SortKey, scoreBand } from '../lib/pairs'
 import type { CoordinationPair, Project } from '../types'
@@ -51,10 +52,10 @@ export function PairList({
 }: Props) {
   const offscreen = totalCount - pairs.length
   return (
-    <section className="pair-list" aria-label="Flagged pairs">
+    <section className="pair-list" aria-label="Potential coordination opportunities">
       <header className="list-head">
         <div className="list-title">
-          <h2>Flagged pairs</h2>
+          <h2>Potential coordination opportunities</h2>
           <span className="count" aria-live="polite">
             {loading
               ? 'updating…'
@@ -88,11 +89,14 @@ export function PairList({
           ) : null}
         </div>
       </header>
+      <p className="disclaimer">
+        Built on public filings. Planned projects are not commitments to build.
+      </p>
       {pairs.length === 0 && !loading ? (
         <p className="empty">
           {offscreen > 0
-            ? 'No flagged pairs in this part of the map. Zoom out or turn off “Only pairs in map view”.'
-            : 'No project pairs at these thresholds. Try widening the sliders.'}
+            ? 'Nothing in this part of the map. Zoom out or turn off “Only pairs in map view”.'
+            : 'No project pairs at these thresholds. Try ticking more distance bands or widening the date padding.'}
         </p>
       ) : null}
       <ol className="cards">
@@ -119,7 +123,7 @@ export function PairList({
                     {pct(pair.scores.composite)}
                   </span>
                   <span className="card-stats">
-                    <strong>{pair.miles.toFixed(1)} mi</strong> apart ·{' '}
+                    <strong>{milesToKm(pair.miles).toFixed(1)} km</strong> apart ·{' '}
                     <strong>{pair.overlap_days} d</strong> overlap
                   </span>
                   {pair.brief ? (

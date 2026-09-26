@@ -8,6 +8,7 @@
 
 # ---- Python (backend)
 .venv/
+.venv
 venv/
 __pycache__/
 *.py[cod]
@@ -23,6 +24,7 @@ htmlcov/
 
 # ---- Node (frontend)
 node_modules/
+node_modules
 dist/
 dist-ssr/
 .vite/
@@ -53,5 +55,5 @@ lerna-debug.log*
 Thumbs.db
 
 
-# ---- Downloaded public filings (re-download with source_docs/README.md)
-source_docs/*.pdf
+# Raw public filings in source_docs/ are committed on purpose: they are the originals
+# every project record cites (see source_docs/README.md).

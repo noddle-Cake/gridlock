@@ -9,16 +9,19 @@ import {
   MapContainer,
   Pane,
   Polyline,
+  ScaleControl,
   Tooltip,
   useMap,
 } from 'react-leaflet'
 
+import { milesToKm } from '../lib/distanceBands'
 import { lineBounds, lineOwners, lineStyle, lineTooltip, UNKNOWN_OWNER } from '../lib/lines'
 import { markerStyle } from '../lib/mapStyle'
 import type { ViewBounds } from '../lib/pairs'
 import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE } from '../lib/powerGrid'
 import { enableSmoothWheelZoom } from '../lib/smoothWheelZoom'
 import type { CoordinationPair, LineCollection, LineFeature, Project } from '../types'
+import { BaseMap } from './BaseMap'
 import { PowerGridLayer } from './PowerGridLayer'
 
 const FIT = { padding: [40, 40] as [number, number], maxZoom: 11 }
@@ -106,6 +109,14 @@ function SmoothWheelZoom() {
   return null
 }
 
+type MapLayer = 'grid' | 'highways' | 'counties' | 'labels'
+const MAP_LAYERS: [MapLayer, string][] = [
+  ['grid', 'Power grid'],
+  ['highways', 'Highways'],
+  ['counties', 'County lines'],
+  ['labels', 'Place names'],
+]
+
 interface Props {
   projects: Project[]
   pairs: CoordinationPair[]
@@ -134,11 +145,17 @@ export function MapView({
   onBoundsChange,
 }: Props) {
   const [showLines, setShowLines] = useState(true)
+  const [layers, setLayers] = useState<Record<MapLayer, boolean>>({
+    grid: true,
+    highways: true,
+    counties: true,
+    labels: true,
+  })
   const [map, setMap] = useState<LeafletMap | null>(null)
   const wrap = useRef<HTMLDivElement>(null)
 
   // Leaflet only watches the window; the split layout resizes the map on its own
-  // (timeline dock, panel width), so redraw whenever the container changes size.
+  // (panel width, filter bar wrapping), so redraw whenever the container changes size.
   useEffect(() => {
     if (!map || !wrap.current || typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(() => map.invalidateSize({ pan: false }))
@@ -194,12 +211,18 @@ export function MapView({
         ref={setMap}
         center={[39.8, -77.1]}
         zoom={9}
+        // Without an explicit floor Leaflet borrows the grid tiles' minZoom (5), which is
+        // too close to frame projects from Hawaii to Maine. The grid layer just switches off
+        // below its own minimum.
+        minZoom={3}
         zoomSnap={0}
         scrollWheelZoom={false}
         className="map"
       >
         <SmoothWheelZoom />
-        <PowerGridLayer />
+        <ScaleControl position="bottomleft" imperial={false} metric />
+        <BaseMap highways={layers.highways} counties={layers.counties} labels={layers.labels} />
+        {layers.grid ? <PowerGridLayer /> : null}
         <ViewController allBounds={allBounds} pairBounds={pairBounds} />
         <ReportBounds onChange={onBoundsChange} />
         {/* Existing lines sit in their own pane under the project markers. */}
@@ -236,7 +259,7 @@ export function MapView({
               eventHandlers={onSelectPair ? { click: () => onSelectPair(pair) } : undefined}
             >
               <Tooltip sticky>
-                {pair.miles.toFixed(1)} mi · {pair.overlap_days} days overlap
+                {milesToKm(pair.miles).toFixed(1)} km · {pair.overlap_days} days overlap
               </Tooltip>
             </Polyline>
           )
@@ -282,74 +305,92 @@ export function MapView({
           </p>
         ) : null}
       </div>
-      {map && allBounds ? (
-        <button
-          type="button"
-          className="map-fit"
-          onClick={() => map.flyToBounds(allBounds, { ...FIT, duration: 0.8 })}
-        >
-          Fit all
-        </button>
-      ) : null}
-      <details className="legend-card">
-        <summary>Legend</summary>
-        <div className="map-legend" aria-label="Map legend">
-          {projectUtilities.map((u) => (
-            <span key={u} className="legend-item">
-              <span className="swatch" style={{ background: colors[u] ?? '#555' }} />
-              {u}
-            </span>
-          ))}
-          <span className="legend-item">
-            <span className="swatch swatch-paired" /> in a flagged pair
-          </span>
-          <span className="legend-item">
-            <span className="swatch swatch-approx" /> approximate location
-          </span>
-        </div>
-        <div className="map-legend grid-legend" aria-label="Power grid legend">
-          <span>Grid lines (kV):</span>
-          {[...VOLTAGE_SCALE].reverse().map(([kv, c]) => (
-            <span key={kv} className="legend-item">
-              <span className="swatch swatch-line" style={{ background: c }} />
-              {kv}+
-            </span>
-          ))}
-          <span className="legend-item">
-            <span className="swatch swatch-line" style={{ background: LOW_VOLTAGE_COLOR }} />
-            lower / unknown
-          </span>
-          <span className="legend-item">
-            <span className="swatch swatch-substation" /> substation
-          </span>
-          <span className="legend-item">
-            <span className="swatch swatch-plant" /> power plant
-          </span>
-        </div>
-        {lines && owners.length ? (
-          <div className="map-legend lines-legend" aria-label="Existing transmission lines">
-            <label className="legend-item">
-              <input
-                type="checkbox"
-                checked={showLines}
-                onChange={(e) => setShowLines(e.target.checked)}
-              />
-              Existing lines (HIFLD)
-            </label>
-            {showLines
-              ? owners.map(({ owner, count }) => (
-                  <span key={owner ?? UNKNOWN_OWNER} className="legend-item">
-                    <span
-                      className="swatch swatch-line"
-                      style={{ background: owner ? (colors[owner] ?? '#555') : undefined }}
-                    />
-                    {owner ?? UNKNOWN_OWNER} ({count})
-                  </span>
-                ))
-              : null}
-          </div>
+      <div className="map-tools">
+        {map && allBounds ? (
+          <button
+            type="button"
+            className="map-fit"
+            onClick={() => map.flyToBounds(allBounds, { ...FIT, duration: 0.8 })}
+          >
+            Fit all
+          </button>
         ) : null}
-      </details>
+        <details className="legend-card">
+          <summary>Layers &amp; legend</summary>
+          <div className="map-legend layer-toggles" aria-label="Map layers">
+            {MAP_LAYERS.map(([key, label]) => (
+              <label key={key} className="legend-item">
+                <input
+                  type="checkbox"
+                  checked={layers[key]}
+                  onChange={(e) => setLayers((l) => ({ ...l, [key]: e.target.checked }))}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          <div className="map-legend utility-legend" aria-label="Map legend">
+            {projectUtilities.map((u) => (
+              <span key={u} className="legend-item">
+                <span className="swatch" style={{ background: colors[u] ?? '#555' }} />
+                {u}
+              </span>
+            ))}
+          </div>
+          <div className="map-legend" aria-label="Marker legend">
+            <span className="legend-item">
+              <span className="swatch swatch-paired" /> in a potential coordination opportunity
+            </span>
+            <span className="legend-item">
+              <span className="swatch swatch-approx" /> approximate location
+            </span>
+          </div>
+          {layers.grid ? (
+            <div className="map-legend grid-legend" aria-label="Power grid legend">
+              <span>Grid lines (kV):</span>
+              {[...VOLTAGE_SCALE].reverse().map(([kv, c]) => (
+                <span key={kv} className="legend-item">
+                  <span className="swatch swatch-line" style={{ background: c }} />
+                  {kv}+
+                </span>
+              ))}
+              <span className="legend-item">
+                <span className="swatch swatch-line" style={{ background: LOW_VOLTAGE_COLOR }} />
+                lower / unknown
+              </span>
+              <span className="legend-item">
+                <span className="swatch swatch-substation" /> substation
+              </span>
+              <span className="legend-item">
+                <span className="swatch swatch-plant" /> power plant
+              </span>
+            </div>
+          ) : null}
+          {lines && owners.length ? (
+            <div className="map-legend lines-legend" aria-label="Existing transmission lines">
+              <label className="legend-item">
+                <input
+                  type="checkbox"
+                  checked={showLines}
+                  onChange={(e) => setShowLines(e.target.checked)}
+                />
+                Existing lines (HIFLD)
+              </label>
+              {showLines
+                ? owners.map(({ owner, count }) => (
+                    <span key={owner ?? UNKNOWN_OWNER} className="legend-item">
+                      <span
+                        className="swatch swatch-line"
+                        style={{ background: owner ? (colors[owner] ?? '#555') : undefined }}
+                      />
+                      {owner ?? UNKNOWN_OWNER} ({count})
+                    </span>
+                  ))
+                : null}
+            </div>
+          ) : null}
+        </details>
+      </div>
     </div>
   )
 }

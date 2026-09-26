@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     )
     hifld_bbox: str = "-86.0,29.8,-80.8,31.6"  # FL–GA border region, minLng,minLat,maxLng,maxLat
     autoload_lines: bool = True
+    # EIA-860M + SERTP projects from the committed source_docs/extracted/ CSVs, inserted
+    # at startup when their plan is missing (refresh with scripts.load_public_sources).
+    autoload_public_sources: bool = True
 
     # Matching defaults (Req 6.5, 6.6, 7.2)
     default_radius_miles: float = 25.0
