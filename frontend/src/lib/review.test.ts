@@ -6,7 +6,7 @@ import { DEFAULT_CONFIDENCE_THRESHOLD, needsReview } from './review'
 const unit = fc.double({ min: 0, max: 1, noNaN: true })
 
 describe('needsReview', () => {
-  // Feature: gridlock, Property 17: Review predicate matches the threshold boundary
+  // Feature: gridmerge, Property 17: Review predicate matches the threshold boundary
   // (Requirements 3.3 / 13.1 flag confidence "equal to or below" the threshold.)
   it('flags exactly the projects at or below the threshold', () => {
     fc.assert(

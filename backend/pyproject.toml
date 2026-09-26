@@ -1,7 +1,7 @@
 [project]
-name = "gridlock"
+name = "gridmerge"
 version = "0.1.0"
-description = "GridLock: coordination radar for electric utility capital planners"
+description = "GridMerge: coordination radar for electric utility capital planners"
 requires-python = ">=3.11"
 
 [tool.pytest.ini_options]

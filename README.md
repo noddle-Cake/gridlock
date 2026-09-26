@@ -1,11 +1,11 @@
-# GridLock
+# GridMerge
 
-Coordination radar for electric-utility capital planners. GridLock ingests neighboring
+Coordination radar for electric-utility capital planners. GridMerge ingests neighboring
 utilities' capital plans (PDF / XLSX / CSV), extracts every project with Gemini, geocodes
 and stores them in Postgres + PostGIS, flags cross-utility project pairs that are close in
 space and time, scores them, and drafts a short coordination brief a planner can forward.
 
-Spec: [`.kiro/specs/gridlock`](.kiro/specs/gridlock) (requirements, design, tasks).
+Spec: [`.kiro/specs/gridmerge`](.kiro/specs/gridmerge) (requirements, design, tasks).
 
 ```
 backend/    FastAPI + asyncpg + PostGIS, Gemini extraction/briefs, Hypothesis tests
@@ -41,7 +41,7 @@ pre-extracted projects so the rest of the demo loop works offline.
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `DATABASE_URL` | `postgresql://gridlock:gridlock@localhost:5432/gridlock` | Set by `deploy/docker-compose.yml` in prod |
+| `DATABASE_URL` | `postgresql://gridmerge:gridmerge@localhost:5432/gridmerge` | Set by `deploy/docker-compose.yml` in prod |
 | `GEMINI_API_KEY` | — | Extraction + briefs |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | |
 | `GEOCODER` | `nominatim` | `none` = offline county gazetteer only |
@@ -70,7 +70,7 @@ cd frontend && npm test         # 22 tests
 ```
 
 All 18 design properties have a property-based test (Hypothesis / fast-check, ≥100 cases),
-tagged `Feature: gridlock, Property N`. P1, P2, P13, P14 run against real PostGIS.
+tagged `Feature: gridmerge, Property N`. P1, P2, P13, P14 run against real PostGIS.
 
 ## CI/CD
 

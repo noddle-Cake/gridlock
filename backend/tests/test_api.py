@@ -210,7 +210,7 @@ invalid_values = st.sampled_from([
 valid_values = st.sampled_from([{"name": "Changed"}, {"reviewed": True}, {"state": "MD"}])
 
 
-# Feature: gridlock, Property 15: Invalid edits are rejected and leave the target unchanged
+# Feature: gridmerge, Property 15: Invalid edits are rejected and leave the target unchanged
 @given(st.lists(invalid_values, min_size=1, max_size=3), st.lists(valid_values, max_size=2))
 def test_invalid_edits_rejected_unchanged(api_client, bad, good):
     if count("projects") == 0:

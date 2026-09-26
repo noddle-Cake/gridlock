@@ -10,7 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 
-class GridLockError(Exception):
+class GridMergeError(Exception):
     status_code = 500
     code = "internal_error"
 
@@ -39,77 +39,77 @@ class GridLockError(Exception):
         return {"error": err}
 
 
-class UnsupportedFormatError(GridLockError):
+class UnsupportedFormatError(GridMergeError):
     status_code = 415
     code = "unsupported_format"
 
 
-class FileTooLargeError(GridLockError):
+class FileTooLargeError(GridMergeError):
     status_code = 413
     code = "file_too_large"
 
 
-class CorruptFileError(GridLockError):
+class CorruptFileError(GridMergeError):
     status_code = 422
     code = "unreadable_file"
 
 
-class MissingMetadataError(GridLockError):
+class MissingMetadataError(GridMergeError):
     status_code = 422
     code = "missing_metadata"
 
 
-class TooManyUtilitiesError(GridLockError):
+class TooManyUtilitiesError(GridMergeError):
     status_code = 422
     code = "too_many_utilities"
 
 
-class ExtractionFailedError(GridLockError):
+class ExtractionFailedError(GridMergeError):
     status_code = 502
     code = "extraction_failed"
 
 
-class PairNotFoundError(GridLockError):
+class PairNotFoundError(GridMergeError):
     status_code = 404
     code = "pair_not_found"
 
 
-class PlanNotFoundError(GridLockError):
+class PlanNotFoundError(GridMergeError):
     status_code = 404
     code = "plan_not_found"
 
 
-class ProjectNotFoundError(GridLockError):
+class ProjectNotFoundError(GridMergeError):
     status_code = 404
     code = "project_not_found"
 
 
-class BriefTimeoutError(GridLockError):
+class BriefTimeoutError(GridMergeError):
     status_code = 504
     code = "brief_timeout"
 
 
-class BriefGenerationError(GridLockError):
+class BriefGenerationError(GridMergeError):
     status_code = 502
     code = "brief_generation_failed"
 
 
-class InvalidFieldError(GridLockError):
+class InvalidFieldError(GridMergeError):
     status_code = 422
     code = "invalid_fields"
 
 
-class InvalidParameterError(GridLockError):
+class InvalidParameterError(GridMergeError):
     status_code = 422
     code = "invalid_parameters"
 
 
-class InvalidExportError(GridLockError):
+class InvalidExportError(GridMergeError):
     status_code = 422
     code = "invalid_export"
 
 
 def install_error_handlers(app: FastAPI) -> None:
-    @app.exception_handler(GridLockError)
-    async def _handle(_: Request, exc: GridLockError) -> JSONResponse:
+    @app.exception_handler(GridMergeError)
+    async def _handle(_: Request, exc: GridMergeError) -> JSONResponse:
         return JSONResponse(status_code=exc.status_code, content=exc.to_body())

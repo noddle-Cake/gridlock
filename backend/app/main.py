@@ -1,4 +1,4 @@
-"""GridLock FastAPI app factory. Run with: uvicorn app.main:app --reload"""
+"""GridMerge FastAPI app factory. Run with: uvicorn app.main:app --reload"""
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def create_app(
             if owns_pool:
                 await app.state.pool.close()
 
-    app = FastAPI(title="GridLock", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="GridMerge", version="0.1.0", lifespan=lifespan)
     llm_client = llm or default_llm()
     app.state.extraction = ExtractionService(llm_client)
     app.state.brief_generator = BriefGenerator(llm_client)

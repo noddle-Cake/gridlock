@@ -2,13 +2,13 @@
 
 ## Overview
 
-GridLock is a coordination radar for electric-utility capital planners. It ingests two or more utilities' public capital plans (PDF, XLSX, CSV), uses Gemini to extract each project into a common schema, geocodes and stores each project in a PostGIS-enabled Postgres database, and flags project pairs from different utilities that are close in both space and time. Each flagged pair is scored on four factors and can be turned into a short natural-language coordination brief. The whole product is wrapped in a human-in-the-loop web UI: planners review low-confidence extractions, tune matching thresholds with live sliders, inspect why a pair was flagged, verify against the source document page, and export briefs.
+GridMerge is a coordination radar for electric-utility capital planners. It ingests two or more utilities' public capital plans (PDF, XLSX, CSV), uses Gemini to extract each project into a common schema, geocodes and stores each project in a PostGIS-enabled Postgres database, and flags project pairs from different utilities that are close in both space and time. Each flagged pair is scored on four factors and can be turned into a short natural-language coordination brief. The whole product is wrapped in a human-in-the-loop web UI: planners review low-confidence extractions, tune matching thresholds with live sliders, inspect why a pair was flagged, verify against the source document page, and export briefs.
 
 This design is scoped for a 24-hour hackathon. It draws a hard line between **MVP** (must ship for the demo) and **Stretch** (ship if time allows). The MVP is a complete, demoable loop: upload → extract → review → map/timeline → tune thresholds → why-flagged → brief. Stretch adds export, 3+ utility scaling, public deployment, and true transmission-line geometry.
 
 The design also targets several sponsor tracks, and the architecture is shaped to make each one legible in a demo:
 
-- **Microsoft "What's Missing" (human-in-the-loop, not a chatbot):** GridLock is not a chat interface. The LLM does bounded extraction and brief drafting; a planner reviews, edits, and approves. The Review_Screen and why-flagged panel are the product, not a chat box.
+- **Microsoft "What's Missing" (human-in-the-loop, not a chatbot):** GridMerge is not a chat interface. The LLM does bounded extraction and brief drafting; a planner reviews, edits, and approves. The Review_Screen and why-flagged panel are the product, not a chat box.
 - **Gemini API:** used twice, both in structured/bounded modes — structured JSON extraction (Requirement 2/3) and short constrained brief generation (Requirement 8).
 - **Postgres + PostGIS:** all spatial/temporal matching is pushed into SQL. (Originally Tiger Data managed Postgres; the MVP deployment self-hosts Postgres + PostGIS on the Lightsail instance to keep costs down.)
 - **AWS Lightsail + GoDaddy domain:** the Stretch deployment topology (Requirement 16).
@@ -441,7 +441,7 @@ The human-in-the-loop loop is the heart of the "What's Missing" story:
 
 *A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
 
-The properties below are the outcome of a per-acceptance-criterion analysis followed by a redundancy pass. They concentrate on GridLock's own computable logic — matching set membership, the four scoring functions and the composite, geocoding outcome rules, extraction-record schema invariants, date-precision preservation, persistence/edit round-trips, and ingestion validation. Criteria that depend on the external LLM's output quality, on external service behavior, or on UI rendering are covered by the golden-set, integration, and snapshot tests described in the Testing Strategy, not by property tests.
+The properties below are the outcome of a per-acceptance-criterion analysis followed by a redundancy pass. They concentrate on GridMerge's own computable logic — matching set membership, the four scoring functions and the composite, geocoding outcome rules, extraction-record schema invariants, date-precision preservation, persistence/edit round-trips, and ingestion validation. Criteria that depend on the external LLM's output quality, on external service behavior, or on UI rendering are covered by the golden-set, integration, and snapshot tests described in the Testing Strategy, not by property tests.
 
 ### Property 1: Valid pair membership
 
@@ -554,7 +554,7 @@ The properties below are the outcome of a per-acceptance-criterion analysis foll
 ## Testing Strategy
 
 
-GridLock's testing is deliberately layered because the system mixes three kinds of code: **pure logic we fully control** (matching membership, scoring, geocoding decision rules, date-precision, validation), **external non-deterministic services** (Gemini extraction and brief generation, the hosted geocoder), and **UI rendering**. Each layer gets the test type that actually catches its bugs.
+GridMerge's testing is deliberately layered because the system mixes three kinds of code: **pure logic we fully control** (matching membership, scoring, geocoding decision rules, date-precision, validation), **external non-deterministic services** (Gemini extraction and brief generation, the hosted geocoder), and **UI rendering**. Each layer gets the test type that actually catches its bugs.
 
 ### Property-Based Testing (pure logic)
 
@@ -563,7 +563,7 @@ Property-based testing is the primary tool for the scoring functions, matching s
 - **Library:** [Hypothesis](https://hypothesis.readthedocs.io/) for the Python backend; `fast-check` for any pure TS helpers on the frontend (e.g. the source-link builder, the review predicate).
 - **Iterations:** each property test runs a minimum of 100 generated cases.
 - **Traceability tag:** each property test carries a comment of the form
-  `# Feature: gridlock, Property {number}: {property_text}` referencing the design property it implements.
+  `# Feature: gridmerge, Property {number}: {property_text}` referencing the design property it implements.
 - **One test per property:** each of Properties 1–18 is implemented by a single property-based test.
 - **Generators:** custom Hypothesis strategies produce project sets (varied utility, geom presence/coordinates, date ranges at mixed precision, types, voltages), threshold pairs (non-negative `radius`/`pad`, plus invalid negatives/non-numerics for Property 16-adjacent validation), factor tuples in `[0,1]`, geocoder attempt-outcome sequences, and candidate-count lists.
 - **Isolation via mocks:** properties over geocoding (P9) mock the `Geocoder` and clock so timeout/retry/ambiguity branches are exercised deterministically and cheaply; properties over extraction invariants (P11, P12) feed generated *model-output* records into the normalizer rather than calling Gemini. This keeps 100+ iterations fast and free of external cost.
@@ -596,11 +596,11 @@ Export (Req 14): a property for CSV record completeness (every exported row cont
 
 ## Deployment Topology (Stretch — Requirement 16)
 
-MVP runs locally: FastAPI (`uvicorn`), the Vite dev server, and a Postgres+PostGIS instance (local Docker or a Tiger Data dev database). The Stretch deployment makes GridLock publicly reachable:
+MVP runs locally: FastAPI (`uvicorn`), the Vite dev server, and a Postgres+PostGIS instance (local Docker or a Tiger Data dev database). The Stretch deployment makes GridMerge publicly reachable:
 
 ```mermaid
 flowchart LR
-    U[Planner browser] -->|HTTPS gridlock.example.com| GD[GoDaddy DNS]
+    U[Planner browser] -->|HTTPS gridmerge.example.com| GD[GoDaddy DNS]
     GD --> LS[AWS Lightsail instance]
     subgraph LS["AWS Lightsail instance (Docker Compose)"]
         CAD[Caddy: TLS] --> BE["FastAPI container: API at /api + React build at /"]

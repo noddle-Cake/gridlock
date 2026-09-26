@@ -39,7 +39,7 @@ raw_records = st.fixed_dictionaries(
 )
 
 
-# Feature: gridlock, Property 11: Accepted extracted record satisfies schema invariants
+# Feature: gridmerge, Property 11: Accepted extracted record satisfies schema invariants
 @given(raw_records, st.integers(1, 500))
 def test_record_invariants(raw, page_count):
     p = normalize_record(raw, utility="Util A", page_count=page_count)
@@ -65,7 +65,7 @@ FULL = {
 }
 
 
-# Feature: gridlock, Property 12: Undeterminable fields are emptied, record still created
+# Feature: gridmerge, Property 12: Undeterminable fields are emptied, record still created
 @given(st.sets(st.sampled_from(list(FULL))), st.booleans())
 def test_undeterminable_fields_emptied(unknown, unclassifiable_type):
     raw = {k: ("" if k in unknown else v) for k, v in FULL.items()}

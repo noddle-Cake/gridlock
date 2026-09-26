@@ -222,9 +222,9 @@ async def export(
     if fmt == "csv":
         return Response(
             export_service.render_csv(records), media_type="text/csv",
-            headers={"Content-Disposition": 'attachment; filename="gridlock-briefs.csv"'},
+            headers={"Content-Disposition": 'attachment; filename="gridmerge-briefs.csv"'},
         )
     return Response(
         export_service.render_pdf(records), media_type="application/pdf",
-        headers={"Content-Disposition": 'attachment; filename="gridlock-briefs.pdf"'},
+        headers={"Content-Disposition": 'attachment; filename="gridmerge-briefs.pdf"'},
     )

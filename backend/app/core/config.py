@@ -6,11 +6,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str = "postgresql://gridlock:gridlock@localhost:5432/gridlock"
+    database_url: str = "postgresql://gridmerge:gridmerge@localhost:5432/gridmerge"
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.5-flash"
     geocoder: str = "nominatim"  # nominatim | none
-    geocoder_user_agent: str = "GridLock/0.1 (hackathon demo)"
+    geocoder_user_agent: str = "GridMerge/0.1 (hackathon demo)"
     cors_origins: str = "http://localhost:5173"
 
     # Matching defaults (Req 6.5, 6.6, 7.2)

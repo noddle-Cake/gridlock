@@ -1,8 +1,8 @@
-# Implementation Plan: GridLock
+# Implementation Plan: GridMerge
 
 ## Overview
 
-This plan builds GridLock incrementally toward a demoable MVP loop first —
+This plan builds GridMerge incrementally toward a demoable MVP loop first —
 **upload → extract → review → map/timeline → tune thresholds → why-flagged → brief** —
 then layers on stretch items (CSV/PDF export, 3+ utility scaling, AWS Lightsail + GoDaddy
 deployment, transmission-line geometry).
@@ -318,7 +318,7 @@ Tasks and sub-tasks tagged **[Stretch]** are explicitly out of the MVP path.
 
 - Tasks marked with `*` are optional (tests) and can be skipped for a faster MVP, but should be run before the demo.
 - Tasks tagged **[Stretch]** (14–17) are out of the MVP path; build them only after the demo loop in tasks 1–13 works end to end.
-- Each of Properties 1–18 is implemented by exactly one property-based test, tagged with a `# Feature: gridlock, Property {number}` comment and referencing the design property it validates.
+- Each of Properties 1–18 is implemented by exactly one property-based test, tagged with a `# Feature: gridmerge, Property {number}` comment and referencing the design property it validates.
 - DB-backed properties (P1, P2, P13, P14) and cross-utility coverage run against a disposable Postgres+PostGIS test database so PostGIS behavior is exercised for real.
 - Extraction accuracy is measured by the golden-set harness (task 10.3), not by property tests, since it depends on Gemini output quality.
 - Checkpoints (tasks 8, 13, 18) ensure incremental validation; the task-13 checkpoint corresponds to a working MVP demo.

@@ -1,6 +1,8 @@
 # Production stack on a single Lightsail instance. CI copies this directory to
 # ~/gridlock on the server and writes ~/gridlock/.env (APP_TAG, POSTGRES_PASSWORD,
 # GEMINI_API_KEY, SITE_ADDRESS) before each `docker compose up -d`.
+# Server-side names (project, ~/gridlock dir, DB user/name, gridlock_pgdata volume)
+# keep the pre-rename "gridlock" so the running stack and its data carry over.
 name: gridlock
 
 services:
@@ -21,7 +23,7 @@ services:
       retries: 30
 
   app:
-    image: gridlock:${APP_TAG:?}
+    image: gridmerge:${APP_TAG:?}
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://gridlock:${POSTGRES_PASSWORD}@db:5432/gridlock

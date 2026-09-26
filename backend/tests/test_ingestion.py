@@ -8,7 +8,7 @@ from hypothesis import strategies as st
 from app.core.errors import (
     CorruptFileError,
     FileTooLargeError,
-    GridLockError,
+    GridMergeError,
     MissingMetadataError,
     UnsupportedFormatError,
 )
@@ -63,7 +63,7 @@ FILES = {
 metadata = st.one_of(st.none(), st.just(""), st.just("   "), st.text(min_size=1, max_size=20))
 
 
-# Feature: gridlock, Property 16: Ingestion accept/reject invariant
+# Feature: gridmerge, Property 16: Ingestion accept/reject invariant
 @given(st.sampled_from(list(FILES)), metadata, metadata, st.booleans())
 def test_accept_reject_invariant(kind, utility, source_url, oversize):
     data, filename, expected_format = FILES[kind]
@@ -140,9 +140,9 @@ def test_pages_are_annotated():
     assert "Row 2:" in validate_bytes(CSV, "p.csv").pages[0]
 
 
-def test_errors_are_gridlock_errors():
+def test_errors_are_gridmerge_errors():
     for cls in (CorruptFileError, FileTooLargeError, MissingMetadataError, UnsupportedFormatError):
-        assert issubclass(cls, GridLockError)
+        assert issubclass(cls, GridMergeError)
     from app.services.ingestion import validate_upload
 
     assert inspect.iscoroutinefunction(validate_upload)

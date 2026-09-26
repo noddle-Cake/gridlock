@@ -1,4 +1,4 @@
-# GridLock — single ignore file for the whole repo (backend + frontend).
+# GridMerge — single ignore file for the whole repo (backend + frontend).
 
 # ---- Secrets / local config (keep the .example templates)
 .env

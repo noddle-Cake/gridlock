@@ -2,7 +2,7 @@
 
 DB-backed tests need a disposable Postgres+PostGIS database. Start one with
 `docker compose up -d testdb` and set
-TEST_DATABASE_URL=postgresql://gridlock:gridlock@localhost:5433/gridlock_test
+TEST_DATABASE_URL=postgresql://gridmerge:gridmerge@localhost:5433/gridmerge_test
 (that URL is the default). They are skipped when no database is reachable.
 """
 
@@ -19,13 +19,13 @@ from hypothesis import HealthCheck, settings
 from app.services.geocoding import Candidate
 
 settings.register_profile(
-    "gridlock", max_examples=100, deadline=None,
+    "gridmerge", max_examples=100, deadline=None,
     suppress_health_check=[HealthCheck.function_scoped_fixture, HealthCheck.too_slow],
 )
-settings.load_profile("gridlock")
+settings.load_profile("gridmerge")
 
 TEST_DATABASE_URL = os.environ.get(
-    "TEST_DATABASE_URL", "postgresql://gridlock:gridlock@localhost:5433/gridlock_test"
+    "TEST_DATABASE_URL", "postgresql://gridmerge:gridmerge@localhost:5433/gridmerge_test"
 )
 
 

@@ -73,7 +73,7 @@ radii = st.floats(0, 60)
 pads = st.integers(0, 120)
 
 
-# Feature: gridlock, Property 1: Valid pair membership
+# Feature: gridmerge, Property 1: Valid pair membership
 @given(project_sets, radii, pads)
 def test_valid_pair_membership(projects, radius, pad):
     async def body(conn):
@@ -103,7 +103,7 @@ def test_valid_pair_membership(projects, radius, pad):
             assert (ia, ib) in found
 
 
-# Feature: gridlock, Property 2: Matching symmetry and well-formed distance
+# Feature: gridmerge, Property 2: Matching symmetry and well-formed distance
 @given(project_sets, radii, pads)
 def test_matching_symmetry(projects, radius, pad):
     def pairs_for(order):
@@ -126,7 +126,7 @@ def test_matching_symmetry(projects, radius, pad):
         assert days == backward[key][1]
 
 
-# Feature: gridlock, Property 13: Persistence round-trip
+# Feature: gridmerge, Property 13: Persistence round-trip
 @given(new_projects(), st.sampled_from(list(DatePrecision)))
 def test_persistence_round_trip(p, precision):
     p.start_precision = precision if p.start_date else None
@@ -170,7 +170,7 @@ edits = st.fixed_dictionaries({}, optional={
 }).filter(bool)
 
 
-# Feature: gridlock, Property 14: Edit round-trip and effect on matching
+# Feature: gridmerge, Property 14: Edit round-trip and effect on matching
 @settings(max_examples=100)
 @given(st.lists(new_projects(), min_size=2, max_size=10), st.data(), edits)
 def test_edit_round_trip_and_rematch(projects, data, edit):

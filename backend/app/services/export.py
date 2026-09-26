@@ -81,11 +81,11 @@ def render_pdf(records: list[ExportRecord]) -> bytes:
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
-        buf, pagesize=letter, title="GridLock coordination briefs",
+        buf, pagesize=letter, title="GridMerge coordination briefs",
         leftMargin=0.8 * inch, rightMargin=0.8 * inch,
     )
     styles = getSampleStyleSheet()
-    story = [Paragraph("GridLock coordination briefs", styles["Title"])]
+    story = [Paragraph("GridMerge coordination briefs", styles["Title"])]
     if not records:
         story.append(
             Paragraph("No coordination pairs at the current thresholds.", styles["Normal"])

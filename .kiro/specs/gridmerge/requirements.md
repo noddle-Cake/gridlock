@@ -2,7 +2,7 @@
 
 ## Introduction
 
-GridLock is a coordination radar for electric utility capital planners. Neighboring utilities plan capital projects (substations, transmission lines, generation) years in advance without visibility into each other's plans. GridLock ingests the public capital plans of two or more utilities (PDF or spreadsheet), uses a Large Language Model to extract every project into a common schema, geocodes and stores each project, and flags project pairs that are close in both space and time. For each flagged pair, GridLock generates a short coordination brief that a planner can forward to a neighboring utility (for example, suggesting a shared crane crew for two nearby breaker replacements in the same quarter).
+GridMerge is a coordination radar for electric utility capital planners. Neighboring utilities plan capital projects (substations, transmission lines, generation) years in advance without visibility into each other's plans. GridMerge ingests the public capital plans of two or more utilities (PDF or spreadsheet), uses a Large Language Model to extract every project into a common schema, geocodes and stores each project, and flags project pairs that are close in both space and time. For each flagged pair, GridMerge generates a short coordination brief that a planner can forward to a neighboring utility (for example, suggesting a shared crane crew for two nearby breaker replacements in the same quarter).
 
 The product centers on a human-in-the-loop workflow: planners review low-confidence extractions, tune matching thresholds, inspect why a pair was flagged, and export coordination briefs. Every project links back to its source document page for verification.
 
@@ -10,19 +10,19 @@ This document scopes an MVP (must-ship for the hackathon demo) and a set of Stre
 
 ## Glossary
 
-- **GridLock**: The overall system comprising the ingestion pipeline, data store, matching engine, brief generator, and web UI.
-- **System**: A synonym for GridLock, referring to the overall system when a specific component is not being singled out.
-- **Ingestion_Service**: The GridLock component that accepts uploaded utility plans and initiates processing.
-- **Extraction_Service**: The GridLock component that uses the LLM to convert source documents into structured Project records.
+- **GridMerge**: The overall system comprising the ingestion pipeline, data store, matching engine, brief generator, and web UI.
+- **System**: A synonym for GridMerge, referring to the overall system when a specific component is not being singled out.
+- **Ingestion_Service**: The GridMerge component that accepts uploaded utility plans and initiates processing.
+- **Extraction_Service**: The GridMerge component that uses the LLM to convert source documents into structured Project records.
 - **LLM**: The Large Language Model (Gemini) used for extraction and brief generation.
-- **Geocoding_Service**: The GridLock component that converts substation names, town names, or county names into geographic coordinates.
+- **Geocoding_Service**: The GridMerge component that converts substation names, town names, or county names into geographic coordinates.
 - **Data_Store**: The PostgreSQL database (with the PostGIS extension) that persists Project records and supports spatial and temporal queries.
-- **Matching_Engine**: The GridLock component that identifies and scores candidate coordination pairs.
-- **Brief_Generator**: The GridLock component that uses the LLM to produce a coordination brief for a flagged pair.
-- **Web_UI**: The GridLock browser application providing the map, timeline, threshold controls, why-flagged panel, and review screen.
+- **Matching_Engine**: The GridMerge component that identifies and scores candidate coordination pairs.
+- **Brief_Generator**: The GridMerge component that uses the LLM to produce a coordination brief for a flagged pair.
+- **Web_UI**: The GridMerge browser application providing the map, timeline, threshold controls, why-flagged panel, and review screen.
 - **Review_Screen**: The Web_UI view where a Planner inspects and edits extracted projects.
-- **Export_Service**: The GridLock component that produces downloadable files of coordination briefs.
-- **Planner**: A human utility capital planner who uses GridLock to review extractions, tune thresholds, and export briefs.
+- **Export_Service**: The GridMerge component that produces downloadable files of coordination briefs.
+- **Planner**: A human utility capital planner who uses GridMerge to review extractions, tune thresholds, and export briefs.
 - **Project**: A single planned capital work item extracted from a source document. Fields: id, utility, state, name, type, voltage_kv, geom, start_date, end_date, confidence, source_url, source_page, raw_excerpt, reviewed.
 - **Project_Type**: One of the enumerated categories: substation, transmission line, generation.
 - **Coordination_Pair**: A pair of Projects from two different utilities that satisfy the spatial and temporal matching criteria.
@@ -38,7 +38,7 @@ This document scopes an MVP (must-ship for the hackathon demo) and a set of Stre
 
 ### Requirement 1: Plan Ingestion [MVP]
 
-**User Story:** As a Planner, I want to upload two or more utilities' public capital plans, so that GridLock can analyze them for coordination opportunities.
+**User Story:** As a Planner, I want to upload two or more utilities' public capital plans, so that GridMerge can analyze them for coordination opportunities.
 
 #### Acceptance Criteria
 
@@ -91,7 +91,7 @@ This document scopes an MVP (must-ship for the hackathon demo) and a set of Stre
 
 ### Requirement 5: Project Storage [MVP]
 
-**User Story:** As a Planner, I want extracted projects stored in a database that supports spatial and temporal queries, so that GridLock can compute distances and time overlaps.
+**User Story:** As a Planner, I want extracted projects stored in a database that supports spatial and temporal queries, so that GridMerge can compute distances and time overlaps.
 
 #### Acceptance Criteria
 
@@ -102,7 +102,7 @@ This document scopes an MVP (must-ship for the hackathon demo) and a set of Stre
 
 ### Requirement 6: Overlap Matching [MVP]
 
-**User Story:** As a Planner, I want GridLock to flag pairs of projects that are close in space and time, so that I can identify coordination opportunities.
+**User Story:** As a Planner, I want GridMerge to flag pairs of projects that are close in space and time, so that I can identify coordination opportunities.
 
 #### Acceptance Criteria
 
@@ -158,7 +158,7 @@ This document scopes an MVP (must-ship for the hackathon demo) and a set of Stre
 
 ### Requirement 10: Threshold Controls [MVP]
 
-**User Story:** As a Planner, I want sliders to adjust the distance and time thresholds, so that I can tune which pairs GridLock flags and watch the results change.
+**User Story:** As a Planner, I want sliders to adjust the distance and time thresholds, so that I can tune which pairs GridMerge flags and watch the results change.
 
 #### Acceptance Criteria
 
@@ -202,7 +202,7 @@ This document scopes an MVP (must-ship for the hackathon demo) and a set of Stre
 
 ### Requirement 14: Coordination Brief Export [Stretch]
 
-**User Story:** As a Planner, I want to export coordination briefs to a file, so that I can share them outside GridLock with neighboring utilities.
+**User Story:** As a Planner, I want to export coordination briefs to a file, so that I can share them outside GridMerge with neighboring utilities.
 
 #### Acceptance Criteria
 
@@ -222,11 +222,11 @@ This document scopes an MVP (must-ship for the hackathon demo) and a set of Stre
 
 ### Requirement 16: Deployment and Domain [Stretch]
 
-**User Story:** As a Planner, I want GridLock hosted at a public web address, so that I can access it and demonstrate it without local setup.
+**User Story:** As a Planner, I want GridMerge hosted at a public web address, so that I can access it and demonstrate it without local setup.
 
 #### Acceptance Criteria
 
-1. THE GridLock system SHALL be deployable to a cloud host reachable over the public internet.
+1. THE GridMerge system SHALL be deployable to a cloud host reachable over the public internet.
 2. THE Web_UI SHALL be reachable through a registered public domain name.
 
 ### Requirement 17: Transmission Line Geometry [Stretch]

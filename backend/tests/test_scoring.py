@@ -26,7 +26,7 @@ def test_weights_are_convex():
     assert math.isclose(sum(WEIGHTS.values()), 1.0)
 
 
-# Feature: gridlock, Property 3: Distance score is bounded and monotonically non-increasing
+# Feature: gridmerge, Property 3: Distance score is bounded and monotonically non-increasing
 @given(nonneg, nonneg, pos)
 def test_distance_score(d1, d2, radius):
     d1, d2 = sorted((d1, d2))
@@ -38,7 +38,7 @@ def test_distance_score(d1, d2, radius):
     assert distance_score(radius + d1, radius) == 0.0
 
 
-# Feature: gridlock, Property 4: Overlap score is bounded and monotonically non-decreasing
+# Feature: gridmerge, Property 4: Overlap score is bounded and monotonically non-decreasing
 @given(st.integers(-5000, 5000), st.integers(-5000, 5000), st.integers(1, 3650))
 def test_overlap_score(d1, d2, max_overlap):
     d1, d2 = sorted((d1, d2))
@@ -51,7 +51,7 @@ def test_overlap_score(d1, d2, max_overlap):
         assert s2 == 1.0
 
 
-# Feature: gridlock, Property 5: Type-similarity is exact and symmetric
+# Feature: gridmerge, Property 5: Type-similarity is exact and symmetric
 @given(types, types)
 def test_type_similarity(a, b):
     s = type_similarity(a, b)
@@ -59,7 +59,7 @@ def test_type_similarity(a, b):
     assert s == type_similarity(b, a)
 
 
-# Feature: gridlock, Property 6: Voltage-similarity is bounded, monotone in difference, symmetric
+# Feature: gridmerge, Property 6: Voltage-similarity is bounded, monotone in difference, symmetric
 @given(volts, volts, volts, volts)
 def test_voltage_similarity(a, b, c, d):
     s = voltage_similarity(a, b)
@@ -70,7 +70,7 @@ def test_voltage_similarity(a, b, c, d):
         assert voltage_similarity(a, b) >= voltage_similarity(c, d)
 
 
-# Feature: gridlock, Property 7: Composite score is bounded and factor-monotone
+# Feature: gridmerge, Property 7: Composite score is bounded and factor-monotone
 @given(unit, unit, unit, unit, st.sampled_from(list(WEIGHTS)), unit)
 def test_composite(f1, f2, f3, f4, bump, delta):
     factors = dict(zip(WEIGHTS, (f1, f2, f3, f4), strict=True))
@@ -81,7 +81,7 @@ def test_composite(f1, f2, f3, f4, bump, delta):
     assert composite_score(raised) >= c - 1e-12
 
 
-# Feature: gridlock, Property 8: Missing factor inputs are zeroed and flagged indeterminate
+# Feature: gridmerge, Property 8: Missing factor inputs are zeroed and flagged indeterminate
 @given(
     miles=st.one_of(st.none(), st.just(float("nan")), nonneg),
     overlap=st.one_of(st.none(), st.integers(-100, 1000)),

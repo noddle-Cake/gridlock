@@ -36,7 +36,7 @@ def _spellings(p: PartialDate) -> list[str]:
             return [f"{y}-{p.month:02d}-{p.day:02d}", f"{p.month}/{p.day}/{y}"]
 
 
-# Feature: gridlock, Property 10: Date precision is preserved, never refined
+# Feature: gridmerge, Property 10: Date precision is preserved, never refined
 @given(partial_dates(), st.data())
 def test_precision_preserved_and_span_canonical(p: PartialDate, data):
     spelling = data.draw(st.sampled_from(_spellings(p)))

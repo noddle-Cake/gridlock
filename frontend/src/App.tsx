@@ -91,7 +91,7 @@ export default function App() {
         <div className="brand">
           <img src="/favicon.svg" alt="" width={28} height={28} />
           <div>
-            <h1>GridLock</h1>
+            <h1>GridMerge</h1>
             <p>Coordination radar for utility capital plans</p>
           </div>
         </div>
@@ -190,5 +190,5 @@ export default function App() {
 
 function describe(e: unknown): string {
   if (e instanceof ApiError) return e.body.message
-  return `Could not reach the GridLock API (${String(e)}). Is the backend running?`
+  return `Could not reach the GridMerge API (${String(e)}). Is the backend running?`
 }

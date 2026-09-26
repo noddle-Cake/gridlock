@@ -34,7 +34,7 @@ class ScriptedGeocoder:
         return [Candidate(40.0 + i, -77.0 - i) for i in range(outcome)]
 
 
-# Feature: gridlock, Property 9: Geocoding resolution outcome
+# Feature: gridmerge, Property 9: Geocoding resolution outcome
 @given(attempts)
 def test_resolution_outcome(script):
     geocoder = ScriptedGeocoder(script)

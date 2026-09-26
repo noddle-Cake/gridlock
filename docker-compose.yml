@@ -2,15 +2,15 @@ services:
   db:
     image: postgis/postgis:16-3.4
     environment:
-      POSTGRES_USER: gridlock
-      POSTGRES_PASSWORD: gridlock
-      POSTGRES_DB: gridlock
+      POSTGRES_USER: gridmerge
+      POSTGRES_PASSWORD: gridmerge
+      POSTGRES_DB: gridmerge
     ports:
       - "5432:5432"
     volumes:
-      - gridlock-db:/var/lib/postgresql/data
+      - gridmerge-db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gridlock"]
+      test: ["CMD-SHELL", "pg_isready -U gridmerge"]
       interval: 2s
       retries: 30
 
@@ -18,13 +18,13 @@ services:
   testdb:
     image: postgis/postgis:16-3.4
     environment:
-      POSTGRES_USER: gridlock
-      POSTGRES_PASSWORD: gridlock
-      POSTGRES_DB: gridlock_test
+      POSTGRES_USER: gridmerge
+      POSTGRES_PASSWORD: gridmerge
+      POSTGRES_DB: gridmerge_test
     ports:
       - "5433:5432"
     tmpfs:
       - /var/lib/postgresql/data
 
 volumes:
-  gridlock-db:
+  gridmerge-db:

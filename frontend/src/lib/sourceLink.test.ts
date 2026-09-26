@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { sourceLink } from './sourceLink'
 
 describe('sourceLink', () => {
-  // Feature: gridlock, Property 18: Source link encodes the page
+  // Feature: gridmerge, Property 18: Source link encodes the page
   it('is derived from source_url and encodes source_page', () => {
     fc.assert(
       fc.property(

@@ -1,4 +1,4 @@
--- GridLock schema (Req 5). Idempotent: safe to run on every startup.
+-- GridMerge schema (Req 5). Idempotent: safe to run on every startup.
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 CREATE TABLE IF NOT EXISTS plans (
