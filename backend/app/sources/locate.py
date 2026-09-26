@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,7 +22,7 @@ from pathlib import Path
 import httpx
 
 from app.services.geocoding import STATE_NAMES, county_centroid
-from app.sources.substations import lookup
+from app.sources.substations import candidates, name_key
 
 PLACE_CACHE = Path(__file__).resolve().parent.parent / "data" / "place_cache.json"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
@@ -32,7 +33,9 @@ PLACE_TYPES = {
 }
 # Two endpoints of one planned line/project further apart than this aren't trusted as
 # a pair; the first resolved endpoint is used instead of the midpoint.
-MAX_SPAN_MILES = 150.0
+MAX_SPAN_MILES = 75.0
+# Same-named substations this close together are treated as one area (approximate).
+CLUSTER_MILES = 15.0
 
 
 def _miles(a: tuple[float, float], b: tuple[float, float]) -> float:
@@ -40,6 +43,21 @@ def _miles(a: tuple[float, float], b: tuple[float, float]) -> float:
     dp, dl = p2 - p1, math.radians(b[1] - a[1])
     h = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
     return 3958.8 * 2 * math.asin(math.sqrt(h))
+
+
+_NOT_A_PLACE = re.compile(
+    r"\b(main|retail|autotransformers?|transformers?|customer|delivery|loop|in|\d+)\b"
+)
+
+
+def place_name(name: str) -> str:
+    """Plan substation name -> the town/area it is probably named after, title case.
+
+    'HARRISBURG TIE 230/100/44 KV AUTOTRANSFORMER' -> 'Harrisburg'; '' when nothing
+    place-like is left ('CUSTOMER DELIVERY').
+    """
+    key = re.sub(r"\s+", " ", _NOT_A_PLACE.sub(" ", name_key(name))).strip()
+    return key.title() if len(key) >= 4 else ""
 
 
 @dataclass
@@ -65,7 +83,9 @@ class PlaceCache:
         self._dirty = False
 
     def places(self, name: str) -> list[dict]:
-        key = name.strip().upper()
+        key = place_name(name)
+        if not key:
+            return []
         if key in self._data or self._offline:
             return self._data.get(key, [])
         resp = None
@@ -73,7 +93,7 @@ class PlaceCache:
             try:
                 resp = httpx.get(
                     NOMINATIM_URL,
-                    params={"q": name, "format": "jsonv2", "limit": 10, "countrycodes": "us",
+                    params={"q": key, "format": "jsonv2", "limit": 40, "countrycodes": "us",
                             "addressdetails": 1, "viewbox": SOUTHEAST_VIEWBOX, "bounded": 1},
                     headers={"User-Agent": self._ua}, timeout=15,
                 )
@@ -119,36 +139,66 @@ def _county_point(place: dict) -> tuple[float, float, str] | None:
 
 
 def locate(
-    endpoints: list[str], states: list[str], places: PlaceCache, *, operator: str | None = None
+    endpoints: list[str], states: list[str], places: PlaceCache, *, operator: str | None = None,
+    bounds: tuple[float, float, float, float] | None = None,
 ) -> Located:
+    def inside(lat: float, lng: float) -> bool:
+        return bounds is None or (bounds[0] <= lat <= bounds[1] and bounds[2] <= lng <= bounds[3])
+
     exact: list[tuple[float, float, str]] = []
+    ambiguous: dict[str, list] = {}
     rough_names: list[str] = []
     for name in endpoints:
-        sub = lookup(name, states, operator_hint=operator)
-        if sub:
-            exact.append((sub.lat, sub.lng, f"{name} = OSM {sub.power} '{sub.name}' ({sub.state})"))
+        subs = [s for s in candidates(name, states, operator_hint=operator)
+                if inside(s.lat, s.lng)]
+        if len(subs) == 1:
+            s = subs[0]
+            exact.append((s.lat, s.lng, f"{name} = OSM {s.power} '{s.name}' ({s.state})"))
+        elif subs:
+            ambiguous[name] = subs
         else:
             rough_names.append(name)
 
+    def nearest(options: list[tuple[float, float, str]], to: tuple[float, float, str]):
+        best = min(options, key=lambda q: _miles(q[:2], to[:2]))
+        return best if _miles(best[:2], to[:2]) <= MAX_SPAN_MILES else None
+
+    # Same-named substations (several "Morrow"s in GA): the other endpoint decides.
+    for name, subs in list(ambiguous.items()):
+        options = [(s.lat, s.lng, f"{name} = OSM {s.power} '{s.name}' ({s.state}), nearest "
+                    f"of {len(subs)} same-named") for s in subs]
+        if exact and (pick := nearest(options, exact[0])):
+            exact.append(pick)
+            del ambiguous[name]
+
     rough: list[tuple[float, float, str]] = []
     for name in rough_names:
-        matches = [p for p in places.places(name) if p["state"] in states]
+        matches = [p for p in places.places(name)
+                   if p["state"] in states and inside(p["lat"], p["lng"])]
         points = {}
         for p in matches:
             pt = _county_point(p)
             if pt:
                 points[(round(pt[0], 2), round(pt[1], 2))] = pt
-        anchor = exact[0] if exact else None
-        if len(points) == 1:
-            pt = next(iter(points.values()))
-            rough.append((pt[0], pt[1], f"{name} ~ {pt[2]}"))
-        elif points and anchor:
+        options = [(q[0], q[1], f"{name} ~ {q[2]}") for q in points.values()]
+        if len(options) == 1:
+            rough.append(options[0])
+        elif options and exact and (pick := nearest(options, exact[0])):
             # Same-named towns in several states: take the one nearest the resolved end.
-            pt = min(points.values(), key=lambda q: _miles(q[:2], anchor[:2]))
-            if _miles(pt[:2], anchor[:2]) <= MAX_SPAN_MILES:
-                rough.append((pt[0], pt[1], f"{name} ~ {pt[2]} (nearest of {len(points)})"))
+            rough.append((pick[0], pick[1], pick[2] + f" (nearest of {len(options)})"))
 
-    resolved = exact + rough
+    for name, subs in ambiguous.items():
+        anchor = (exact + rough)[0] if exact or rough else None
+        options = [(s.lat, s.lng, f"{name} = OSM '{s.name}' ({s.state})") for s in subs]
+        if anchor and (pick := nearest(options, anchor)):
+            exact.append(pick)
+        elif max(_miles(a[:2], b[:2]) for a in options for b in options) <= CLUSTER_MILES:
+            lat = sum(o[0] for o in options) / len(options)
+            lng = sum(o[1] for o in options) / len(options)
+            rough.append((lat, lng, f"{name} ~ centre of {len(options)} nearby same-named "
+                          "OSM substations"))
+
+    resolved = [(*e, True) for e in exact] + [(*r, False) for r in rough]
     if not resolved:
         return Located(requires_review=True, how="No substation or place match; needs review.")
     first = resolved[0]
@@ -159,7 +209,7 @@ def locate(
     else:
         lat, lng = first[0], first[1]
         used = [first]
-    approximate = bool(rough) or len(used) < len(endpoints)
+    approximate = not all(u[3] for u in used) or len(used) < len(endpoints)
     how = "Located: " + "; ".join(u[2] for u in used)
     if len(used) == 2:
         how += " (midpoint)"

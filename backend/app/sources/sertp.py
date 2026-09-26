@@ -40,6 +40,18 @@ AREAS: dict[str, tuple[str, list[str]]] = {
     "SOUTHERN": ("Southern Company", ["GA", "AL", "MS", "FL"]),
     "TVA": ("TVA", ["TN", "AL", "MS", "KY", "GA", "NC", "VA"]),
 }
+# Rough service-territory box per area (min lat, max lat, min lng, max lng). Candidate
+# substations/places outside it are same-named elsewhere (e.g. FPL's "Martin Plant" in
+# south Florida vs Alabama Power's Martin Dam), so they're ignored.
+AREA_BOUNDS: dict[str, tuple[float, float, float, float]] = {
+    "AECI": (33.0, 41.0, -97.0, -89.0),
+    "DUKE CAROLINAS": (33.8, 36.6, -83.2, -78.5),
+    "DUKE PROGRESS EAST": (33.5, 36.6, -80.2, -75.4),
+    "DUKE PROGRESS WEST": (35.0, 36.2, -83.3, -82.0),
+    "LG&E/KU": (36.4, 39.2, -89.6, -81.9),
+    "SOUTHERN": (29.9, 35.1, -91.7, -80.8),
+    "TVA": (32.0, 37.5, -90.4, -81.5),
+}
 # Southern-area owners that sit in fewer states than the whole area.
 OWNER_STATES = {
     "Georgia Transmission Corp": ["GA"],
@@ -72,9 +84,13 @@ _TAIL = re.compile(
     r"LINE\b.*|SUBSTATION\b.*|SUB\b.*|AREA\b.*|NETWORK\b.*|PROTECTION\b.*|"
     r"RELAY\b.*|BREAKER\b.*|STATCOM\b.*|SWITCHING\b.*|MODERNIZATION\b.*|"
     r"GENERATION\b.*|SOLAR\b.*|IMPROVEMENTS?\b.*|UPGRADES?\b.*|REBUILD\b.*|"
-    r"RECONDUCTOR\b.*|REACTOR\b.*|CAP\b.*|BANK\b.*|AUTOBANK\b.*)$"
+    r"RECONDUCTOR\b.*|REACTOR\b.*|CAP\b.*|BANK\b.*|AUTOBANK\b.*|TERMINAL\b.*|"
+    r"EQUIPMENT\b.*|OVERSTRESSED\b.*|SOLUTION\b.*|LIMITING\b.*)$"
 )
-_VERB = re.compile(r"^(REPLACE|INSTALL|ADD|CONSTRUCT|UPGRADE|EXPAND|REMOVE .* AT)\s+")
+_VERB = re.compile(
+    r"^(REPLACE|INSTALL|ADD|CONSTRUCT|UPGRADE|EXPAND|REMOVE LIMITING ELEMENTS (ON|AT))\s+"
+)
+_SPLIT = re.compile(r"\s+[-–]\s+|(?<=[A-Z])[-–](?=[A-Z])|\s+TO\s+|\s+AND\s+|\s*&\s*")
 
 
 @dataclass
@@ -107,9 +123,9 @@ class SertpEntry:
     def endpoints(self) -> list[str]:
         """Place names in the title: 'A - B 230 KV ...' -> ['A', 'B']."""
         head = self.title.upper().split(",")[0]
-        head = _VERB.sub("", _TAIL.sub("", head)).strip(" -–")
-        parts = re.split(r"\s+[-–]\s+|\s+TO\s+|\s*&\s*", head)
-        return [p.strip() for p in parts if len(p.strip()) >= 3]
+        head = _TAIL.sub("", _VERB.sub("", head)).strip(" -–")
+        parts = [p.strip() for p in _SPLIT.split(head) if len(p.strip()) >= 3]
+        return list(dict.fromkeys(parts))  # "CAMPOBELLO TIE AND CAMPOBELLO TIE"
 
     @property
     def kind(self) -> str:

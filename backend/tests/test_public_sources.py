@@ -132,3 +132,43 @@ def test_eia_plant_record_cites_rows():
 def test_owner_aliases_line_up_sertp_and_eia():
     assert canonical_utility("Duke Energy Progress - (NC)") == "Duke Energy Progress"
     assert canonical_utility("Tennessee Valley Authority") == canonical_utility("TVA") == "TVA"
+
+
+def test_ambiguous_substation_resolved_by_other_endpoint(fake_osm):
+    # Two "Oak Grove"s; the one near Doyle (33.9, -83.9) is picked, the far one isn't.
+    got = locate_mod.locate(["DOYLE", "OAK GROVE"], ["GA"], FakePlaces({}))
+    assert (got.lat, got.lng, got.approximate) == (33.45, -83.95, False)
+    assert "nearest of 2" in got.how
+
+
+def test_nearby_same_named_substations_become_one_approximate_area(fake_osm):
+    fake_osm["twin"] = [
+        Substation("GA", "Twin", "substation", "", 33.00, -84.00),
+        Substation("GA", "Twin", "substation", "", 33.10, -84.00),  # ~7 miles apart
+    ]
+    got = locate_mod.locate(["TWIN"], ["GA"], FakePlaces({}))
+    assert (got.lat, got.lng, got.approximate) == (33.05, -84.0, True)
+
+
+@pytest.mark.parametrize("name, endpoints", [
+    ("SOCO: ASHLEY PARK-WANSLEY 500 KV LINE", ["ASHLEY PARK", "WANSLEY"]),
+    ("SOCO: REMOVE LIMITING ELEMENTS ON SOUTH COWETA 115 KV", ["SOUTH COWETA"]),
+    ("SOCO: LINE CREEK TERMINAL EQUIPMENT REPLACEMENT", ["LINE CREEK"]),
+    ("CAMPOBELLO TIE AND CAMPOBELLO TIE 100 KV", ["CAMPOBELLO TIE"]),
+])
+def test_endpoint_cleanup(name, endpoints):
+    from app.sources.sertp import SertpEntry
+
+    entry = SertpEntry(page=1, area="SOUTHERN", year=2027, name=name, description="",
+                       supporting="")
+    assert entry.endpoints == endpoints
+
+
+@pytest.mark.parametrize("name, place", [
+    ("HARRISBURG TIE 230/100/44 KV AUTOTRANSFORMER", "Harrisburg"),
+    ("LAWSONS FORK TIE", "Lawsons Fork"),
+    ("DURHAM MAIN", "Durham"),
+    ("CUSTOMER DELIVERY", ""),
+])
+def test_place_name_strips_equipment_words(name, place):
+    assert locate_mod.place_name(name) == place

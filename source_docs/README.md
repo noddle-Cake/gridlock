@@ -85,8 +85,15 @@ be uploaded again once the quota resets.
      (Nominatim, Southeast only); the project is put at that place's **county centre**
      and marked approximate.
   3. Otherwise no point; the project is marked for review.
+- Candidates outside the balancing area's rough territory box are ignored (FPL's "Martin
+  Plant" in south Florida is not Alabama Power's Martin Dam), and two endpoints more than
+  75 miles apart aren't averaged.
 - Citation: report URL + page; the excerpt holds the full SERTP entry and how it was
   located (which OSM feature or which county).
+
+Result for the 2026 report: 123 projects placed on matched OSM substations, 193
+approximate (one endpoint only, or a county centre), 110 unplaced and marked for review.
+The placement trail for every project is in `extracted/sertp_2026_preliminary_projects.csv`.
 - Confidence: 0.95 placed on OSM substations, 0.8 approximate, 0.6 unplaced.
 
 A pdfplumber pass reads all 426 entries, so no LLM is needed for SERTP. Messier filings

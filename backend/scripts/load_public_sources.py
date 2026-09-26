@@ -47,7 +47,7 @@ EXPORT_COLUMNS = [
 def write_export(path: Path, projects: list[repo.NewProject], source_file: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=EXPORT_COLUMNS)
+        w = csv.DictWriter(f, fieldnames=EXPORT_COLUMNS, lineterminator="\n")
         w.writeheader()
         for p in projects:
             in_service = p.start_date.strftime("%Y-%m" if p.start_precision ==
@@ -98,7 +98,8 @@ def sertp_projects(path: Path, areas: set[str] | None, *, offline: bool) -> list
     stats: Counter[str] = Counter()
     try:
         for i, e in enumerate(entries, start=1):
-            where = locate(e.endpoints, e.states, places, operator=e.owner)
+            where = locate(e.endpoints, e.states, places, operator=e.owner,
+                           bounds=sertp.AREA_BOUNDS.get(e.area))
             stats["review" if where.requires_review else
                   "approximate" if where.approximate else "exact"] += 1
             if i % 50 == 0:

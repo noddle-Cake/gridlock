@@ -24,15 +24,15 @@ _EQUIPMENT = re.compile(
     r"distribution|transmission|ts|ss|dist|plant|steam|generating|power|energy|center|"
     r"electric|facility|hydro|dam|cc|ct|sw|sta|kv|tap|junction|jct)\b"
 )
-_ABBREV = {"mt": "mount", "ft": "fort", "st": "saint", "hwy": "highway", "rd": "road",
-           "n": "north", "s": "south", "e": "east", "w": "west"}
+_ABBREV = {"mt": "mount", "mtn": "mountain", "ft": "fort", "st": "saint", "hwy": "highway",
+           "rd": "road", "n": "north", "s": "south", "e": "east", "w": "west"}
 
 
 def name_key(name: str) -> str:
     """'Lawsons Fork Tie' / 'LAWSON'S FORK SUBSTATION' -> 'lawsons fork'."""
     text = name.lower().replace("&", " and ").replace("’", "").replace("'", "")
     text = re.sub(r"\(.*?\)", " ", text)            # "(Yates to Clem)"
-    text = re.sub(r"\d+(\.\d+)?\s*/?\s*kv\b", " ", text)
+    text = re.sub(r"\d+(\.\d+)?(\s*/\s*\d+(\.\d+)?)*\s*kv\b", " ", text)  # "230/100/44 kV"
     text = re.sub(r"#\s*\d+|\bno\.?\s*\d+\b", " ", text)  # "#2", "No. 2"
     text = re.sub(r"[^a-z0-9 ]", " ", text)
     words = [_ABBREV.get(w, w) for w in text.split()]
@@ -67,29 +67,33 @@ def _index() -> dict[str, list[Substation]]:
     return table
 
 
-def lookup(
+def candidates(
     name: str, states: list[str], *, operator_hint: str | None = None
-) -> Substation | None:
-    """The one OSM substation this plan name refers to, or None if absent/ambiguous.
+) -> list[Substation]:
+    """Distinct OSM substations this plan name could refer to (empty if none).
 
     Several same-named features within ~3 km are one place (a substation node and its
-    fence polygon). Otherwise an operator match breaks the tie; anything still
-    ambiguous is left unresolved rather than guessed.
+    fence polygon). An operator match narrows the list; substations win over power
+    plants of the same name.
     """
     key = name_key(name)
     if len(key) < 3:
-        return None
+        return []
     hits = [s for s in _index().get(key, []) if s.state in states]
     if not hits:
-        return None
-    # Prefer substations over power plants of the same name.
+        return []
     subs = [s for s in hits if s.power == "substation"] or hits
     if operator_hint:
         words = {w for w in re.findall(r"[a-z]{3,}", operator_hint.lower())} - {"energy", "power"}
         owned = [s for s in subs if words & set(re.findall(r"[a-z]{3,}", s.operator.lower()))]
         subs = owned or subs
     places = dedupe_candidates([Candidate(s.lat, s.lng, s.name) for s in subs])
-    if len(places) != 1:
-        return None
-    first = next(s for s in subs if (s.lat, s.lng) == (places[0].lat, places[0].lng))
-    return first
+    return [next(s for s in subs if (s.lat, s.lng) == (p.lat, p.lng)) for p in places]
+
+
+def lookup(
+    name: str, states: list[str], *, operator_hint: str | None = None
+) -> Substation | None:
+    """The one OSM substation this plan name refers to, or None if absent/ambiguous."""
+    found = candidates(name, states, operator_hint=operator_hint)
+    return found[0] if len(found) == 1 else None
