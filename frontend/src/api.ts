@@ -10,6 +10,7 @@ import type {
   Project,
   ProjectPatch,
   SearchResponse,
+  Session,
 } from './types'
 
 export const API_BASE: string = import.meta.env.VITE_API_BASE ?? '/api'
@@ -25,8 +26,12 @@ export class ApiError extends Error {
   }
 }
 
+/** Fired when the server rejects the session (missing or expired); the sign-in gate listens. */
+export const UNAUTHENTICATED_EVENT = 'gridmerge:unauthenticated'
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, init)
+  // `include` also sends the session cookie when VITE_API_BASE points at another origin.
+  const res = await fetch(`${API_BASE}${path}`, { credentials: 'include', ...init })
   if (!res.ok) {
     let body: ApiErrorBody = { code: 'http_error', message: `${res.status} ${res.statusText}` }
     try {
@@ -35,9 +40,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* non-JSON error body */
     }
+    if (res.status === 401 && body.code === 'unauthenticated') {
+      window.dispatchEvent(new Event(UNAUTHENTICATED_EVENT))
+    }
     throw new ApiError(res.status, body)
   }
   return (await res.json()) as T
+}
+
+function postJson<T>(path: string, body?: unknown): Promise<T> {
+  return request(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
 }
 
 /** `utilities` keeps only pairs between those utilities; omit it for every pair. */
@@ -49,6 +65,10 @@ export function thresholdQuery(radius: number, bands?: BandId[], utilities?: str
 }
 
 export const api = {
+  session: (): Promise<Session> => request('/auth/session'),
+  login: (username: string, password: string): Promise<Session> =>
+    postJson('/auth/login', { username, password }),
+  logout: (): Promise<Session> => postJson('/auth/logout'),
   ingest(file: File, utility: string, sourceUrl: string, pages = ''): Promise<IngestResult> {
     const form = new FormData()
     form.append('file', file)

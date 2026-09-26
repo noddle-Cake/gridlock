@@ -234,3 +234,10 @@ export interface AskResponse {
   projects: Project[]
   tool_calls: AskToolCall[]
 }
+
+/** GET /auth/session. `required` is false when the server has no sign-in configured. */
+export interface Session {
+  required: boolean
+  authenticated: boolean
+  username: string | null
+}

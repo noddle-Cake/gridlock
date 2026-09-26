@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     geocoder: str = "nominatim"  # nominatim | none
     geocoder_user_agent: str = "GridMerge/0.1 (hackathon demo)"
     cors_origins: str = "http://localhost:5173"
+
+    # Sign-in (app/core/auth.py). Both set = every API route needs a session; either
+    # empty = open. AUTH_SECRET signs session cookies; empty = random per process.
+    auth_username: str = ""
+    auth_password: str = ""
+    auth_secret: str = ""
+    auth_session_hours: float = 12.0
     # gzip JSON responses (the pair list runs to megabytes). The deploy stack turns this
     # off because Caddy already compresses, with zstd where the browser takes it.
     compress_responses: bool = True

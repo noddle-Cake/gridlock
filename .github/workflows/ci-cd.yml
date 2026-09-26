@@ -108,9 +108,14 @@ jobs:
           # Optional repo variables; empty falls back to the compose defaults.
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           GEMINI_RPM: ${{ vars.GEMINI_RPM }}
+          # Sign-in (app/core/auth.py); unset secrets leave the site open.
+          AUTH_USERNAME: ${{ secrets.AUTH_USERNAME }}
+          AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
         run: |
-          printf 'APP_TAG=%s\nPOSTGRES_PASSWORD=%s\nGEMINI_API_KEY=%s\nSITE_ADDRESS=%s\nGEMINI_MODEL=%s\nGEMINI_RPM=%s\n' \
+          printf 'APP_TAG=%s\nPOSTGRES_PASSWORD=%s\nGEMINI_API_KEY=%s\nSITE_ADDRESS=%s\nGEMINI_MODEL=%s\nGEMINI_RPM=%s\nAUTH_USERNAME=%s\nAUTH_PASSWORD=%s\nAUTH_SECRET=%s\n' \
             "$TAG" "$POSTGRES_PASSWORD" "$GEMINI_API_KEY" "$SITE_ADDRESS" "$GEMINI_MODEL" "$GEMINI_RPM" \
+            "$AUTH_USERNAME" "$AUTH_PASSWORD" "$AUTH_SECRET" \
             | ssh prod 'umask 077 && cat > ~/gridlock/.env.new'
           ssh prod '~/gridlock/remote-deploy.sh'
 

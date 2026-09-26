@@ -160,6 +160,7 @@ def api_client():
 
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
     os.environ["AUTOLOAD_PUBLIC_SOURCES"] = "false"  # API tests start from an empty dataset
+    os.environ["AUTH_USERNAME"] = ""  # open, even when a local .env sets credentials
     get_settings.cache_clear()
     run_db(lambda conn: asyncio.sleep(0))  # reset schema + data
 

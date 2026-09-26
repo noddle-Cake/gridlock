@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router
+from app.core.auth import Auth, install_auth
 from app.core.config import get_settings
 from app.core.errors import install_error_handlers
 from app.db import lines as lines_db
@@ -71,11 +72,14 @@ def create_app(
     app.state.ask = AskService(llm_client)
     app.state.geocoding = GeocodingService(geocoder or default_geocoder())
 
+    # Installed first so CORS (added after, so outermost) also covers its 401s.
+    install_auth(app, Auth(settings))
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
         allow_methods=["*"],
         allow_headers=["*"],
+        allow_credentials=True,  # the session cookie
     )
     if settings.compress_responses:
         app.add_middleware(GZipMiddleware, minimum_size=1024)

@@ -5,13 +5,16 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, File, Form, Query, Request, Response, UploadFile
 from pydantic import ValidationError
 
+from app.core.auth import COOKIE_NAME, client_id
 from app.core.config import get_settings
 from app.core.errors import (
+    InvalidCredentialsError,
     InvalidFieldError,
     InvalidParameterError,
     PairNotFoundError,
     PlanNotFoundError,
     ProjectNotFoundError,
+    TooManyAttemptsError,
     TooManyUtilitiesError,
 )
 from app.db import lines as lines_db
@@ -22,11 +25,13 @@ from app.models.dto import (
     CoordinationBriefDTO,
     IngestResult,
     LineOwnerDTO,
+    LoginRequest,
     OverlapsResponse,
     PlanDTO,
     ProjectDTO,
     ProjectPatch,
     SearchResponse,
+    SessionDTO,
 )
 from app.services import export as export_service
 from app.services import hifld, matching
@@ -44,6 +49,53 @@ def _state(request: Request) -> Any:
 @router.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------- sign-in (core/auth.py)
+
+
+def _set_session(request: Request, response: Response, token: str | None) -> None:
+    auth = _state(request).auth
+    if token is None:
+        response.delete_cookie(COOKIE_NAME, path="/")
+        return
+    response.set_cookie(
+        COOKIE_NAME, token, max_age=auth.max_age, path="/", httponly=True, samesite="lax",
+        # Behind Caddy, --proxy-headers makes the scheme https in production.
+        secure=request.url.scheme == "https",
+    )
+
+
+@router.get("/auth/session", response_model=SessionDTO)
+async def session(request: Request) -> SessionDTO:
+    auth = _state(request).auth
+    if not auth.enabled:
+        return SessionDTO(required=False, authenticated=True)
+    user = auth.verify(request.cookies.get(COOKIE_NAME))
+    return SessionDTO(required=True, authenticated=user is not None, username=user)
+
+
+@router.post("/auth/login", response_model=SessionDTO)
+async def login(body: LoginRequest, request: Request, response: Response) -> SessionDTO:
+    auth = _state(request).auth
+    if not auth.enabled:
+        return SessionDTO(required=False, authenticated=True)
+    client = client_id(request)
+    if auth.locked_out(client):
+        raise TooManyAttemptsError("Too many failed sign-ins. Try again in 15 minutes.")
+    if not auth.check(body.username, body.password):
+        auth.record_failure(client)
+        raise InvalidCredentialsError("Wrong username or password.", fields=["password"])
+    auth.clear_failures(client)
+    _set_session(request, response, auth.issue())
+    return SessionDTO(required=True, authenticated=True, username=auth.username)
+
+
+@router.post("/auth/logout", response_model=SessionDTO)
+async def logout(request: Request, response: Response) -> SessionDTO:
+    auth = _state(request).auth
+    _set_session(request, response, None)
+    return SessionDTO(required=auth.enabled, authenticated=not auth.enabled)
 
 
 # ---------------------------------------------------------------- ingestion (Req 1)

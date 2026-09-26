@@ -220,6 +220,17 @@ class SearchResponse(BaseModel):
     suggest_ai: bool = False  # reads like a question: offer "Ask GridMerge" first
 
 
+class LoginRequest(BaseModel):
+    username: str = Field(max_length=320)
+    password: str = Field(max_length=256)
+
+
+class SessionDTO(BaseModel):
+    required: bool  # sign-in is configured on this server
+    authenticated: bool
+    username: str | None = None
+
+
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=500)
 

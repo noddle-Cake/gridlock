@@ -102,11 +102,27 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | `AUTOLOAD_LINES` | `true` | load the committed snapshot into an empty table on startup |
 | `COMPRESS_RESPONSES` | `true` | gzip API responses; the deploy stack sets `false` because Caddy compresses (zstd) |
 | `SEARCH_ZIP_RADIUS_MILES` | `25` | a ZIP search matches projects this close to the ZIP (widens to 50, then 100, when empty) |
+| `AUTH_USERNAME`, `AUTH_PASSWORD` | — | the one sign-in account; both set = sign-in required, either empty = open app |
+| `AUTH_SECRET` | random per process | signs session cookies; set it so restarts and redeploys keep people signed in |
+| `AUTH_SESSION_HOURS` | `12` | how long a sign-in lasts |
+
+### Sign-in
+
+With `AUTH_USERNAME` and `AUTH_PASSWORD` set, the app opens on a sign-in screen and every
+API route (and `/samples`) returns `401 unauthenticated` without a session; `/health` and
+`/auth/*` stay public. Signing in sets an HttpOnly, SameSite=Lax cookie (Secure over
+HTTPS) holding an HMAC-signed expiry. Five failed sign-ins from one address lock it out for
+15 minutes. In production the CI deploy writes the `AUTH_USERNAME`, `AUTH_PASSWORD`, and
+`AUTH_SECRET` repository secrets into the server's `.env`; with them unset the site stays
+open.
 
 ## API
 
 | Method | Path | Purpose |
 | --- | --- | --- |
+| POST | `/auth/login` | `{"username", "password"}` → session cookie; `401 invalid_credentials`, `429 too_many_attempts` |
+| POST | `/auth/logout` | clears the session cookie |
+| GET | `/auth/session` | `{"required", "authenticated", "username"}` |
 | POST | `/ingest` | multipart `file` + `utility` + `source_url` (+ optional `pages`, e.g. `27-102`) → `202 {plan_id}`; processing runs in the background |
 | GET | `/plans`, `/plans/{id}` | ingestion status (`processing` / `complete` / `failed`) |
 | GET | `/projects` | all stored projects |
