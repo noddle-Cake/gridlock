@@ -18,6 +18,18 @@
   --approx-ink: #574aa8;
   --error: #b42318;
   --bar: #0f7b6c;
+  /* Base map: pale land on muted water, grey lines so the coloured grid and markers stand out. */
+  --map-water: #d4e2ec;
+  --map-land: #fbfbf9;
+  --map-land-foreign: #ecebe6;
+  --map-outline: #8d9aa6;
+  --map-border: #7d8894;
+  --map-county: #b9c1c9;
+  --map-road: #ffffff;
+  --map-road-casing: #c4c9cf;
+  --map-label: #3d4852;
+  --map-label-soft: #6f7b86;
+  --map-halo: rgb(255 255 255 / 85%);
   --radius: 10px;
   --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 8%);
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -49,6 +61,17 @@
     --approx-ink: #b9b0f5;
     --error: #ff8a80;
     --bar: #3fb8a6;
+    --map-water: #0e1a24;
+    --map-land: #1b242d;
+    --map-land-foreign: #161d24;
+    --map-outline: #52606d;
+    --map-border: #6b7885;
+    --map-county: #36424e;
+    --map-road: #4a5561;
+    --map-road-casing: #2b343d;
+    --map-label: #d3dbe2;
+    --map-label-soft: #95a3b0;
+    --map-halo: rgb(14 20 26 / 85%);
     color-scheme: dark;
   }
 }
@@ -338,9 +361,89 @@ a {
   width: 100%;
 }
 
-/* No street base map: grid infrastructure is drawn over a plain field. */
+/* The base map draws land over this, so the container itself reads as open water. */
 .map.leaflet-container {
-  background: var(--surface-2);
+  background: var(--map-water);
+}
+
+/* Place names, highway signs and county names (components/BaseMap.tsx). The icon element is a
+   zero-size anchor at the point; the text is positioned around it. */
+.map-label {
+  pointer-events: none;
+}
+
+.map-label span {
+  position: absolute;
+  white-space: nowrap;
+  line-height: 1;
+  color: var(--map-label);
+  text-shadow:
+    0 0 2px var(--map-halo),
+    0 0 3px var(--map-halo),
+    0 0 4px var(--map-halo);
+}
+
+.map-label-state span,
+.map-label-county span,
+.map-label-sign span {
+  transform: translate(-50%, -50%);
+}
+
+.map-label-state span {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--map-label-soft);
+}
+
+.map-label-county span {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--map-label-soft);
+}
+
+.map-label-place i {
+  position: absolute;
+  left: -2.5px;
+  top: -2.5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--map-label);
+  box-shadow: 0 0 0 1.5px var(--map-halo);
+}
+
+.map-label-place span {
+  left: 5px;
+  transform: translateY(-50%);
+  font-size: 11px;
+}
+
+.map-label-town span {
+  font-size: 12px;
+}
+
+.map-label-city span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.map-label-sign span {
+  padding: 1px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 3px;
+  color: #1f2933;
+  background: #ffffff;
+  border: 1px solid #8d9aa6;
+  text-shadow: none;
+}
+
+.map-label-interstate span {
+  color: #ffffff;
+  background: #2f5d9e;
+  border-color: #1f3f6e;
 }
 
 .map-legend {

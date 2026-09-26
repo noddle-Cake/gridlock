@@ -9,6 +9,7 @@ import {
   MapContainer,
   Pane,
   Polyline,
+  ScaleControl,
   Tooltip,
   useMap,
 } from 'react-leaflet'
@@ -18,6 +19,7 @@ import { markerStyle } from '../lib/mapStyle'
 import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE } from '../lib/powerGrid'
 import { enableSmoothWheelZoom } from '../lib/smoothWheelZoom'
 import type { CoordinationPair, LineCollection, LineFeature, Project } from '../types'
+import { BaseMap } from './BaseMap'
 import { PowerGridLayer } from './PowerGridLayer'
 
 function FitBounds({ bounds }: { bounds: LatLngBoundsExpression | null }) {
@@ -40,6 +42,14 @@ function SmoothWheelZoom() {
   return null
 }
 
+type MapLayer = 'grid' | 'highways' | 'counties' | 'labels'
+const MAP_LAYERS: [MapLayer, string][] = [
+  ['grid', 'Power grid'],
+  ['highways', 'Highways'],
+  ['counties', 'County lines'],
+  ['labels', 'Place names'],
+]
+
 interface Props {
   projects: Project[]
   pairs: CoordinationPair[]
@@ -60,6 +70,12 @@ export function MapView({
   onSelectProject,
 }: Props) {
   const [showLines, setShowLines] = useState(true)
+  const [layers, setLayers] = useState<Record<MapLayer, boolean>>({
+    grid: true,
+    highways: true,
+    counties: true,
+    labels: true,
+  })
   const owners = useMemo(() => (lines ? lineOwners(lines) : []), [lines])
   const projectUtilities = useMemo(
     () => [...new Set(projects.map((p) => p.utility))].sort((a, b) => a.localeCompare(b)),
@@ -109,7 +125,9 @@ export function MapView({
         className="map"
       >
         <SmoothWheelZoom />
-        <PowerGridLayer />
+        <ScaleControl position="bottomleft" imperial metric={false} />
+        <BaseMap highways={layers.highways} counties={layers.counties} labels={layers.labels} />
+        {layers.grid ? <PowerGridLayer /> : null}
         <FitBounds bounds={pairBounds ?? allBounds} />
         {/* Existing lines sit in their own pane under the project markers. */}
         <Pane name="reference-lines" style={{ zIndex: 350 }}>
@@ -187,25 +205,40 @@ export function MapView({
           <span className="swatch swatch-approx" /> approximate location
         </span>
       </div>
-      <div className="map-legend grid-legend" aria-label="Power grid legend">
-        <span>Grid lines (kV):</span>
-        {[...VOLTAGE_SCALE].reverse().map(([kv, c]) => (
-          <span key={kv} className="legend-item">
-            <span className="swatch swatch-line" style={{ background: c }} />
-            {kv}+
-          </span>
+      <div className="map-legend grid-legend" aria-label="Map layers">
+        <span>Show:</span>
+        {MAP_LAYERS.map(([key, label]) => (
+          <label key={key} className="legend-item">
+            <input
+              type="checkbox"
+              checked={layers[key]}
+              onChange={(e) => setLayers((l) => ({ ...l, [key]: e.target.checked }))}
+            />
+            {label}
+          </label>
         ))}
-        <span className="legend-item">
-          <span className="swatch swatch-line" style={{ background: LOW_VOLTAGE_COLOR }} />
-          lower / unknown
-        </span>
-        <span className="legend-item">
-          <span className="swatch swatch-substation" /> substation
-        </span>
-        <span className="legend-item">
-          <span className="swatch swatch-plant" /> power plant
-        </span>
       </div>
+      {layers.grid ? (
+        <div className="map-legend grid-legend" aria-label="Power grid legend">
+          <span>Grid lines (kV):</span>
+          {[...VOLTAGE_SCALE].reverse().map(([kv, c]) => (
+            <span key={kv} className="legend-item">
+              <span className="swatch swatch-line" style={{ background: c }} />
+              {kv}+
+            </span>
+          ))}
+          <span className="legend-item">
+            <span className="swatch swatch-line" style={{ background: LOW_VOLTAGE_COLOR }} />
+            lower / unknown
+          </span>
+          <span className="legend-item">
+            <span className="swatch swatch-substation" /> substation
+          </span>
+          <span className="legend-item">
+            <span className="swatch swatch-plant" /> power plant
+          </span>
+        </div>
+      ) : null}
       {lines && owners.length ? (
         <div className="map-legend lines-legend" aria-label="Existing transmission lines">
           <label className="legend-item">
