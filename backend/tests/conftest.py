@@ -17,6 +17,7 @@ import pytest
 from hypothesis import HealthCheck, settings
 
 from app.services.geocoding import Candidate
+from app.services.llm import AgentTurn
 
 settings.register_profile(
     "gridmerge", max_examples=100, deadline=None,
@@ -103,6 +104,10 @@ class FakeLLM:
         self.fail = fail
         self.delay = delay
         self.prompts: list[str] = []
+        # Scripted agent turns for converse(), consumed in order; each call's keyword
+        # arguments are recorded in `conversation`.
+        self.turns: list[AgentTurn] = []
+        self.conversation: list[dict[str, Any]] = []
 
     async def generate_json(self, prompt: str, schema: dict[str, Any]) -> str:
         self.prompts.append(prompt)
@@ -119,6 +124,16 @@ class FakeLLM:
         if self.fail:
             raise RuntimeError("model unavailable")
         return self.brief or "We propose sharing a crane crew across both sites."
+
+    async def converse(self, **kwargs: Any) -> AgentTurn:
+        self.conversation.append(kwargs)
+        if self.delay:
+            await asyncio.sleep(self.delay)
+        if self.fail:
+            raise RuntimeError("model unavailable")
+        if not self.turns:
+            return AgentTurn(calls=[], text="No scripted answer.")
+        return self.turns.pop(0)
 
 
 class FakeGeocoder:

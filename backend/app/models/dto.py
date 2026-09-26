@@ -133,3 +133,65 @@ class LineOwnerDTO(BaseModel):
     min_kv: float | None = None
     max_kv: float | None = None
     raw_names: list[str] = []
+
+
+# ---------------------------------------------------------------- search and ask
+
+
+class SearchInterpretationDTO(BaseModel):
+    """How GET /search read the query, so the UI can echo it back ("FPL · FL · 33157")."""
+
+    zip: str | None = None
+    zip_found: bool = False  # the ZIP is in the Census ZCTA gazetteer
+    zip_label: str | None = None  # e.g. "ZIP 33157 · near Miami-Dade County, FL"
+    radius_miles: float | None = None  # ZIP searches match projects within this distance
+    states: list[str] = []
+    utilities: list[str] = []
+    types: list[ProjectType] = []
+    terms: list[str] = []
+    fuzzy: bool = False  # nothing matched exactly; results are trigram near-matches
+
+
+class CompanySuggestionDTO(BaseModel):
+    utility: str
+    project_count: int
+
+
+class LocationSuggestionDTO(BaseModel):
+    kind: Literal["state", "zip"]
+    code: str  # "GA" or "33157"
+    label: str
+    project_count: int
+
+
+class SearchHitDTO(ProjectDTO):
+    miles: float | None = None  # distance from the searched ZIP code
+
+
+class SearchResponse(BaseModel):
+    query: str
+    interpretation: SearchInterpretationDTO
+    companies: list[CompanySuggestionDTO]
+    locations: list[LocationSuggestionDTO]
+    projects: list[SearchHitDTO]  # the first `limit` matches
+    project_ids: list[int]  # every match, for filtering the map and pair list
+    total: int
+    bounds: list[float] | None = None  # [south, west, north, east] of the placed matches
+    suggest_ai: bool = False  # reads like a question: offer "Ask GridMerge" first
+
+
+class AskRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+
+
+class AskToolCallDTO(BaseModel):
+    name: str
+    arguments: dict
+    summary: str  # e.g. "12 projects"
+
+
+class AskResponse(BaseModel):
+    question: str
+    answer: str
+    projects: list[ProjectDTO]  # the projects the answer cites, else the ones it looked at
+    tool_calls: list[AskToolCallDTO]

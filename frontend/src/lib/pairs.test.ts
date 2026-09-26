@@ -23,6 +23,19 @@ describe('filterPairs', () => {
     expect(filterPairs([near, far], { query: '  ', hiddenUtilities: none })).toHaveLength(2)
   })
 
+  it('uses the server matches for the text once they arrive', () => {
+    const none = new Set<string>()
+    // "33157" matches no project text, but the server placed project 4 near that ZIP.
+    expect(filterPairs([near, far], { query: '33157', hiddenUtilities: none })).toEqual([])
+    expect(
+      filterPairs([near, far], { query: '33157', hiddenUtilities: none, matchIds: new Set([4]) }),
+    ).toEqual([far])
+    // Cleared text shows everything, whatever the last server answer was.
+    expect(
+      filterPairs([near, far], { query: '', hiddenUtilities: none, matchIds: new Set([4]) }),
+    ).toHaveLength(2)
+  })
+
   it('drops pairs touching a hidden utility', () => {
     const hidden = new Set(['Chesapeake Power'])
     expect(filterPairs([near, far], { query: '', hiddenUtilities: hidden })).toEqual([far])

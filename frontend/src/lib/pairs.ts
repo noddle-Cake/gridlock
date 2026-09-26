@@ -20,6 +20,11 @@ export interface ViewBounds {
 export interface PairFilter {
   query: string
   hiddenUtilities: ReadonlySet<string>
+  /**
+   * The server's matches for `query` (GET /search), which understands ZIP codes, states,
+   * and company acronyms. Until it answers, the text is matched locally instead.
+   */
+  matchIds?: ReadonlySet<number> | null
 }
 
 function matches(p: PairProject, q: string): boolean {
@@ -28,14 +33,18 @@ function matches(p: PairProject, q: string): boolean {
   )
 }
 
-/** Pairs whose utilities are both shown and where either project matches the search text. */
+/** Pairs whose utilities are both shown and where either project matches the search. */
 export function filterPairs(pairs: CoordinationPair[], f: PairFilter): CoordinationPair[] {
   const q = f.query.trim().toLowerCase()
+  const ids = q ? f.matchIds : null
+  const hit = ids
+    ? (p: PairProject) => ids.has(p.id)
+    : (p: PairProject) => !q || matches(p, q)
   return pairs.filter(
     (pair) =>
       !f.hiddenUtilities.has(pair.project_a.utility) &&
       !f.hiddenUtilities.has(pair.project_b.utility) &&
-      (!q || matches(pair.project_a, q) || matches(pair.project_b, q)),
+      (hit(pair.project_a) || hit(pair.project_b)),
   )
 }
 

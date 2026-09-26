@@ -42,7 +42,8 @@ npm run dev                     # http://localhost:5173
 
 Without `GEMINI_API_KEY` everything works except the two LLM steps: uploads fail with
 "Extraction failed: GEMINI_API_KEY is not configured" (the plan is marked failed, no
-projects are created), and brief generation returns a 502. The seed script loads
+projects are created), brief generation returns a 502, and Ask GridMerge returns a 503
+(the search bar itself never needs the key). The seed script loads
 pre-extracted projects so the rest of the demo loop works offline.
 
 ### Whole stack in Docker (any OS)
@@ -65,7 +66,7 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | `postgresql://gridmerge:gridmerge@localhost:5432/gridmerge` | Set by `deploy/docker-compose.yml` in prod |
-| `GEMINI_API_KEY` | — | Extraction + briefs |
+| `GEMINI_API_KEY` | — | Extraction, briefs, Ask GridMerge |
 | `GEMINI_MODEL` | `gemini-3.8-flash` | `gemini-2.5-flash` is closed to new keys |
 | `GEMINI_RPM` | `5` | requests/minute across the app (free tier: 5); `0` = unpaced |
 | `GEOCODER` | `nominatim` | `none` = offline county gazetteer only |
@@ -73,6 +74,7 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | `HIFLD_LINES_URL` | HIFLD ArcGIS FeatureServer layer | only used by `load_hifld --fetch` |
 | `HIFLD_BBOX` | `-86.0,29.8,-80.8,31.6` | FL–GA region fetched by `load_hifld --fetch` |
 | `AUTOLOAD_LINES` | `true` | load the committed snapshot into an empty table on startup |
+| `SEARCH_ZIP_RADIUS_MILES` | `25` | a ZIP search matches projects this close to the ZIP (widens to 50, then 100, when empty) |
 
 ## API
 
@@ -87,6 +89,8 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | GET | `/export?format=csv\|pdf&radius=&bands=` | briefs export (stretch) |
 | GET | `/lines?bbox=&min_kv=&owner=` | existing transmission lines (HIFLD) as GeoJSON; `owner` may repeat |
 | GET | `/lines/owners` | owner roster: line count, km, voltage range, raw HIFLD spellings |
+| GET | `/search?q=&limit=` | search bar: ZIP code, state, company (name, acronym like `FPL`, or prefix), project type, and text, combined (`FPL 33101`, `Georgia transmission`). Deterministic Postgres + pg_trgm, no LLM |
+| POST | `/ask` | `{"question"}` → Gemini answer grounded in GridMerge data: the model calls `search_gridmerge`, `get_project_details`, and `find_coordination_overlaps`, which run here against Postgres; cited projects come back as `[#id]` (90 s budget) |
 
 Errors always look like `{"error": {"code", "message", "field?", "fields?", "detected_format?"}}`.
 

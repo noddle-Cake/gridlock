@@ -1,5 +1,8 @@
 -- GridMerge schema (Req 5). Idempotent: safe to run on every startup.
 CREATE EXTENSION IF NOT EXISTS postgis;
+-- Trigram matching for the search bar: typo-tolerant company/project names, and indexed
+-- ILIKE '%term%' lookups.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE IF NOT EXISTS plans (
   id uuid PRIMARY KEY,
@@ -46,6 +49,11 @@ CREATE INDEX IF NOT EXISTS projects_geom_gix ON projects USING GIST (geom);
 CREATE INDEX IF NOT EXISTS projects_dates_ix ON projects (start_date, end_date);
 -- Deleting a plan cascades to its projects; without this each delete scans the table.
 CREATE INDEX IF NOT EXISTS projects_plan_ix ON projects (plan_id);
+-- Search (GET /search, the /ask agent's tools): state filter and trigram text matching.
+CREATE INDEX IF NOT EXISTS projects_state_ix ON projects (upper(state));
+CREATE INDEX IF NOT EXISTS projects_utility_trgm_ix ON projects USING GIN (utility gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS projects_name_trgm_ix ON projects USING GIN (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS projects_location_trgm_ix ON projects USING GIN (location_ref gin_trgm_ops);
 
 -- Coordination briefs, keyed by the stable pair id "a_id-b_id" (a_id < b_id).
 -- radius records the threshold the pair was flagged under so an edit can re-run

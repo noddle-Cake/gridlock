@@ -17,6 +17,8 @@ from app.core.errors import (
 from app.db import lines as lines_db
 from app.db import repository as repo
 from app.models.dto import (
+    AskRequest,
+    AskResponse,
     CoordinationBriefDTO,
     IngestResult,
     LineOwnerDTO,
@@ -24,9 +26,11 @@ from app.models.dto import (
     PlanDTO,
     ProjectDTO,
     ProjectPatch,
+    SearchResponse,
 )
 from app.services import export as export_service
 from app.services import hifld, matching
+from app.services import search as search_service
 from app.services.ingestion import validate_upload
 from app.services.pipeline import process_plan
 
@@ -247,6 +251,27 @@ async def get_lines(
 async def get_line_owners(request: Request) -> list[LineOwnerDTO]:
     async with _state(request).pool.acquire() as conn:
         return await lines_db.line_owners(conn)
+
+
+# ---------------------------------------------------------------- search and ask
+
+
+@router.get("/search", response_model=SearchResponse)
+async def search(
+    request: Request,
+    q: str = Query(default=""),
+    limit: int = Query(default=8, ge=1, le=50),
+) -> SearchResponse:
+    """Search bar: ZIP code, state, company, or project text. Deterministic; no LLM."""
+    async with _state(request).pool.acquire() as conn:
+        return await search_service.run_search(conn, q, limit=limit)
+
+
+@router.post("/ask", response_model=AskResponse)
+async def ask(body: AskRequest, request: Request) -> AskResponse:
+    """Ask GridMerge: a Gemini agent answering from GridMerge data via tool calls."""
+    state = _state(request)
+    return await state.ask.ask(state.pool, body.question.strip())
 
 
 # ---------------------------------------------------------------- export (Req 14, Stretch)

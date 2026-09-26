@@ -1,6 +1,7 @@
 import type { BandId } from './lib/distanceBands'
 import type {
   ApiErrorBody,
+  AskResponse,
   CoordinationBrief,
   IngestResult,
   LineCollection,
@@ -8,6 +9,7 @@ import type {
   Plan,
   Project,
   ProjectPatch,
+  SearchResponse,
 } from './types'
 
 export const API_BASE: string = import.meta.env.VITE_API_BASE ?? '/api'
@@ -70,6 +72,17 @@ export const api = {
       method: 'POST',
     }),
   lines: (): Promise<LineCollection> => request('/lines'),
+  /** Search bar: ZIP code, state, company, or project text (deterministic, no LLM). */
+  search: (q: string, signal?: AbortSignal): Promise<SearchResponse> =>
+    request(`/search?${new URLSearchParams({ q })}`, { signal }),
+  /** Ask GridMerge: a Gemini answer grounded in GridMerge's own data. */
+  ask: (question: string, signal?: AbortSignal): Promise<AskResponse> =>
+    request('/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+      signal,
+    }),
   exportUrl: (format: 'csv' | 'pdf', radius: number, bands?: BandId[]): string =>
     `${API_BASE}/export?format=${format}&${thresholdQuery(radius, bands)}`,
 }

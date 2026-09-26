@@ -3,8 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { pair, project } from '../test/fixtures'
+import type { SearchResponse } from '../types'
+import { AnswerText } from './AskPanel'
 import { PAGE_SIZE, PairList } from './PairList'
 import { ReviewTable } from './ReviewTable'
+import { SmartSearch } from './SmartSearch'
 import { SourceLink } from './SourceLink'
 import { ThresholdControls } from './ThresholdControls'
 import { WhyFlaggedPanel } from './WhyFlaggedPanel'
@@ -158,5 +161,103 @@ describe('SourceLink (Req 12)', () => {
     expect(link).toHaveAttribute('href', 'https://x.test/plan.pdf#page=7')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
+  })
+})
+
+describe('SmartSearch', () => {
+  const fplSearch: SearchResponse = {
+    query: 'FPL',
+    interpretation: {
+      zip: null, zip_found: false, zip_label: null, radius_miles: null, states: [],
+      utilities: ['Florida Power & Light'], types: [], terms: [], fuzzy: false,
+    },
+    companies: [{ utility: 'Florida Power & Light', project_count: 13 }],
+    locations: [{ kind: 'state', code: 'FL', label: 'Florida', project_count: 236 }],
+    projects: [
+      { ...project({ id: 7, name: 'Cocoplum solar', utility: 'Florida Power & Light' }), miles: null },
+    ],
+    project_ids: [7],
+    total: 13,
+    bounds: null,
+    suggest_ai: false,
+  }
+
+  function setup(result: SearchResponse | null, value = 'FPL') {
+    const handlers = {
+      onChange: vi.fn(),
+      onApply: vi.fn(),
+      onPickCompany: vi.fn(),
+      onPickLocation: vi.fn(),
+      onPickProject: vi.fn(),
+      onAsk: vi.fn(),
+    }
+    render(<SmartSearch value={value} result={result} loading={false} {...handlers} />)
+    return handlers
+  }
+
+  it('groups suggestions and echoes how the query was read', async () => {
+    setup(fplSearch)
+    await userEvent.click(screen.getByLabelText('Search GridMerge'))
+    const list = screen.getByRole('listbox')
+    expect(within(list).getByRole('group', { name: 'Companies' })).toHaveTextContent(
+      'Florida Power & Light13 projects',
+    )
+    expect(within(list).getByRole('group', { name: 'Locations' })).toHaveTextContent('Florida')
+    expect(within(list).getByRole('group', { name: 'Projects' })).toHaveTextContent('Cocoplum solar')
+    expect(screen.getByText('Florida Power & Light', { selector: '.ss-token' })).toBeInTheDocument()
+    // A lookup offers the AI last.
+    const options = within(list).getAllByRole('option')
+    expect(options.at(-1)).toHaveTextContent('Ask GridMerge “FPL”')
+    expect(options.at(-2)).toHaveTextContent('Show all 13 matching projects')
+  })
+
+  it('picks with the keyboard; Enter on plain text applies the search', async () => {
+    const h = setup(fplSearch)
+    const input = screen.getByLabelText('Search GridMerge')
+    await userEvent.click(input)
+    await userEvent.keyboard('{ArrowDown}')
+    expect(input).toHaveAttribute('aria-activedescendant')
+    await userEvent.keyboard('{Enter}')
+    expect(h.onPickCompany).toHaveBeenCalledWith(fplSearch.companies[0])
+    await userEvent.click(input)
+    await userEvent.keyboard('{Enter}')
+    expect(h.onApply).toHaveBeenCalled()
+  })
+
+  it('sends a question to the AI on Enter', async () => {
+    const q = 'Which utilities have projects in Georgia?'
+    const h = setup({ ...fplSearch, query: q, suggest_ai: true }, q)
+    await userEvent.click(screen.getByLabelText('Search GridMerge'))
+    expect(within(screen.getByRole('listbox')).getAllByRole('option')[0]).toHaveTextContent(
+      'Ask GridMerge',
+    )
+    await userEvent.keyboard('{Enter}')
+    expect(h.onAsk).toHaveBeenCalledWith(q)
+  })
+
+  it('offers the AI button even before the server answers', async () => {
+    const h = setup(null, 'solar near 33157')
+    await userEvent.click(screen.getByRole('button', { name: 'Ask GridMerge' }))
+    expect(h.onAsk).toHaveBeenCalledWith('solar near 33157')
+  })
+})
+
+describe('AnswerText', () => {
+  it('renders bullets, bold, and citations as text, never as HTML', async () => {
+    const onSelect = vi.fn()
+    const { container } = render(
+      <AnswerText
+        text={'Two projects <img src=x onerror=alert(1)>:\n- **Hanover** [#1, #99]\n- done'}
+        projects={[project()]}
+        onSelect={onSelect}
+      />,
+    )
+    expect(container.querySelector('img')).toBeNull()
+    expect(container).toHaveTextContent('Two projects <img src=x onerror=alert(1)>:')
+    expect(container.querySelectorAll('li')).toHaveLength(2)
+    expect(container.querySelector('li strong')).toHaveTextContent('Hanover')
+    expect(container.querySelector('.cite.missing')).toHaveTextContent('#99')
+    await userEvent.click(screen.getByRole('button', { name: '#1' }))
+    expect(onSelect).toHaveBeenCalledWith(project())
   })
 })

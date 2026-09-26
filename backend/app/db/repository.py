@@ -222,6 +222,162 @@ async def list_projects(conn: asyncpg.Connection) -> list[ProjectDTO]:
     return [_project_from_record(r) for r in rows]
 
 
+# ---------------------------------------------------------------- search
+
+# Minimum pg_trgm word_similarity for a fuzzy match ("Florda Powr" -> Florida Power & Light).
+FUZZY_THRESHOLD = 0.5
+
+
+@dataclass
+class ProjectFilter:
+    """Structured project search; every field that is set narrows the match (AND)."""
+
+    utilities: list[str] = field(default_factory=list)  # exact utility names, any of
+    states: list[str] = field(default_factory=list)  # two-letter codes, any of
+    types: list[str] = field(default_factory=list)  # ProjectType values, any of
+    near: tuple[float, float] | None = None  # (lat, lng): within radius_miles of it
+    radius_miles: float = 25.0
+    terms: list[str] = field(default_factory=list)  # each in utility, name, or location
+    fuzzy_text: str | None = None  # trigram word match on utility/name/location
+
+    @property
+    def empty(self) -> bool:
+        return not (
+            self.utilities or self.states or self.types or self.near or self.terms
+            or self.fuzzy_text
+        )
+
+
+@dataclass
+class ProjectSearch:
+    projects: list[ProjectDTO]  # the first `limit` matches
+    miles: dict[int, float]  # distance from `near`, when the filter has one
+    total: int
+    ids: list[int]  # every match
+    bounds: tuple[float, float, float, float] | None  # south, west, north, east
+    by_utility: list[tuple[str, int]]  # most projects first
+    by_state: list[tuple[str | None, int]]
+    by_type: list[tuple[str | None, int]]
+    first_start: date | None
+    last_end: date | None
+
+
+def like_pattern(term: str) -> str:
+    """ILIKE pattern matching `term` literally anywhere in the text."""
+    escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
+def state_ref_pattern(codes: list[str]) -> str:
+    """Regex for a state code in a location_ref: 'Adams County, PA' or '(GA/AL/MS/FL)'."""
+    return rf"(^|[,(/]\s*)({'|'.join(sorted(codes))})(\s*[)/,]|\s*$)"
+
+
+def _search_where(f: ProjectFilter, args: list[Any]) -> tuple[str, str, str]:
+    """(WHERE clause, distance-in-miles SQL, similarity SQL) for `f`, appending to `args`."""
+
+    def arg(value: Any) -> str:
+        args.append(value)
+        return f"${len(args)}"
+
+    conds = ["true"]
+    if f.utilities:
+        conds.append(f"p.utility = ANY({arg(f.utilities)}::text[])")
+    if f.states:
+        codes = sorted({s.upper() for s in f.states})
+        # Loader rows without a state column still name it at the end of location_ref.
+        conds.append(
+            f"(upper(p.state) = ANY({arg(codes)}::text[]) OR "
+            f"(p.state IS NULL AND p.location_ref ~ {arg(state_ref_pattern(codes))}))"
+        )
+    if f.types:
+        conds.append(f"p.type = ANY({arg(f.types)}::text[])")
+    miles = "NULL::float8"
+    if f.near:
+        lat, lng = f.near
+        point = f"ST_SetSRID(ST_MakePoint({arg(lng)}::float8, {arg(lat)}::float8), 4326)::geography"
+        radius = arg(f.radius_miles * METERS_PER_MILE)
+        conds.append(f"ST_DWithin(p.geom, {point}, {radius}::float8)")
+        miles = f"ST_Distance(p.geom, {point}) / {METERS_PER_MILE}"
+    for term in f.terms:
+        pat = arg(like_pattern(term))
+        conds.append(f"(p.utility ILIKE {pat} OR p.name ILIKE {pat} OR p.location_ref ILIKE {pat})")
+    similarity = "NULL::float8"
+    if f.fuzzy_text:
+        t = arg(f.fuzzy_text.lower())
+        similarity = (
+            f"GREATEST(word_similarity({t}, lower(p.utility)), "
+            f"word_similarity({t}, lower(coalesce(p.name, ''))), "
+            f"word_similarity({t}, lower(coalesce(p.location_ref, ''))))"
+        )
+        conds.append(f"{similarity} >= {FUZZY_THRESHOLD}")
+    return " AND ".join(conds), miles, similarity
+
+
+async def search_projects(
+    conn: asyncpg.Connection, f: ProjectFilter, *, limit: int
+) -> ProjectSearch:
+    args: list[Any] = []
+    where, miles, similarity = _search_where(f, args)
+    if f.near:
+        order = "miles"
+    elif f.fuzzy_text:
+        order = "sim DESC"
+    else:
+        order = "p.utility, p.name NULLS LAST"
+    rows = await conn.fetch(
+        f"""SELECT {_PROJECT_COLUMNS}, {miles} AS miles, {similarity} AS sim
+            FROM projects p WHERE {where}
+            ORDER BY {order}, p.id LIMIT ${len(args) + 1}""",
+        *args, limit,
+    )
+    matched = f"SELECT p.* FROM projects p WHERE {where}"
+    summary = await conn.fetchrow(
+        f"""WITH m AS ({matched})
+            SELECT (SELECT count(*) FROM m) AS total,
+                   (SELECT coalesce(array_agg(id ORDER BY id), '{{}}') FROM m) AS ids,
+                   (SELECT min(coalesce(start_date, end_date)) FROM m) AS first_start,
+                   (SELECT max(coalesce(end_date, start_date)) FROM m) AS last_end,
+                   ST_YMin(e.x) AS south, ST_XMin(e.x) AS west,
+                   ST_YMax(e.x) AS north, ST_XMax(e.x) AS east
+            FROM (SELECT ST_Extent(geom::geometry) AS x FROM m) e""",
+        *args,
+    )
+    groups = await conn.fetch(
+        f"""WITH m AS ({matched})
+            SELECT 'utility' AS k, utility AS v, count(*) AS n FROM m GROUP BY utility
+            UNION ALL SELECT 'state', upper(state), count(*) FROM m GROUP BY upper(state)
+            UNION ALL SELECT 'type', type, count(*) FROM m GROUP BY type""",
+        *args,
+    )
+
+    def counts(kind: str) -> list[tuple[Any, int]]:
+        pairs = [(g["v"], g["n"]) for g in groups if g["k"] == kind]
+        return sorted(pairs, key=lambda kv: (-kv[1], kv[0] or "￿"))
+
+    bounds = None
+    if summary["south"] is not None:
+        bounds = (summary["south"], summary["west"], summary["north"], summary["east"])
+    return ProjectSearch(
+        projects=[_project_from_record(r) for r in rows],
+        miles={r["id"]: float(r["miles"]) for r in rows if r["miles"] is not None},
+        total=summary["total"], ids=list(summary["ids"]), bounds=bounds,
+        by_utility=counts("utility"), by_state=counts("state"), by_type=counts("type"),
+        first_start=summary["first_start"], last_end=summary["last_end"],
+    )
+
+
+async def count_projects(conn: asyncpg.Connection, f: ProjectFilter) -> int:
+    args: list[Any] = []
+    where, _, _ = _search_where(f, args)
+    return await conn.fetchval(f"SELECT count(*) FROM projects p WHERE {where}", *args)
+
+
+async def utility_counts(conn: asyncpg.Connection) -> dict[str, int]:
+    rows = await conn.fetch("SELECT utility, count(*) AS n FROM projects GROUP BY utility")
+    return {r["utility"]: r["n"] for r in rows}
+
+
 async def update_project(
     conn: asyncpg.Connection, project_id: int, changes: dict[str, Any]
 ) -> ProjectDTO | None:
