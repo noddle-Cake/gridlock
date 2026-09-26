@@ -19,6 +19,7 @@ class ProjectDTO(BaseModel):
     lng: float | None = None
     # Straight route between the endpoint substations as [lat, lng] points; None = a point.
     route: list[tuple[float, float]] | None = None
+    cost_usd: int | None = None  # estimated total cost (USD) when the filing publishes it
     start_date: date | None = None
     end_date: date | None = None
     start_precision: DatePrecision | None = None

@@ -8,6 +8,7 @@ import { ReviewTable } from './components/ReviewTable'
 import { DEFAULT_PAD, ThresholdControls } from './components/ThresholdControls'
 import { UploadPanel } from './components/UploadPanel'
 import { UtilityFilter } from './components/UtilityFilter'
+import { focusHidden } from './lib/focus'
 import { WhyFlaggedPanel } from './components/WhyFlaggedPanel'
 import { ALL_BANDS, MAX_RADIUS_MILES, type BandId } from './lib/distanceBands'
 import { utilityColors } from './lib/format'
@@ -46,13 +47,22 @@ export default function App() {
   const [linesFailed, setLinesFailed] = useState(false)
   const [version, setVersion] = useState(0)
   const requestSeq = useRef(0)
+  const focused = useRef(false)
 
   const refresh = useCallback(() => setVersion((v) => v + 1), [])
 
   useEffect(() => {
     api
       .projects()
-      .then(setProjects)
+      .then((loaded) => {
+        setProjects(loaded)
+        // Open on the challenge's DESC <-> Georgia Power comparison when both are loaded;
+        // after that the planner's own utility choices stand.
+        if (focused.current || loaded.length === 0) return
+        focused.current = true
+        const hidden = focusHidden([...new Set(loaded.map((p) => p.utility))])
+        if (hidden) setHiddenUtilities(hidden)
+      })
       .catch((e) => setError(describe(e)))
   }, [version])
 

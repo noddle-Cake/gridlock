@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.errors import InvalidParameterError
 from app.db import repository as repo
 from app.models.dto import CoordinationPairDTO, ProjectDTO
+from app.services.owners import planning_entity
 from app.services.scoring import score_pair
 
 
@@ -109,6 +110,14 @@ def parse_bands(raw: str | None) -> set[str] | None:
     return bands
 
 
+def _cross_entity(
+    rows: list[repo.CandidateRow], projects: dict[int, ProjectDTO]
+) -> list[repo.CandidateRow]:
+    """Drop pairs whose utilities plan together (owners.PLANNING_ENTITY)."""
+    return [r for r in rows if planning_entity(projects[r.a_id].utility)
+            != planning_entity(projects[r.b_id].utility)]
+
+
 def _build_pair(
     row: repo.CandidateRow, projects: dict[int, ProjectDTO], radius: float, max_overlap: int
 ) -> CoordinationPairDTO:
@@ -138,6 +147,7 @@ async def overlaps(
     if bands is not None:
         rows = [r for r in rows if distance_band(r.miles) in bands]
     projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
+    rows = _cross_entity(rows, projects)
     pairs = [_build_pair(r, projects, radius, max_overlap) for r in rows]
     briefs = await repo.briefs_for_pairs(conn, [p.id for p in pairs])
     for p in pairs:
@@ -154,6 +164,8 @@ async def find_pair(
     if not rows:
         return None
     projects = await repo.get_projects(conn, [a_id, b_id])
+    if not _cross_entity(rows, projects):
+        return None
     return _build_pair(rows[0], projects, radius, get_settings().max_overlap_days)
 
 
@@ -176,6 +188,7 @@ async def rematch_project(conn: asyncpg.Connection, project_id: int) -> RematchR
         conn, settings.default_radius_miles, settings.default_pad_days, project_id=project_id
     )
     projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
+    rows = _cross_entity(rows, projects)
     pairs = [
         _build_pair(r, projects, settings.default_radius_miles, settings.max_overlap_days)
         for r in rows

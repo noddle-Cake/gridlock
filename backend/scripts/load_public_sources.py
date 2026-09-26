@@ -4,6 +4,8 @@
     python -m scripts.load_public_sources eia860m --states GA AL TN
     python -m scripts.load_public_sources sertp                   # all 7 SERTP areas
     python -m scripts.load_public_sources sertp --areas SOUTHERN TVA
+    python -m scripts.load_public_sources desc                    # DESC $2M+ projects
+    python -m scripts.load_public_sources gpc                     # Georgia Power ITS list
     python -m scripts.load_public_sources all --dry-run          # parse + CSV only
 
 Inputs default to the raw copies in source_docs/. Every run writes a citation table to
@@ -27,7 +29,7 @@ from app.core.config import get_settings
 from app.db import repository as repo
 from app.db.pool import apply_schema, create_pool
 from app.models.enums import DatePrecision, ProjectType
-from app.sources import eia860m, sertp, snapshot
+from app.sources import desc, eia860m, gpc_its, sertp, snapshot
 from app.sources.locate import PlaceCache, locate
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -35,9 +37,9 @@ DOCS = ROOT / "source_docs"
 EXTRACTED = DOCS / "extracted"
 
 EXPORT_COLUMNS = [
-    "utility", "state", "name", "type", "voltage_kv", "in_service", "lat", "lng", "route",
-    "approximate", "requires_review", "confidence", "location_ref", "source_file",
-    "source_url", "source_page", "raw_excerpt",
+    "utility", "state", "name", "type", "voltage_kv", "in_service", "in_service_end", "lat",
+    "lng", "route", "cost_usd", "approximate", "requires_review", "confidence", "location_ref",
+    "source_file", "source_url", "source_page", "raw_excerpt",
 ]
 
 
@@ -47,14 +49,18 @@ def write_export(path: Path, projects: list[repo.NewProject], source_file: str) 
         w = csv.DictWriter(f, fieldnames=EXPORT_COLUMNS, lineterminator="\n")
         w.writeheader()
         for p in projects:
-            in_service = p.start_date.strftime("%Y-%m" if p.start_precision ==
-                                               DatePrecision.MONTH else "%Y")
+            fmt = {DatePrecision.DAY: "%Y-%m-%d", DatePrecision.MONTH: "%Y-%m"}.get(
+                p.start_precision, "%Y")
+            in_service = p.start_date.strftime(fmt)
+            in_service_end = p.end_date.isoformat() if p.end_date != p.start_date else ""
             w.writerow({
                 "utility": p.utility, "state": p.state or "", "name": p.name,
                 "type": p.type.value if p.type else "", "voltage_kv": p.voltage_kv or "",
-                "in_service": in_service, "lat": p.lat if p.lat is not None else "",
+                "in_service": in_service, "in_service_end": in_service_end,
+                "lat": p.lat if p.lat is not None else "",
                 "lng": p.lng if p.lng is not None else "",
-                "route": snapshot.format_route(p.route), "approximate": p.approximate,
+                "route": snapshot.format_route(p.route), "cost_usd": p.cost_usd or "",
+                "approximate": p.approximate,
                 "requires_review": p.requires_review, "confidence": p.confidence,
                 "location_ref": p.location_ref, "source_file": source_file,
                 "source_url": p.source_url, "source_page": p.source_page,
@@ -127,6 +133,71 @@ def sertp_projects(path: Path, areas: set[str] | None, *, offline: bool) -> list
     return out
 
 
+# ---------------------------------------------------------------- DESC / Georgia Power
+
+
+def _located_project(where, **fields) -> repo.NewProject:
+    confidence = 0.6 if where.requires_review else 0.8 if where.approximate else 0.95
+    return repo.NewProject(
+        lat=where.lat, lng=where.lng, approximate=where.approximate,
+        requires_review=where.requires_review, confidence=confidence, **fields,
+    )
+
+
+def desc_projects(path: Path, *, offline: bool) -> list[repo.NewProject]:
+    entries = desc.parse_report(path)
+    places = PlaceCache(offline=offline, user_agent=get_settings().geocoder_user_agent)
+    out, stats = [], Counter()
+    try:
+        for e in entries:
+            where = locate(e.endpoints, desc.STATES, places, operator=desc.UTILITY,
+                           bounds=desc.BOUNDS)
+            stats["review" if where.requires_review else
+                  "approximate" if where.approximate else "exact"] += 1
+            start, end = e.in_service or (None, None)
+            out.append(_located_project(
+                where, utility=desc.UTILITY, state="SC", name=e.title,
+                type=ProjectType(e.kind), voltage_kv=e.voltage_kv,
+                location_ref=" - ".join(e.endpoints),
+                route=where.ends if e.kind == "transmission line" else None,
+                cost_usd=e.cost_usd, start_date=start, end_date=end,
+                start_precision=DatePrecision.DAY if start else None,
+                end_precision=DatePrecision.DAY if end else None,
+                source_url=desc.SOURCE_URL, source_page=e.page,
+                raw_excerpt=f"{e.excerpt()}\n{where.how}"[:2000],
+            ))
+    finally:
+        places.save()
+    print(f"DESC: {len(entries)} projects; location {dict(stats)}")
+    return out
+
+
+def gpc_projects(path: Path, *, offline: bool) -> list[repo.NewProject]:
+    entries = gpc_its.parse_report(path)
+    places = PlaceCache(offline=offline, user_agent=get_settings().geocoder_user_agent)
+    out, stats = [], Counter()
+    try:
+        for e in entries:
+            s = e.as_sertp()
+            where = locate(s.endpoints, gpc_its.STATES, places, operator=gpc_its.UTILITY,
+                           bounds=gpc_its.BOUNDS)
+            stats["review" if where.requires_review else
+                  "approximate" if where.approximate else "exact"] += 1
+            out.append(_located_project(
+                where, utility=gpc_its.UTILITY, state="GA", name=s.title.title(),
+                type=ProjectType(s.kind), voltage_kv=s.voltage_kv,
+                location_ref=" - ".join(n.title() for n in s.endpoints),
+                route=where.ends if s.kind == "transmission line" else None,
+                start_date=e.need, end_date=e.need, start_precision=DatePrecision.DAY,
+                end_precision=DatePrecision.DAY, source_url=gpc_its.SOURCE_URL,
+                source_page=e.page, raw_excerpt=f"{e.excerpt()}\n{where.how}"[:2000],
+            ))
+    finally:
+        places.save()
+    print(f"Georgia Power ITS: {len(entries)} GPC/SAV projects; location {dict(stats)}")
+    return out
+
+
 # ---------------------------------------------------------------- main
 
 
@@ -144,13 +215,16 @@ async def load(source: snapshot.Source, projects: list[repo.NewProject], csv_pat
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Load EIA-860M / SERTP public data.")
-    ap.add_argument("source", choices=["eia860m", "sertp", "all"])
+    ap.add_argument("source", choices=["eia860m", "sertp", "desc", "gpc", "all"])
     ap.add_argument("--eia-file", type=Path, default=DOCS / snapshot.EIA860M.filename)
     ap.add_argument("--sertp-file", type=Path, default=DOCS / snapshot.SERTP.filename)
+    ap.add_argument("--desc-file", type=Path, default=DOCS / snapshot.DESC.filename)
+    ap.add_argument("--gpc-file", type=Path, default=DOCS / snapshot.GPC_ITS.filename)
     ap.add_argument("--states", nargs="+", default=["ALL"],
                     help="EIA-860M plant states (default ALL = nationwide)")
     ap.add_argument("--areas", nargs="+", help=f"SERTP areas, default all: {list(sertp.AREAS)}")
-    ap.add_argument("--offline", action="store_true", help="no Nominatim calls for SERTP")
+    ap.add_argument("--offline", action="store_true",
+                    help="no Nominatim calls when placing SERTP/DESC/GPC projects")
     ap.add_argument("--dry-run", action="store_true", help="parse + write CSV, skip the DB")
     args = ap.parse_args()
 
@@ -169,6 +243,17 @@ def main() -> None:
         write_export(out, projects, args.sertp_file.name)
         if not args.dry_run:
             asyncio.run(load(snapshot.SERTP, projects, out))
+
+    for name, source, build, path in (
+        ("desc", snapshot.DESC, desc_projects, args.desc_file),
+        ("gpc", snapshot.GPC_ITS, gpc_projects, args.gpc_file),
+    ):
+        if args.source in (name, "all"):
+            projects = build(path, offline=args.offline)
+            out = EXTRACTED / source.export
+            write_export(out, projects, path.name)
+            if not args.dry_run:
+                asyncio.run(load(source, projects, out))
 
 
 if __name__ == "__main__":

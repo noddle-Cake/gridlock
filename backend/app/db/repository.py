@@ -18,7 +18,7 @@ METERS_PER_MILE = 1609.344
 _PROJECT_COLUMNS = """
     id, plan_id::text AS plan_id, utility, state, name, type, voltage_kv, location_ref,
     ST_Y(geom::geometry) AS lat, ST_X(geom::geometry) AS lng,
-    ST_AsGeoJSON(route) AS route,
+    ST_AsGeoJSON(route) AS route, cost_usd,
     start_date, end_date, start_precision, end_precision, confidence, source_url,
     source_page, raw_excerpt, reviewed, approximate, requires_review
 """
@@ -55,6 +55,7 @@ class NewProject:
     plan_id: str | None = None
     # Straight route through the endpoint substations, as (lat, lng) points; None = a point.
     route: list[tuple[float, float]] | None = None
+    cost_usd: int | None = None  # estimated total cost, when the filing publishes it
 
 
 def route_wkt(route: list[tuple[float, float]] | None) -> str | None:
@@ -185,12 +186,12 @@ async def insert_projects(conn: asyncpg.Connection, projects: list[NewProject]) 
                  plan_id, utility, state, name, type, voltage_kv, location_ref, geom,
                  start_date, end_date, start_precision, end_precision, confidence,
                  source_url, source_page, raw_excerpt, reviewed, approximate, requires_review,
-                 route)
+                 route, cost_usd)
                VALUES ($1::uuid, $2, $3, $4, $5, $6, $7,
                  CASE WHEN $8::float8 IS NULL OR $9::float8 IS NULL THEN NULL
                       ELSE ST_SetSRID(ST_MakePoint($9, $8), 4326)::geography END,
                  $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-                 ST_GeogFromText('SRID=4326;' || $21::text))
+                 ST_GeogFromText('SRID=4326;' || $21::text), $22)
                RETURNING id""",
             p.plan_id, clean(p.utility).strip(), clean(p.state), clean(p.name),
             p.type.value if p.type else None, round_voltage(p.voltage_kv), clean(p.location_ref),
@@ -198,7 +199,7 @@ async def insert_projects(conn: asyncpg.Connection, projects: list[NewProject]) 
             p.start_precision.value if p.start_precision else None,
             p.end_precision.value if p.end_precision else None,
             p.confidence, clean(p.source_url), p.source_page, clean(p.raw_excerpt), p.reviewed,
-            p.approximate, p.requires_review, route_wkt(p.route),
+            p.approximate, p.requires_review, route_wkt(p.route), p.cost_usd,
         )
         ids.append(pid)
     return ids

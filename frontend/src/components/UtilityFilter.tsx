@@ -1,3 +1,4 @@
+import { CHALLENGE_UTILITIES, focusHidden } from '../lib/focus'
 import { FilterMenu } from './FilterMenu'
 
 interface Props {
@@ -8,11 +9,16 @@ interface Props {
 }
 
 export function UtilityFilter({ utilities, hidden, colors, onChange }: Props) {
-  const shown = utilities.filter((u) => !hidden.has(u)).length
+  const shown = utilities.filter((u) => !hidden.has(u))
+  const challenge = focusHidden(utilities)
+  const onlyChallenge =
+    challenge != null && shown.length === 2 && CHALLENGE_UTILITIES.every((u) => !hidden.has(u))
   const label =
     hidden.size === 0 || utilities.length === 0
       ? 'All utilities'
-      : `${shown} of ${utilities.length} utilities`
+      : onlyChallenge
+        ? 'DESC ↔ Georgia Power'
+        : `${shown.length} of ${utilities.length} utilities`
 
   function toggle(u: string, on: boolean) {
     const next = new Set(hidden)
@@ -25,6 +31,11 @@ export function UtilityFilter({ utilities, hidden, colors, onChange }: Props) {
     <FilterMenu label={label} active={hidden.size > 0}>
       <fieldset className="check-list">
         <legend>Show projects from</legend>
+        {challenge && !onlyChallenge ? (
+          <button type="button" className="link-button" onClick={() => onChange(challenge)}>
+            Only DESC ↔ Georgia Power
+          </button>
+        ) : null}
         {utilities.length === 0 ? <p className="empty">No utilities loaded yet.</p> : null}
         {utilities.map((u) => (
           <label key={u}>
