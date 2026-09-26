@@ -49,7 +49,8 @@ the rest of the demo loop works offline.
 
 ### Demo walkthrough (Sperry Gridlock challenge)
 
-1. The app opens on **DESC ↔ Georgia Power**: DESC in blue, Georgia Power in orange, and
+1. The app opens on **Dominion SC ↔ Georgia Power** (Dominion Energy South Carolina, "DESC"
+   in the filings): Dominion SC in blue, Georgia Power in orange, and
    the list ranked by Sperry's tiers (touching → under 1.6 km → under 8 km → under 40 km),
    then by score, which carries timing.
 2. Sperry's six reference overlaps (`source_docs/sperry_reference_overlaps.xlsx`) are all

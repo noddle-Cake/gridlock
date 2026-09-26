@@ -94,6 +94,7 @@ Legend: `[x]` done · `[~]` partly done · `[ ]` open · **P0** before demo · *
 - [ ] U10 · P2 · The Georgia Power source link opens the PSC docket page, so `#page=` is lost. Serve or link the committed PDF instead.
 - [ ] U11 · P2 · Review → Radar remounts the whole map, and the renderer stalls briefly. Keep it mounted and hide it instead.
 - [ ] U12 · P2 · Changing `#pair=` in an open tab (a pasted link) doesn't open the pair; only a page load does. Listen for `hashchange`.
+- [x] U13 · P2 · The utility filter chip said "DESC ↔ Georgia Power". "DESC" is filing shorthand that viewers don't recognise, so it now reads "Dominion SC ↔ Georgia Power". *(fixed in this branch)*
 
 ---
 

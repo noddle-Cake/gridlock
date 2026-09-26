@@ -98,7 +98,7 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     expect(screen.getByRole('button', { name: /Hanover breakers/ })).toBeInTheDocument()
   })
 
-  it('opens on DESC ↔ Georgia Power when both are loaded', async () => {
+  it('opens on Dominion SC ↔ Georgia Power when both are loaded', async () => {
     // Low confidence, so both would be listed in Review if it ignored the focus.
     const desc = project({
       id: 7,
@@ -115,7 +115,7 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
           : jsonResponse({ type: 'FeatureCollection', features: [] }),
     )
     render(<App />)
-    expect(await screen.findByText('DESC ↔ Georgia Power')).toBeInTheDocument()
+    expect(await screen.findByText('Dominion SC ↔ Georgia Power')).toBeInTheDocument()
     // The Keystone/Chesapeake fixture pair is hidden by the focus.
     expect(screen.queryByRole('button', { name: /Hanover breakers/ })).toBeNull()
 
