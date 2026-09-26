@@ -1,0 +1,4527 @@
+{
+ "31St Avenue": [],
+ "Adamsville": [
+  {
+   "county": "Jefferson County",
+   "label": "Adamsville, Jefferson County, Alabama, 35005, United States",
+   "lat": 33.601,
+   "lng": -86.956,
+   "state": "AL"
+  },
+  {
+   "county": "Kent County",
+   "label": "Adamsville, Kent County, Delaware, United States",
+   "lat": 38.832,
+   "lng": -75.689,
+   "state": "DE"
+  },
+  {
+   "county": "McNairy County",
+   "label": "Adamsville, McNairy County, West Tennessee, Tennessee, United States",
+   "lat": 35.236,
+   "lng": -88.391,
+   "state": "TN"
+  },
+  {
+   "county": "Muskingum County",
+   "label": "Adamsville, Salem Township, Muskingum County, Ohio, United States",
+   "lat": 40.07,
+   "lng": -81.882,
+   "state": "OH"
+  },
+  {
+   "county": "Hillsborough County",
+   "label": "Adamsville, Gibsonton, Hillsborough County, Florida, 33534, United States",
+   "lat": 27.815,
+   "lng": -82.384,
+   "state": "FL"
+  },
+  {
+   "county": "Sumner County",
+   "label": "Adamsville, Sumner County, Kansas, United States",
+   "lat": 37.173,
+   "lng": -97.176,
+   "state": "KS"
+  },
+  {
+   "county": "Harrison County",
+   "label": "Adamsville, Harrison County, West Virginia, 26568, United States",
+   "lat": 39.395,
+   "lng": -80.245,
+   "state": "WV"
+  },
+  {
+   "county": "Lampasas County",
+   "label": "Adamsville, Lampasas County, Texas, United States",
+   "lat": 31.301,
+   "lng": -98.169,
+   "state": "TX"
+  },
+  {
+   "county": "Wayne County",
+   "label": "Adamsville, Goldsboro, Wayne County, North Carolina, 27531, United States",
+   "lat": 35.371,
+   "lng": -77.953,
+   "state": "NC"
+  },
+  {
+   "county": "Sumter County",
+   "label": "Adamsville, The Villages, Sumter County, Florida, 32163, United States",
+   "lat": 28.8,
+   "lng": -82.021,
+   "state": "FL"
+  },
+  {
+   "county": "Gallia County",
+   "label": "Adamsville, Raccoon Township, Gallia County, Ohio, 45674, United States",
+   "lat": 38.875,
+   "lng": -82.355,
+   "state": "OH"
+  },
+  {
+   "county": "McDuffie County",
+   "label": "Adamsville, McDuffie County, Georgia, 30808, United States",
+   "lat": 33.375,
+   "lng": -82.37,
+   "state": "GA"
+  }
+ ],
+ "Advanced Flow Controllers At East Villa Rica": [],
+ "Aeroderivative": [],
+ "Alex City": [],
+ "Amity": [
+  {
+   "county": "Clark County",
+   "label": "Amity, Clark County, Arkansas, United States",
+   "lat": 34.265,
+   "lng": -93.461,
+   "state": "AR"
+  },
+  {
+   "county": "DeKalb County",
+   "label": "Amity, Camden Township, DeKalb County, Missouri, United States",
+   "lat": 39.869,
+   "lng": -94.435,
+   "state": "MO"
+  },
+  {
+   "county": "Knox County",
+   "label": "Amity, Pike Township, Knox County, Ohio, United States",
+   "lat": 40.471,
+   "lng": -82.378,
+   "state": "OH"
+  },
+  {
+   "county": "Washington County",
+   "label": "Amity, Amwell Township, Washington County, Pennsylvania, 15311, United States",
+   "lat": 40.04,
+   "lng": -80.205,
+   "state": "PA"
+  },
+  {
+   "county": "Madison County",
+   "label": "Amity, Canaan Township, Madison County, Ohio, 43064, United States",
+   "lat": 40.069,
+   "lng": -83.251,
+   "state": "OH"
+  },
+  {
+   "county": "Johnson County",
+   "label": "Amity, Johnson County, Indiana, United States",
+   "lat": 39.426,
+   "lng": -86.001,
+   "state": "IN"
+  },
+  {
+   "county": "Montgomery County",
+   "label": "Amity, Perry Township, Montgomery County, Ohio, 45439, United States",
+   "lat": 39.789,
+   "lng": -84.367,
+   "state": "OH"
+  },
+  {
+   "county": "Hamilton County",
+   "label": "Amity, Deer Park, Hamilton County, Ohio, 45236, United States",
+   "lat": 39.206,
+   "lng": -84.404,
+   "state": "OH"
+  },
+  {
+   "county": "Bucks County",
+   "label": "Amity, Springfield Township, Bucks County, Pennsylvania, 18955, United States",
+   "lat": 40.509,
+   "lng": -75.286,
+   "state": "PA"
+  },
+  {
+   "county": "Comanche County",
+   "label": "Amity, Comanche County, Texas, United States",
+   "lat": 32.059,
+   "lng": -98.884,
+   "state": "TX"
+  },
+  {
+   "county": "Richland County",
+   "label": "Amity, Richland County, Illinois, 62421, United States",
+   "lat": 38.776,
+   "lng": -87.924,
+   "state": "IL"
+  },
+  {
+   "county": "Lincoln County",
+   "label": "Amity, Lincoln County, Georgia, United States",
+   "lat": 33.676,
+   "lng": -82.49,
+   "state": "GA"
+  },
+  {
+   "county": "Cannon County",
+   "label": "Amity, Cannon County, Middle Tennessee, Tennessee, 37026, United States",
+   "lat": 35.699,
+   "lng": -86.06,
+   "state": "TN"
+  },
+  {
+   "county": "Berks County",
+   "label": "Amity Township, Berks County, Pennsylvania, 19518, United States",
+   "lat": 40.287,
+   "lng": -75.749,
+   "state": "PA"
+  }
+ ],
+ "Arkwright": [
+  {
+   "county": "Spartanburg County",
+   "label": "Arkwright, Spartanburg, Spartanburg County, South Carolina, 29306, United States",
+   "lat": 34.924,
+   "lng": -81.933,
+   "state": "SC"
+  },
+  {
+   "county": "Bibb County",
+   "label": "Arkwright, Macon, Bibb County, Georgia, 31209, United States",
+   "lat": 32.933,
+   "lng": -83.703,
+   "state": "GA"
+  },
+  {
+   "county": "Shelby County",
+   "label": "Arkwright, Vincent, Shelby County, Alabama, 35178, United States",
+   "lat": 33.371,
+   "lng": -86.402,
+   "state": "AL"
+  }
+ ],
+ "Artemus": [
+  {
+   "county": "Knox County",
+   "label": "Artemus, Knox County, Kentucky, 40903, United States",
+   "lat": 36.833,
+   "lng": -83.842,
+   "state": "KY"
+  }
+ ],
+ "Ashe Saint": [],
+ "Ashley Park": [
+  {
+   "county": "Mecklenburg County",
+   "label": "Ashley Park, Charlotte, Mecklenburg County, North Carolina, 28208, United States",
+   "lat": 35.235,
+   "lng": -80.891,
+   "state": "NC"
+  },
+  {
+   "county": "Davidson County",
+   "label": "Ashley Park, Myrtlewood Estates, Nashville, Davidson County, Middle Tennessee, Tennessee, United States",
+   "lat": 36.04,
+   "lng": -86.733,
+   "state": "TN"
+  },
+  {
+   "county": "Wake County",
+   "label": "Ashley Park, North Hills, Raleigh, Wake County, North Carolina, United States",
+   "lat": 35.851,
+   "lng": -78.64,
+   "state": "NC"
+  },
+  {
+   "county": "Wake County",
+   "label": "Ashley Park, Brier Creek, Raleigh, Wake County, North Carolina, United States",
+   "lat": 35.914,
+   "lng": -78.787,
+   "state": "NC"
+  },
+  {
+   "county": "Gaston County",
+   "label": "Ashley Park, Bessemer City, Gaston County, North Carolina, 28016, United States",
+   "lat": 35.294,
+   "lng": -81.268,
+   "state": "NC"
+  },
+  {
+   "county": "Horry County",
+   "label": "Ashley Park, Carolina Forest, Horry County, South Carolina, United States",
+   "lat": 33.765,
+   "lng": -78.957,
+   "state": "SC"
+  },
+  {
+   "county": "Fayette County",
+   "label": "Ashley Park, Fayette County, Georgia, 30214, United States",
+   "lat": 33.507,
+   "lng": -84.477,
+   "state": "GA"
+  }
+ ],
+ "At Lloyd Shoals": [],
+ "Atkinson": [
+  {
+   "county": "Atkinson County",
+   "label": "Atkinson County, Georgia, United States",
+   "lat": 31.303,
+   "lng": -82.884,
+   "state": "GA"
+  },
+  {
+   "county": "Pender County",
+   "label": "Atkinson, Pender County, North Carolina, United States",
+   "lat": 34.529,
+   "lng": -78.171,
+   "state": "NC"
+  }
+ ],
+ "Attalla": [
+  {
+   "county": "Etowah County",
+   "label": "Attalla, Etowah County, Alabama, United States",
+   "lat": 34.022,
+   "lng": -86.089,
+   "state": "AL"
+  }
+ ],
+ "Aultman Road": [],
+ "Auto At South Hazlehurst": [],
+ "Backwater": [],
+ "Bank A At Morrow": [],
+ "Barneyville": [
+  {
+   "county": "Cook County",
+   "label": "Barneyville, Cook County, Georgia, 31647, United States",
+   "lat": 31.214,
+   "lng": -83.454,
+   "state": "GA"
+  }
+ ],
+ "Bassett Creek": [],
+ "Bellamy": [
+  {
+   "county": "Sumter County",
+   "label": "Bellamy, Sumter County, Alabama, 36901, United States",
+   "lat": 32.46,
+   "lng": -88.129,
+   "state": "AL"
+  },
+  {
+   "county": "Sumter County",
+   "label": "Bellamy, Sumter County, Alabama, 36901, United States",
+   "lat": 32.449,
+   "lng": -88.134,
+   "state": "AL"
+  },
+  {
+   "county": "Gloucester County",
+   "label": "Bellamy, Gloucester, Gloucester County, Virginia, 23003, United States",
+   "lat": 37.398,
+   "lng": -76.572,
+   "state": "VA"
+  },
+  {
+   "county": "Scott County",
+   "label": "Bellamy, Scott County, Virginia, United States",
+   "lat": 36.661,
+   "lng": -82.676,
+   "state": "VA"
+  },
+  {
+   "county": "Vernon County",
+   "label": "Bellamy, Vernon County, Missouri, United States",
+   "lat": 37.685,
+   "lng": -94.181,
+   "state": "MO"
+  },
+  {
+   "county": "Robeson County",
+   "label": "Bellamy, Robeson County, North Carolina, United States",
+   "lat": 34.586,
+   "lng": -78.888,
+   "state": "NC"
+  }
+ ],
+ "Big Tazewell": [
+  {
+   "county": "Tazewell County",
+   "label": "Big Vein, Tazewell County, Virginia, 24635, United States",
+   "lat": 37.296,
+   "lng": -81.357,
+   "state": "VA"
+  }
+ ],
+ "Bostwick": [
+  {
+   "county": "Morgan County",
+   "label": "Bostwick, Morgan County, Georgia, United States",
+   "lat": 33.737,
+   "lng": -83.515,
+   "state": "GA"
+  },
+  {
+   "county": "Putnam County",
+   "label": "Bostwick, Putnam County, Florida, 32007, United States",
+   "lat": 29.774,
+   "lng": -81.637,
+   "state": "FL"
+  },
+  {
+   "county": "Nuckolls County",
+   "label": "Bostwick, Nuckolls County, Nebraska, United States",
+   "lat": 40.048,
+   "lng": -98.184,
+   "state": "NE"
+  }
+ ],
+ "Bowen Series": [],
+ "Boyd": [
+  {
+   "county": "Boyd County",
+   "label": "Boyd County, Kentucky, United States",
+   "lat": 38.361,
+   "lng": -82.695,
+   "state": "KY"
+  },
+  {
+   "county": "Wise County",
+   "label": "Boyd, Wise County, Texas, United States",
+   "lat": 33.079,
+   "lng": -97.565,
+   "state": "TX"
+  },
+  {
+   "county": "Barton County",
+   "label": "Boyd, Barton County, Kansas, United States",
+   "lat": 38.519,
+   "lng": -98.848,
+   "state": "KS"
+  },
+  {
+   "county": "Rush County",
+   "label": "Boyd, Rush County, Indiana, 46115, United States",
+   "lat": 39.72,
+   "lng": -85.55,
+   "state": "IN"
+  }
+ ],
+ "Brandon Farm Road": [],
+ "Broadway": [
+  {
+   "county": "Rockingham County",
+   "label": "Broadway, Rockingham County, Virginia, 22815, United States",
+   "lat": 38.613,
+   "lng": -78.799,
+   "state": "VA"
+  },
+  {
+   "county": "Warren County",
+   "label": "Broadway, Franklin Township, Warren County, New Jersey, United States",
+   "lat": 40.736,
+   "lng": -75.05,
+   "state": "NJ"
+  },
+  {
+   "county": "Warren County",
+   "label": "Broadway, Franklin Township, Warren County, New Jersey, 08808, United States",
+   "lat": 40.732,
+   "lng": -75.052,
+   "state": "NJ"
+  },
+  {
+   "county": "Lee County",
+   "label": "Broadway, Lee County, North Carolina, United States",
+   "lat": 35.458,
+   "lng": -79.053,
+   "state": "NC"
+  },
+  {
+   "county": "Union County",
+   "label": "Broadway, Taylor Township, Union County, Ohio, 43067, United States",
+   "lat": 40.341,
+   "lng": -83.412,
+   "state": "OH"
+  },
+  {
+   "county": "Henderson County",
+   "label": "Broadway, Henderson County, West Tennessee, Tennessee, United States",
+   "lat": 35.675,
+   "lng": -88.467,
+   "state": "TN"
+  },
+  {
+   "county": "Edmonson County",
+   "label": "Broadway, Edmonson County, Kentucky, 42207, United States",
+   "lat": 37.314,
+   "lng": -86.274,
+   "state": "KY"
+  },
+  {
+   "county": "Lamar County",
+   "label": "Broadway, Lamar County, Texas, United States",
+   "lat": 33.52,
+   "lng": -95.574,
+   "state": "TX"
+  },
+  {
+   "county": "Columbus County",
+   "label": "Broadway, Columbus County, North Carolina, 28431, United States",
+   "lat": 34.306,
+   "lng": -78.86,
+   "state": "NC"
+  }
+ ],
+ "Brown": [
+  {
+   "county": "Brown County",
+   "label": "Brown County, Texas, United States",
+   "lat": 31.753,
+   "lng": -98.99,
+   "state": "TX"
+  },
+  {
+   "county": "Brown County",
+   "label": "Brown County, Illinois, United States",
+   "lat": 39.95,
+   "lng": -90.749,
+   "state": "IL"
+  },
+  {
+   "county": "Brown County",
+   "label": "Brown County, Ohio, United States",
+   "lat": 38.909,
+   "lng": -83.884,
+   "state": "OH"
+  },
+  {
+   "county": "Brown County",
+   "label": "Brown County, Kansas, United States",
+   "lat": 39.824,
+   "lng": -95.582,
+   "state": "KS"
+  },
+  {
+   "county": "Brown County",
+   "label": "Brown County, Indiana, United States",
+   "lat": 39.168,
+   "lng": -86.23,
+   "state": "IN"
+  }
+ ],
+ "Brown North": [],
+ "Brumbley Creek": [],
+ "Brunswick": [
+  {
+   "county": "Brunswick County",
+   "label": "Brunswick County, Virginia, United States",
+   "lat": 36.779,
+   "lng": -77.867,
+   "state": "VA"
+  },
+  {
+   "county": "Glynn County",
+   "label": "Brunswick, Glynn County, Georgia, 31520, United States",
+   "lat": 31.15,
+   "lng": -81.491,
+   "state": "GA"
+  },
+  {
+   "county": "Frederick County",
+   "label": "Brunswick, Frederick County, Maryland, United States",
+   "lat": 39.313,
+   "lng": -77.628,
+   "state": "MD"
+  },
+  {
+   "county": "Chariton County",
+   "label": "Brunswick, Chariton County, Missouri, 65236, United States",
+   "lat": 39.423,
+   "lng": -93.13,
+   "state": "MO"
+  },
+  {
+   "county": "Columbus County",
+   "label": "Brunswick, Columbus County, North Carolina, 28424, United States",
+   "lat": 34.287,
+   "lng": -78.701,
+   "state": "NC"
+  },
+  {
+   "county": "Clay County",
+   "label": "Brunswick, Lewis Township, Clay County, Indiana, United States",
+   "lat": 39.197,
+   "lng": -87.12,
+   "state": "IN"
+  },
+  {
+   "county": "Brunswick",
+   "label": "Brunswick, North Carolina, United States",
+   "lat": 34.072,
+   "lng": -78.191,
+   "state": "NC"
+  },
+  {
+   "county": "Brunswick County",
+   "label": "Brunswick County, North Carolina, United States",
+   "lat": 34.062,
+   "lng": -78.244,
+   "state": "NC"
+  }
+ ],
+ "Bull Creek": [
+  {
+   "county": "Taney County",
+   "label": "Bull Creek, Taney County, Missouri, United States",
+   "lat": 36.715,
+   "lng": -93.204,
+   "state": "MO"
+  },
+  {
+   "county": "Osceola County",
+   "label": "Bull Creek, Osceola County, Florida, 34773, United States",
+   "lat": 28.096,
+   "lng": -80.983,
+   "state": "FL"
+  },
+  {
+   "county": "Floyd County",
+   "label": "Bull Creek, Floyd County, Kentucky, 41653, United States",
+   "lat": 37.667,
+   "lng": -82.728,
+   "state": "KY"
+  }
+ ],
+ "Bush River": [
+  {
+   "county": "Newberry County",
+   "label": "Bush River, Newberry County, South Carolina, United States",
+   "lat": 34.322,
+   "lng": -81.761,
+   "state": "SC"
+  }
+ ],
+ "Buzzard Roost": [
+  {
+   "county": "Colbert County",
+   "label": "Buzzard Roost, Colbert County, Alabama, 35616, United States",
+   "lat": 34.761,
+   "lng": -88.024,
+   "state": "AL"
+  }
+ ],
+ "Bynum": [
+  {
+   "county": "Hill County",
+   "label": "Bynum, Hill County, Texas, United States",
+   "lat": 31.969,
+   "lng": -97.004,
+   "state": "TX"
+  },
+  {
+   "county": "Calhoun County",
+   "label": "Bynum, Oxford, Calhoun County, Alabama, 36260, United States",
+   "lat": 33.613,
+   "lng": -85.961,
+   "state": "AL"
+  },
+  {
+   "county": "Chatham County",
+   "label": "Bynum, Chatham County, North Carolina, 27228, United States",
+   "lat": 35.774,
+   "lng": -79.142,
+   "state": "NC"
+  },
+  {
+   "county": "Prentiss County",
+   "label": "Bynum, Prentiss County, Mississippi, 38865, United States",
+   "lat": 34.713,
+   "lng": -88.551,
+   "state": "MS"
+  },
+  {
+   "county": "Lamar County",
+   "label": "Bynum, Sumrall, Lamar County, Mississippi, 39406, United States",
+   "lat": 31.394,
+   "lng": -89.542,
+   "state": "MS"
+  }
+ ],
+ "Cane Run Tp": [
+  {
+   "county": "Mercer County",
+   "label": "Cane Run Camp, Mercer County, Kentucky, 40310, United States",
+   "lat": 37.752,
+   "lng": -84.72,
+   "state": "KY"
+  }
+ ],
+ "Carter Hill Road": [],
+ "Castle Hayne": [
+  {
+   "county": "New Hanover County",
+   "label": "Castle Hayne, New Hanover County, North Carolina, 28429, United States",
+   "lat": 34.356,
+   "lng": -77.9,
+   "state": "NC"
+  }
+ ],
+ "Cavender Drive": [],
+ "Cemex": [],
+ "Clarksboro": [
+  {
+   "county": "Gloucester County",
+   "label": "Clarksboro, Mickleton, East Greenwich Township, Gloucester County, New Jersey, 08020, United States",
+   "lat": 39.8,
+   "lng": -75.224,
+   "state": "NJ"
+  },
+  {
+   "county": "Jackson County",
+   "label": "Clarksboro, Jackson County, Georgia, United States",
+   "lat": 34.041,
+   "lng": -83.498,
+   "state": "GA"
+  }
+ ],
+ "Clayton Industrial": [],
+ "Cliftondale": [
+  {
+   "county": "Fulton County",
+   "label": "Cliftondale, South Fulton, Fulton County, Georgia, United States",
+   "lat": 33.645,
+   "lng": -84.595,
+   "state": "GA"
+  },
+  {
+   "county": "Alleghany County",
+   "label": "Cliftondale Park, Alleghany County, Virginia, 24422, United States",
+   "lat": 37.822,
+   "lng": -79.797,
+   "state": "VA"
+  }
+ ],
+ "Conley": [
+  {
+   "county": "Clayton County",
+   "label": "Conley, Forest Park, Clayton County, Georgia, United States",
+   "lat": 33.636,
+   "lng": -84.329,
+   "state": "GA"
+  },
+  {
+   "county": "Clayton County",
+   "label": "Conley, Clayton County, Georgia, 30288, United States",
+   "lat": 33.645,
+   "lng": -84.326,
+   "state": "GA"
+  },
+  {
+   "county": "Magoffin County",
+   "label": "Conley, Magoffin County, Kentucky, 41426, United States",
+   "lat": 37.752,
+   "lng": -82.978,
+   "state": "KY"
+  }
+ ],
+ "Conyers": [
+  {
+   "county": "Rockdale County",
+   "label": "Conyers, Rockdale County, Georgia, United States",
+   "lat": 33.668,
+   "lng": -84.018,
+   "state": "GA"
+  }
+ ],
+ "Corn Crib": [],
+ "Cornelia": [
+  {
+   "county": "Habersham County",
+   "label": "Cornelia, Habersham County, Georgia, United States",
+   "lat": 34.511,
+   "lng": -83.527,
+   "state": "GA"
+  },
+  {
+   "county": "Johnson County",
+   "label": "Cornelia, Johnson County, Missouri, United States",
+   "lat": 38.644,
+   "lng": -93.739,
+   "state": "MO"
+  },
+  {
+   "county": "Nicholas County",
+   "label": "Cornelia, Nicholas County, West Virginia, 26671, United States",
+   "lat": 38.283,
+   "lng": -80.91,
+   "state": "WV"
+  }
+ ],
+ "County": [
+  {
+   "county": "Lawrence",
+   "label": "Lawrence, Illinois, 62439, United States",
+   "lat": 38.711,
+   "lng": -87.719,
+   "state": "IL"
+  },
+  {
+   "county": "Barbour",
+   "label": "Barbour, West Virginia, 26416, United States",
+   "lat": 39.122,
+   "lng": -80.014,
+   "state": "WV"
+  },
+  {
+   "county": "Osage",
+   "label": "Osage, Kansas, United States",
+   "lat": 38.674,
+   "lng": -95.737,
+   "state": "KS"
+  },
+  {
+   "county": "Boone",
+   "label": "Boone, West Virginia, 25092, United States",
+   "lat": 38.009,
+   "lng": -81.701,
+   "state": "WV"
+  }
+ ],
+ "Crest Street": [
+  {
+   "county": "Durham County",
+   "label": "Crest Street, Durham, Durham County, North Carolina, United States",
+   "lat": 36.013,
+   "lng": -78.94,
+   "state": "NC"
+  },
+  {
+   "county": "Durham County",
+   "label": "Crest Street, Durham, Durham County, North Carolina, 27710, United States",
+   "lat": 36.012,
+   "lng": -78.939,
+   "state": "NC"
+  }
+ ],
+ "Creto": [],
+ "Crooked Creek": [
+  {
+   "county": "Logan County",
+   "label": "Crooked Creek, Logan County, West Virginia, 25639, United States",
+   "lat": 37.882,
+   "lng": -81.981,
+   "state": "WV"
+  },
+  {
+   "county": "Putnam County",
+   "label": "Crooked Creek, Putnam County, Georgia, United States",
+   "lat": 33.265,
+   "lng": -83.271,
+   "state": "GA"
+  },
+  {
+   "county": "Putnam County",
+   "label": "Crooked Creek, Putnam County, Georgia, United States",
+   "lat": 33.26,
+   "lng": -83.261,
+   "state": "GA"
+  },
+  {
+   "county": "Lee County",
+   "label": "Crooked Creek, Opelika, Lee County, Alabama, 36801, United States",
+   "lat": 32.647,
+   "lng": -85.357,
+   "state": "AL"
+  },
+  {
+   "county": "Perry County",
+   "label": "Crooked Creek, Perry County, Middle Tennessee, Tennessee, United States",
+   "lat": 35.809,
+   "lng": -87.901,
+   "state": "TN"
+  },
+  {
+   "county": "Henderson County",
+   "label": "Crooked Creek, Henderson County, North Carolina, 28738, United States",
+   "lat": 35.287,
+   "lng": -82.473,
+   "state": "NC"
+  }
+ ],
+ "Deer Creek": [
+  {
+   "county": "Tazewell County",
+   "label": "Deer Creek, Tazewell County, Illinois, United States",
+   "lat": 40.63,
+   "lng": -89.332,
+   "state": "IL"
+  }
+ ],
+ "Desc Eastover": [],
+ "Dixon School Road": [],
+ "Douglasville": [
+  {
+   "county": "Douglas County",
+   "label": "Douglasville, Douglas County, Georgia, United States",
+   "lat": 33.751,
+   "lng": -84.748,
+   "state": "GA"
+  },
+  {
+   "county": "Pulaski County",
+   "label": "Douglasville, Little Rock, Big Rock Township, Pulaski County, Arkansas, 72204, United States",
+   "lat": 34.715,
+   "lng": -92.36,
+   "state": "AR"
+  },
+  {
+   "county": "Jefferson County",
+   "label": "Douglasville, Birmingham, Jefferson County, Alabama, 35234, United States",
+   "lat": 33.554,
+   "lng": -86.798,
+   "state": "AL"
+  },
+  {
+   "county": "Baldwin County",
+   "label": "Douglasville, Bay Minette, Baldwin County, Alabama, 36507, United States",
+   "lat": 30.866,
+   "lng": -87.786,
+   "state": "AL"
+  },
+  {
+   "county": "Early County",
+   "label": "Douglasville, Early County, Georgia, United States",
+   "lat": 31.36,
+   "lng": -84.67,
+   "state": "GA"
+  }
+ ],
+ "Dpc East Durham": [],
+ "Dresden Jumper Replacement": [],
+ "Durham": [
+  {
+   "county": "Durham County",
+   "label": "Durham, Durham County, North Carolina, United States",
+   "lat": 35.997,
+   "lng": -78.902,
+   "state": "NC"
+  },
+  {
+   "county": "Durham County",
+   "label": "Durham County, North Carolina, United States",
+   "lat": 36.018,
+   "lng": -78.875,
+   "state": "NC"
+  },
+  {
+   "county": "Marion County",
+   "label": "Durham, Marion County, Kansas, 67438, United States",
+   "lat": 38.485,
+   "lng": -97.228,
+   "state": "KS"
+  },
+  {
+   "county": "Bucks County",
+   "label": "Durham Township, Bucks County, Pennsylvania, United States",
+   "lat": 40.573,
+   "lng": -75.22,
+   "state": "PA"
+  }
+ ],
+ "Dvp Kerr": [],
+ "Dyer Road": [],
+ "Dyersburg": [
+  {
+   "county": "Dyer County",
+   "label": "Dyersburg, Dyer County, West Tennessee, Tennessee, United States",
+   "lat": 36.033,
+   "lng": -89.387,
+   "state": "TN"
+  }
+ ],
+ "East Durham": [],
+ "East Greenville": [
+  {
+   "county": "Montgomery County",
+   "label": "East Greenville, Montgomery County, Pennsylvania, United States",
+   "lat": 40.406,
+   "lng": -75.502,
+   "state": "PA"
+  },
+  {
+   "county": "Stark County",
+   "label": "East Greenville, Tuscarawas Township, Stark County, Ohio, 44666, United States",
+   "lat": 40.8,
+   "lng": -81.632,
+   "state": "OH"
+  }
+ ],
+ "East Monroe": [
+  {
+   "county": "Highland County",
+   "label": "East Monroe, Fairfield Township, Highland County, Ohio, 45135, United States",
+   "lat": 39.359,
+   "lng": -83.499,
+   "state": "OH"
+  }
+ ],
+ "East Point Resag And": [],
+ "East Roanoke": [],
+ "East Villa Rica": [],
+ "East Walton": [],
+ "Echeconnee": [
+  {
+   "county": "Houston County",
+   "label": "Echeconnee, Houston County, Georgia, 31216, United States",
+   "lat": 32.685,
+   "lng": -83.7,
+   "state": "GA"
+  },
+  {
+   "county": "Bibb County",
+   "label": "Echeconnee Acres, Macon, Bibb County, Georgia, United States",
+   "lat": 32.72,
+   "lng": -83.757,
+   "state": "GA"
+  }
+ ],
+ "Eliska": [
+  {
+   "county": "Monroe County",
+   "label": "Eliska, Monroe County, Alabama, United States",
+   "lat": 31.353,
+   "lng": -87.683,
+   "state": "AL"
+  }
+ ],
+ "Emerson": [
+  {
+   "county": "Bartow County",
+   "label": "Emerson, Bartow County, Georgia, 30137, United States",
+   "lat": 34.127,
+   "lng": -84.755,
+   "state": "GA"
+  },
+  {
+   "county": "Columbia County",
+   "label": "Emerson, Columbia County, Arkansas, United States",
+   "lat": 33.098,
+   "lng": -93.194,
+   "state": "AR"
+  },
+  {
+   "county": "Raleigh County",
+   "label": "Emerson, Raleigh County, West Virginia, 25209, United States",
+   "lat": 37.941,
+   "lng": -81.498,
+   "state": "WV"
+  },
+  {
+   "county": "Lewis County",
+   "label": "Emerson, Lewis County, Kentucky, 41135, United States",
+   "lat": 38.354,
+   "lng": -83.252,
+   "state": "KY"
+  },
+  {
+   "county": "Bedford County",
+   "label": "Emerson, Monroe Township, Bedford County, Pennsylvania, United States",
+   "lat": 39.914,
+   "lng": -78.33,
+   "state": "PA"
+  },
+  {
+   "county": "Jefferson County",
+   "label": "Emerson, Mount Pleasant Township, Jefferson County, Ohio, 43917, United States",
+   "lat": 40.178,
+   "lng": -80.823,
+   "state": "OH"
+  },
+  {
+   "county": "Brooks County",
+   "label": "Emerson, Brooks County, Georgia, 31629, United States",
+   "lat": 30.776,
+   "lng": -83.632,
+   "state": "GA"
+  },
+  {
+   "county": "Marion County",
+   "label": "Emerson, Marion County, Missouri, United States",
+   "lat": 39.889,
+   "lng": -91.698,
+   "state": "MO"
+  },
+  {
+   "county": "Columbus County",
+   "label": "Emerson, Columbus County, North Carolina, United States",
+   "lat": 34.181,
+   "lng": -78.866,
+   "state": "NC"
+  },
+  {
+   "county": "Bladen County",
+   "label": "Emerson, Bladen County, North Carolina, United States",
+   "lat": 34.458,
+   "lng": -78.566,
+   "state": "NC"
+  }
+ ],
+ "Enterprise": [
+  {
+   "county": "Coffee County",
+   "label": "Enterprise, Coffee County, Alabama, United States",
+   "lat": 31.315,
+   "lng": -85.855,
+   "state": "AL"
+  },
+  {
+   "county": "Dickinson County",
+   "label": "Enterprise, Dickinson County, Kansas, United States",
+   "lat": 38.903,
+   "lng": -97.117,
+   "state": "KS"
+  },
+  {
+   "county": "Clarke County",
+   "label": "Enterprise, Clarke County, Mississippi, United States",
+   "lat": 32.174,
+   "lng": -88.82,
+   "state": "MS"
+  },
+  {
+   "county": "Volusia County",
+   "label": "Enterprise, Volusia County, Florida, 32728, United States",
+   "lat": 28.869,
+   "lng": -81.267,
+   "state": "FL"
+  },
+  {
+   "county": "Spencer County",
+   "label": "Enterprise, Spencer County, Indiana, United States",
+   "lat": 37.843,
+   "lng": -87.182,
+   "state": "IN"
+  },
+  {
+   "county": "Hocking County",
+   "label": "Enterprise, Falls Township, Hocking County, Ohio, United States",
+   "lat": 39.565,
+   "lng": -82.48,
+   "state": "OH"
+  },
+  {
+   "county": "Preble County",
+   "label": "Enterprise, Lanier Township, Preble County, Ohio, 45330, United States",
+   "lat": 39.697,
+   "lng": -84.501,
+   "state": "OH"
+  },
+  {
+   "county": "Wirt County",
+   "label": "Enterprise, Wirt County, West Virginia, 26160, United States",
+   "lat": 39.007,
+   "lng": -81.37,
+   "state": "WV"
+  },
+  {
+   "county": "Harrison County",
+   "label": "Enterprise, Harrison County, West Virginia, 26568, United States",
+   "lat": 39.42,
+   "lng": -80.278,
+   "state": "WV"
+  },
+  {
+   "county": "Oglethorpe County",
+   "label": "Enterprise, Oglethorpe County, Georgia, United States",
+   "lat": 33.926,
+   "lng": -82.97,
+   "state": "GA"
+  },
+  {
+   "county": "Chilton County",
+   "label": "Enterprise, Chilton County, Alabama, United States",
+   "lat": 32.735,
+   "lng": -86.618,
+   "state": "AL"
+  },
+  {
+   "county": "Union County",
+   "label": "Enterprise, Union County, Mississippi, United States",
+   "lat": 34.467,
+   "lng": -89.157,
+   "state": "MS"
+  },
+  {
+   "county": "Sebastian County",
+   "label": "Enterprise, Sebastian County, Arkansas, 72919, United States",
+   "lat": 35.266,
+   "lng": -94.429,
+   "state": "AR"
+  },
+  {
+   "county": "Fannin County",
+   "label": "Enterprise, Fannin County, Texas, 75491, United States",
+   "lat": 33.522,
+   "lng": -96.35,
+   "state": "TX"
+  },
+  {
+   "county": "Wayne County",
+   "label": "Enterprise, Wayne County, Illinois, United States",
+   "lat": 38.522,
+   "lng": -88.358,
+   "state": "IL"
+  },
+  {
+   "county": "Avoyelles Parish",
+   "label": "Enterprise, Avoyelles Parish, Louisiana, 71333, United States",
+   "lat": 30.975,
+   "lng": -92.095,
+   "state": "LA"
+  },
+  {
+   "county": "Catahoula Parish",
+   "label": "Enterprise, Catahoula Parish, Louisiana, 71425, United States",
+   "lat": 31.903,
+   "lng": -91.883,
+   "state": "LA"
+  },
+  {
+   "county": "Miller County",
+   "label": "Enterprise, Miller County, Georgia, United States",
+   "lat": 31.123,
+   "lng": -84.826,
+   "state": "GA"
+  },
+  {
+   "county": "Maury County",
+   "label": "Enterprise, Maury County, Middle Tennessee, Tennessee, United States",
+   "lat": 35.472,
+   "lng": -87.179,
+   "state": "TN"
+  },
+  {
+   "county": "Haskell County",
+   "label": "Enterprise, Haskell County, Oklahoma, United States",
+   "lat": 35.23,
+   "lng": -95.38,
+   "state": "OK"
+  },
+  {
+   "county": "Carter County",
+   "label": "Enterprise, Carter County, Kentucky, 41173, United States",
+   "lat": 38.26,
+   "lng": -83.255,
+   "state": "KY"
+  },
+  {
+   "county": "Lincoln County",
+   "label": "Enterprise, Lincoln County, Mississippi, United States",
+   "lat": 31.474,
+   "lng": -90.385,
+   "state": "MS"
+  },
+  {
+   "county": "Linn County",
+   "label": "Enterprise, Linn County, Missouri, United States",
+   "lat": 40.025,
+   "lng": -93.086,
+   "state": "MO"
+  },
+  {
+   "county": "Amite County",
+   "label": "Enterprise, Amite County, Mississippi, United States",
+   "lat": 31.165,
+   "lng": -90.878,
+   "state": "MS"
+  },
+  {
+   "county": "Hawkins County",
+   "label": "Enterprise, Hawkins County, East Tennessee, Tennessee, United States",
+   "lat": 36.346,
+   "lng": -82.928,
+   "state": "TN"
+  },
+  {
+   "county": "Warren County",
+   "label": "Enterprise, Warren County, North Carolina, United States",
+   "lat": 36.466,
+   "lng": -77.948,
+   "state": "NC"
+  },
+  {
+   "county": "Davidson County",
+   "label": "Enterprise, Davidson County, North Carolina, 27374, United States",
+   "lat": 35.945,
+   "lng": -80.276,
+   "state": "NC"
+  },
+  {
+   "county": "Shelby County",
+   "label": "Enterprise, Shelby County, Missouri, United States",
+   "lat": 39.649,
+   "lng": -92.26,
+   "state": "MO"
+  }
+ ],
+ "Epes": [
+  {
+   "county": "Sumter County",
+   "label": "Epes, Sumter County, Alabama, 35460, United States",
+   "lat": 32.69,
+   "lng": -88.126,
+   "state": "AL"
+  }
+ ],
+ "Factory Shoals": [],
+ "Fawkes": [],
+ "First Avenue": [],
+ "Franklinton Franklinton": [],
+ "Franklinton Novo": [],
+ "Gainesville": [
+  {
+   "county": "Alachua County",
+   "label": "Gainesville, Alachua County, Florida, United States",
+   "lat": 29.652,
+   "lng": -82.325,
+   "state": "FL"
+  },
+  {
+   "county": "Hall County",
+   "label": "Gainesville, Hall County, Georgia, 30501, United States",
+   "lat": 34.298,
+   "lng": -83.824,
+   "state": "GA"
+  },
+  {
+   "county": "Cooke County",
+   "label": "Gainesville, Cooke County, Texas, United States",
+   "lat": 33.625,
+   "lng": -97.143,
+   "state": "TX"
+  },
+  {
+   "county": "Ozark County",
+   "label": "Gainesville, Ozark County, Missouri, 65655, United States",
+   "lat": 36.603,
+   "lng": -92.428,
+   "state": "MO"
+  },
+  {
+   "county": "Sumter County",
+   "label": "Gainesville, Sumter County, Alabama, United States",
+   "lat": 32.821,
+   "lng": -88.159,
+   "state": "AL"
+  },
+  {
+   "county": "Prince William County",
+   "label": "Gainesville, Haymarket, Gainesville, Prince William County, Virginia, 20155, United States",
+   "lat": 38.793,
+   "lng": -77.629,
+   "state": "VA"
+  },
+  {
+   "county": "Prince William County",
+   "label": "Gainesville, Prince William County, Virginia, 20155, United States",
+   "lat": 38.796,
+   "lng": -77.613,
+   "state": "VA"
+  },
+  {
+   "county": "Greene County",
+   "label": "Gainesville, Greene County, Arkansas, United States",
+   "lat": 36.165,
+   "lng": -90.511,
+   "state": "AR"
+  }
+ ],
+ "Garrett Road": [],
+ "Glenwood Springs": [
+  {
+   "county": "Wake County",
+   "label": "Glenwood, Holly Springs, Wake County, North Carolina, United States",
+   "lat": 35.654,
+   "lng": -78.829,
+   "state": "NC"
+  }
+ ],
+ "Goat Rock Reactors Installation": [],
+ "Goldens Creek": [],
+ "Gorgas": [
+  {
+   "county": "Walker County",
+   "label": "Gorgas, Walker County, Alabama, 35560, United States",
+   "lat": 33.649,
+   "lng": -87.208,
+   "state": "AL"
+  },
+  {
+   "county": "Tuscaloosa County",
+   "label": "Gorgas, Tuscaloosa County, Alabama, United States",
+   "lat": 33.52,
+   "lng": -87.614,
+   "state": "AL"
+  }
+ ],
+ "Grassy Hollow": [],
+ "Greeen River": [],
+ "Greensboro": [
+  {
+   "county": "Guilford County",
+   "label": "Greensboro, Guilford County, North Carolina, United States",
+   "lat": 36.073,
+   "lng": -79.792,
+   "state": "NC"
+  },
+  {
+   "county": "Hale County",
+   "label": "Greensboro, Hale County, Alabama, 36744, United States",
+   "lat": 32.705,
+   "lng": -87.596,
+   "state": "AL"
+  },
+  {
+   "county": "Greene County",
+   "label": "Greensboro, Greene County, Georgia, United States",
+   "lat": 33.576,
+   "lng": -83.182,
+   "state": "GA"
+  },
+  {
+   "county": "Gadsden County",
+   "label": "Greensboro, Gadsden County, Florida, 32330, United States",
+   "lat": 30.57,
+   "lng": -84.743,
+   "state": "FL"
+  },
+  {
+   "county": "Caroline County",
+   "label": "Greensboro, Caroline County, Maryland, United States",
+   "lat": 38.974,
+   "lng": -75.805,
+   "state": "MD"
+  },
+  {
+   "county": "Greene County",
+   "label": "Greensboro, Greene County, Pennsylvania, United States",
+   "lat": 39.792,
+   "lng": -79.911,
+   "state": "PA"
+  },
+  {
+   "county": "Henry County",
+   "label": "Greensboro, Henry County, Indiana, 47344, United States",
+   "lat": 39.879,
+   "lng": -85.464,
+   "state": "IN"
+  }
+ ],
+ "Gulf States Steel": [],
+ "Gullatt Road": [],
+ "Hammond": [
+  {
+   "county": "Tangipahoa Parish",
+   "label": "Hammond, Tangipahoa Parish, Louisiana, United States",
+   "lat": 30.504,
+   "lng": -90.461,
+   "state": "LA"
+  },
+  {
+   "county": "Tangipahoa Parish",
+   "label": "Hammond, Tangipahoa Parish, Louisiana, United States",
+   "lat": 30.504,
+   "lng": -90.461,
+   "state": "LA"
+  },
+  {
+   "county": "Piatt County",
+   "label": "Hammond, Piatt County, Illinois, United States",
+   "lat": 39.797,
+   "lng": -88.592,
+   "state": "IL"
+  },
+  {
+   "county": "Ozark County",
+   "label": "Hammond, Ozark County, Missouri, 65762, United States",
+   "lat": 36.676,
+   "lng": -92.644,
+   "state": "MO"
+  },
+  {
+   "county": "Bourbon County",
+   "label": "Hammond, Bourbon County, Kansas, United States",
+   "lat": 37.936,
+   "lng": -94.695,
+   "state": "KS"
+  },
+  {
+   "county": "Kershaw County",
+   "label": "Hammond, Kershaw County, South Carolina, United States",
+   "lat": 34.14,
+   "lng": -80.584,
+   "state": "SC"
+  },
+  {
+   "county": "Marion County",
+   "label": "Hammond, Marion County, West Virginia, 26556, United States",
+   "lat": 39.406,
+   "lng": -80.101,
+   "state": "WV"
+  },
+  {
+   "county": "Anderson County",
+   "label": "Hammond, Anderson County, South Carolina, 29621, United States",
+   "lat": 34.555,
+   "lng": -82.6,
+   "state": "SC"
+  },
+  {
+   "county": "Knox County",
+   "label": "Hammond, Knox County, Kentucky, 40982, United States",
+   "lat": 36.957,
+   "lng": -83.727,
+   "state": "KY"
+  },
+  {
+   "county": "Robertson County",
+   "label": "Hammond, Robertson County, Texas, United States",
+   "lat": 31.095,
+   "lng": -96.714,
+   "state": "TX"
+  },
+  {
+   "county": "Putnam County",
+   "label": "Hammond, Putnam County, Florida, United States",
+   "lat": 29.382,
+   "lng": -81.522,
+   "state": "FL"
+  },
+  {
+   "county": "Horry County",
+   "label": "Hammond, Horry County, South Carolina, United States",
+   "lat": 33.905,
+   "lng": -78.853,
+   "state": "SC"
+  }
+ ],
+ "Hammond Reactors": [],
+ "Hampton": [
+  {
+   "county": "",
+   "label": "Hampton, Virginia, United States",
+   "lat": 37.026,
+   "lng": -76.344,
+   "state": "VA"
+  },
+  {
+   "county": "Hampton County",
+   "label": "Hampton County, South Carolina, United States",
+   "lat": 32.786,
+   "lng": -81.124,
+   "state": "SC"
+  },
+  {
+   "county": "Henry County",
+   "label": "Hampton, Henry County, Georgia, United States",
+   "lat": 33.387,
+   "lng": -84.283,
+   "state": "GA"
+  },
+  {
+   "county": "Calhoun County",
+   "label": "Hampton, Calhoun County, Arkansas, United States",
+   "lat": 33.538,
+   "lng": -92.467,
+   "state": "AR"
+  },
+  {
+   "county": "Bradford County",
+   "label": "Hampton, Bradford County, Florida, 32044, United States",
+   "lat": 29.865,
+   "lng": -82.131,
+   "state": "FL"
+  },
+  {
+   "county": "Hampton County",
+   "label": "Hampton, Hampton County, South Carolina, 29924, United States",
+   "lat": 32.87,
+   "lng": -81.114,
+   "state": "SC"
+  },
+  {
+   "county": "Baltimore County",
+   "label": "Hampton, Baltimore County, Maryland, 21286, United States",
+   "lat": 39.415,
+   "lng": -76.572,
+   "state": "MD"
+  },
+  {
+   "county": "Adams County",
+   "label": "Hampton, Reading Township, Adams County, Pennsylvania, 17316, United States",
+   "lat": 39.93,
+   "lng": -77.058,
+   "state": "PA"
+  }
+ ],
+ "Harrisburg": [
+  {
+   "county": "Dauphin County",
+   "label": "Harrisburg, Dauphin County, Pennsylvania, United States",
+   "lat": 40.266,
+   "lng": -76.886,
+   "state": "PA"
+  },
+  {
+   "county": "Saline County",
+   "label": "Harrisburg, Saline County, Illinois, 62946, United States",
+   "lat": 37.739,
+   "lng": -88.541,
+   "state": "IL"
+  },
+  {
+   "county": "Cabarrus County",
+   "label": "Harrisburg, Cabarrus County, North Carolina, 28075, United States",
+   "lat": 35.326,
+   "lng": -80.645,
+   "state": "NC"
+  },
+  {
+   "county": "Poinsett County",
+   "label": "Harrisburg, Poinsett County, Arkansas, United States",
+   "lat": 35.563,
+   "lng": -90.719,
+   "state": "AR"
+  },
+  {
+   "county": "Franklin County",
+   "label": "Harrisburg, Pleasant Township, Franklin County, Ohio, 43126, United States",
+   "lat": 39.811,
+   "lng": -83.168,
+   "state": "OH"
+  },
+  {
+   "county": "Boone County",
+   "label": "Harrisburg, Boone County, Missouri, United States",
+   "lat": 39.142,
+   "lng": -92.463,
+   "state": "MO"
+  },
+  {
+   "county": "Fayette County",
+   "label": "Harrisburg, Fayette County, Indiana, United States",
+   "lat": 39.687,
+   "lng": -85.18,
+   "state": "IN"
+  }
+ ],
+ "Hatch": [
+  {
+   "county": "Pike County",
+   "label": "Hatch, Sunfish Township, Pike County, Ohio, United States",
+   "lat": 39.009,
+   "lng": -83.176,
+   "state": "OH"
+  },
+  {
+   "county": "Ralls County",
+   "label": "Hatch, Ralls County, Missouri, United States",
+   "lat": 39.589,
+   "lng": -91.618,
+   "state": "MO"
+  }
+ ],
+ "Henderson": [
+  {
+   "county": "Henderson County",
+   "label": "Henderson County, Texas, United States",
+   "lat": 32.183,
+   "lng": -95.789,
+   "state": "TX"
+  },
+  {
+   "county": "Henderson County",
+   "label": "Henderson County, North Carolina, United States",
+   "lat": 35.339,
+   "lng": -82.466,
+   "state": "NC"
+  },
+  {
+   "county": "Henderson County",
+   "label": "Henderson County, Kentucky, United States",
+   "lat": 37.767,
+   "lng": -87.557,
+   "state": "KY"
+  },
+  {
+   "county": "Henderson County",
+   "label": "Henderson County, West Tennessee, Tennessee, United States",
+   "lat": 35.642,
+   "lng": -88.395,
+   "state": "TN"
+  },
+  {
+   "county": "Rusk County",
+   "label": "Henderson, Rusk County, Texas, 75652, United States",
+   "lat": 32.153,
+   "lng": -94.799,
+   "state": "TX"
+  },
+  {
+   "county": "Henderson County",
+   "label": "Henderson, Henderson County, Kentucky, United States",
+   "lat": 37.841,
+   "lng": -87.592,
+   "state": "KY"
+  },
+  {
+   "county": "Vance County",
+   "label": "Henderson, Vance County, North Carolina, 27536, United States",
+   "lat": 36.327,
+   "lng": -78.403,
+   "state": "NC"
+  },
+  {
+   "county": "Chester County",
+   "label": "Henderson, Chester County, West Tennessee, Tennessee, United States",
+   "lat": 35.439,
+   "lng": -88.641,
+   "state": "TN"
+  },
+  {
+   "county": "Mason County",
+   "label": "Henderson, Mason County, West Virginia, 25106, United States",
+   "lat": 38.834,
+   "lng": -82.138,
+   "state": "WV"
+  },
+  {
+   "county": "York County",
+   "label": "Henderson, York County, Nebraska, United States",
+   "lat": 40.781,
+   "lng": -97.812,
+   "state": "NE"
+  },
+  {
+   "county": "Caroline County",
+   "label": "Henderson, Caroline County, Maryland, United States",
+   "lat": 39.075,
+   "lng": -75.766,
+   "state": "MD"
+  },
+  {
+   "county": "Saint Martin Parish",
+   "label": "Henderson, Saint Martin Parish, Louisiana, United States",
+   "lat": 30.313,
+   "lng": -91.79,
+   "state": "LA"
+  },
+  {
+   "county": "Chatham County",
+   "label": "Henderson, Chatham County, Georgia, 31416, United States",
+   "lat": 32.004,
+   "lng": -81.268,
+   "state": "GA"
+  }
+ ],
+ "Hickory Level": [],
+ "Highway": [
+  {
+   "county": "Clinton County",
+   "label": "Highway, Clinton County, Kentucky, United States",
+   "lat": 36.738,
+   "lng": -85.209,
+   "state": "KY"
+  }
+ ],
+ "Hill View": [
+  {
+   "county": "Greene County",
+   "label": "Hill View, Greene County, North Carolina, 28580, United States",
+   "lat": 35.44,
+   "lng": -77.667,
+   "state": "NC"
+  }
+ ],
+ "Hills Bridge": [],
+ "Hodges": [
+  {
+   "county": "Franklin County",
+   "label": "Hodges, Franklin County, Alabama, United States",
+   "lat": 34.327,
+   "lng": -87.927,
+   "state": "AL"
+  },
+  {
+   "county": "Greenwood County",
+   "label": "Hodges, Greenwood County, South Carolina, United States",
+   "lat": 34.288,
+   "lng": -82.244,
+   "state": "SC"
+  },
+  {
+   "county": "Cabell County",
+   "label": "Hodges, Cabell County, West Virginia, 25535, United States",
+   "lat": 38.363,
+   "lng": -82.429,
+   "state": "WV"
+  },
+  {
+   "county": "Greenwood County",
+   "label": "Hodges, Greenwood County, South Carolina, United States",
+   "lat": 34.288,
+   "lng": -82.248,
+   "state": "SC"
+  },
+  {
+   "county": "Jefferson County",
+   "label": "Hodges, Jefferson County, East Tennessee, Tennessee, 37871, United States",
+   "lat": 36.077,
+   "lng": -83.641,
+   "state": "TN"
+  },
+  {
+   "county": "Campbell County",
+   "label": "Hodges, Campbell County, Virginia, United States",
+   "lat": 37.122,
+   "lng": -79.159,
+   "state": "VA"
+  },
+  {
+   "county": "Jones County",
+   "label": "Hodges, Jones County, Texas, 79525, United States",
+   "lat": 32.589,
+   "lng": -99.869,
+   "state": "TX"
+  },
+  {
+   "county": "Edwards County",
+   "label": "Hodges, Edwards County, Kansas, United States",
+   "lat": 37.817,
+   "lng": -99.384,
+   "state": "KS"
+  }
+ ],
+ "Holly Ridge North": [
+  {
+   "county": "Onslow County",
+   "label": "Holly Ridge, Onslow County, North Carolina, United States",
+   "lat": 34.495,
+   "lng": -77.555,
+   "state": "NC"
+  }
+ ],
+ "Holt Street": [],
+ "Hope Hull": [
+  {
+   "county": "Montgomery County",
+   "label": "Hope Hull, Montgomery County, Alabama, 36105, United States",
+   "lat": 32.27,
+   "lng": -86.357,
+   "state": "AL"
+  }
+ ],
+ "Horus": [],
+ "Hurricane Creek": [
+  {
+   "county": "Clarke County",
+   "label": "Hurricane Creek, Clarke County, Mississippi, United States",
+   "lat": 32.211,
+   "lng": -88.454,
+   "state": "MS"
+  },
+  {
+   "county": "Marion County",
+   "label": "Hurricane Creek, Marion County, Mississippi, United States",
+   "lat": 31.102,
+   "lng": -89.872,
+   "state": "MS"
+  }
+ ],
+ "Iron City": [
+  {
+   "county": "Lawrence County",
+   "label": "Iron City, Lawrence County, Middle Tennessee, Tennessee, United States",
+   "lat": 35.024,
+   "lng": -87.581,
+   "state": "TN"
+  },
+  {
+   "county": "Seminole County",
+   "label": "Iron City, Seminole County, Georgia, United States",
+   "lat": 31.014,
+   "lng": -84.813,
+   "state": "GA"
+  },
+  {
+   "county": "Calhoun County",
+   "label": "Iron City, Calhoun County, Alabama, United States",
+   "lat": 33.668,
+   "lng": -85.664,
+   "state": "AL"
+  }
+ ],
+ "Jackson Shoals": [],
+ "Judy Mountain": [],
+ "Kettle Creek": [
+  {
+   "county": "Columbia County",
+   "label": "Kettle Creek, Columbia County, Georgia, 30831, United States",
+   "lat": 33.47,
+   "lng": -82.17,
+   "state": "GA"
+  }
+ ],
+ "Kia Motors": [],
+ "Lake Dreamland": [],
+ "Lancaster": [
+  {
+   "county": "Lancaster County",
+   "label": "Lancaster, Lancaster County, Pennsylvania, 17575, United States",
+   "lat": 40.038,
+   "lng": -76.306,
+   "state": "PA"
+  },
+  {
+   "county": "Lancaster County",
+   "label": "Lancaster County, Pennsylvania, United States",
+   "lat": 40.081,
+   "lng": -76.241,
+   "state": "PA"
+  },
+  {
+   "county": "Lancaster County",
+   "label": "Lancaster County, Virginia, United States",
+   "lat": 37.763,
+   "lng": -76.472,
+   "state": "VA"
+  },
+  {
+   "county": "Lancaster County",
+   "label": "Lancaster County, South Carolina, United States",
+   "lat": 34.663,
+   "lng": -80.701,
+   "state": "SC"
+  },
+  {
+   "county": "Dallas County",
+   "label": "Lancaster, Dallas County, Texas, United States",
+   "lat": 32.592,
+   "lng": -96.756,
+   "state": "TX"
+  },
+  {
+   "county": "Fairfield County",
+   "label": "Lancaster, Fairfield County, Ohio, 43130, United States",
+   "lat": 39.714,
+   "lng": -82.599,
+   "state": "OH"
+  },
+  {
+   "county": "Garrard County",
+   "label": "Lancaster, Garrard County, Kentucky, United States",
+   "lat": 37.62,
+   "lng": -84.578,
+   "state": "KY"
+  },
+  {
+   "county": "Schuyler County",
+   "label": "Lancaster, Schuyler County, Missouri, United States",
+   "lat": 40.521,
+   "lng": -92.528,
+   "state": "MO"
+  },
+  {
+   "county": "Lancaster County",
+   "label": "Lancaster, Lancaster County, South Carolina, United States",
+   "lat": 34.72,
+   "lng": -80.771,
+   "state": "SC"
+  },
+  {
+   "county": "Atchison County",
+   "label": "Lancaster, Atchison County, Kansas, United States",
+   "lat": 39.573,
+   "lng": -95.303,
+   "state": "KS"
+  },
+  {
+   "county": "Lancaster County",
+   "label": "Lancaster, Lancaster County, Virginia, 22513, United States",
+   "lat": 37.77,
+   "lng": -76.466,
+   "state": "VA"
+  }
+ ],
+ "Landon": [
+  {
+   "county": "Harrison County",
+   "label": "Landon, Gulfport, Harrison County, Mississippi, 39503, United States",
+   "lat": 30.438,
+   "lng": -89.103,
+   "state": "MS"
+  },
+  {
+   "county": "Fayette County",
+   "label": "Landon Station, Washington Township, Fayette County, Pennsylvania, 15438, United States",
+   "lat": 40.079,
+   "lng": -79.824,
+   "state": "PA"
+  }
+ ],
+ "Lauderdale East": [],
+ "Lauderdale West": [
+  {
+   "county": "Lauderdale County",
+   "label": "Lauderdale County, West Tennessee, Tennessee, United States",
+   "lat": 35.758,
+   "lng": -89.618,
+   "state": "TN"
+  }
+ ],
+ "Lawsons Fork": [
+  {
+   "county": "Spartanburg County",
+   "label": "Lawsons Fork, Spartanburg County, South Carolina, United States",
+   "lat": 34.995,
+   "lng": -81.924,
+   "state": "SC"
+  }
+ ],
+ "Lick Creek": [
+  {
+   "county": "Pike County",
+   "label": "Lick Creek, Pike County, Kentucky, 41540, United States",
+   "lat": 37.38,
+   "lng": -82.297,
+   "state": "KY"
+  },
+  {
+   "county": "Summers County",
+   "label": "Lick Creek, Summers County, West Virginia, United States",
+   "lat": 37.485,
+   "lng": -80.911,
+   "state": "WV"
+  },
+  {
+   "county": "Union County",
+   "label": "Lick Creek, Union County, Illinois, United States",
+   "lat": 37.523,
+   "lng": -89.075,
+   "state": "IL"
+  },
+  {
+   "county": "Benton County",
+   "label": "Lick Creek, Benton County, West Tennessee, Tennessee, United States",
+   "lat": 36.321,
+   "lng": -88.022,
+   "state": "TN"
+  }
+ ],
+ "Lilesville": [
+  {
+   "county": "Anson County",
+   "label": "Lilesville, Anson County, North Carolina, United States",
+   "lat": 34.968,
+   "lng": -79.985,
+   "state": "NC"
+  }
+ ],
+ "Line Creek": [],
+ "Loch Five": [],
+ "Lock Five": [
+  {
+   "county": "Hale County",
+   "label": "Lock Five, Hale County, Alabama, United States",
+   "lat": 32.583,
+   "lng": -87.737,
+   "state": "AL"
+  }
+ ],
+ "Lookout": [
+  {
+   "county": "Fayette County",
+   "label": "Lookout, Fayette County, West Virginia, 25868, United States",
+   "lat": 38.065,
+   "lng": -80.968,
+   "state": "WV"
+  },
+  {
+   "county": "Pike County",
+   "label": "Lookout, Pike County, Kentucky, 41542, United States",
+   "lat": 37.313,
+   "lng": -82.467,
+   "state": "KY"
+  },
+  {
+   "county": "Ripley County",
+   "label": "Lookout, Ripley County, Indiana, United States",
+   "lat": 39.195,
+   "lng": -85.207,
+   "state": "IN"
+  },
+  {
+   "county": "Arkansas County",
+   "label": "Lookout, Arkansas County, Arkansas, United States",
+   "lat": 34.563,
+   "lng": -91.377,
+   "state": "AR"
+  },
+  {
+   "county": "Benton County",
+   "label": "Lookout, Benton County, Arkansas, 72757, United States",
+   "lat": 36.282,
+   "lng": -93.906,
+   "state": "AR"
+  },
+  {
+   "county": "Walker County",
+   "label": "Lookout Mountain, Walker County, Georgia, 30750, United States",
+   "lat": 34.978,
+   "lng": -85.358,
+   "state": "GA"
+  },
+  {
+   "county": "Hamilton County",
+   "label": "Lookout Mountain, Hamilton County, East Tennessee, Tennessee, 37350, United States",
+   "lat": 34.994,
+   "lng": -85.349,
+   "state": "TN"
+  }
+ ],
+ "Loving Ky": [
+  {
+   "county": "Warren County",
+   "label": "Loving, Warren County, Kentucky, 42159, United States",
+   "lat": 37.02,
+   "lng": -86.291,
+   "state": "KY"
+  }
+ ],
+ "Lyle Creek": [],
+ "Mansfield": [
+  {
+   "county": "Richland County",
+   "label": "Mansfield, Richland County, Ohio, United States",
+   "lat": 40.758,
+   "lng": -82.515,
+   "state": "OH"
+  },
+  {
+   "county": "Tarrant County",
+   "label": "Mansfield, Tarrant County, Texas, 76063, United States",
+   "lat": 32.563,
+   "lng": -97.142,
+   "state": "TX"
+  },
+  {
+   "county": "Piatt County",
+   "label": "Mansfield, Piatt County, Illinois, United States",
+   "lat": 40.211,
+   "lng": -88.506,
+   "state": "IL"
+  },
+  {
+   "county": "DeSoto Parish",
+   "label": "Mansfield, DeSoto Parish, Louisiana, United States",
+   "lat": 32.022,
+   "lng": -93.714,
+   "state": "LA"
+  },
+  {
+   "county": "Scott County",
+   "label": "Mansfield, Scott County, Arkansas, 72902, United States",
+   "lat": 35.06,
+   "lng": -94.249,
+   "state": "AR"
+  },
+  {
+   "county": "Newton County",
+   "label": "Mansfield, Newton County, Georgia, United States",
+   "lat": 33.518,
+   "lng": -83.735,
+   "state": "GA"
+  },
+  {
+   "county": "Wright County",
+   "label": "Mansfield, Wright County, Missouri, United States",
+   "lat": 37.107,
+   "lng": -92.581,
+   "state": "MO"
+  },
+  {
+   "county": "Parke County",
+   "label": "Mansfield, Parke County, Indiana, United States",
+   "lat": 39.676,
+   "lng": -87.102,
+   "state": "IN"
+  },
+  {
+   "county": "Barbour County",
+   "label": "Mansfield, Philippi, Barbour County, West Virginia, 26416, United States",
+   "lat": 39.15,
+   "lng": -80.054,
+   "state": "WV"
+  },
+  {
+   "county": "Henry County",
+   "label": "Mansfield, Henry County, West Tennessee, Tennessee, United States",
+   "lat": 36.177,
+   "lng": -88.286,
+   "state": "TN"
+  },
+  {
+   "county": "DeSoto Parish",
+   "label": "Mansfield, DeSoto Parish, Louisiana, United States",
+   "lat": 32.033,
+   "lng": -93.704,
+   "state": "LA"
+  }
+ ],
+ "Martin": [
+  {
+   "county": "Martin County",
+   "label": "Martin County, Florida, United States",
+   "lat": 27.067,
+   "lng": -80.399,
+   "state": "FL"
+  },
+  {
+   "county": "Martin County",
+   "label": "Martin County, North Carolina, United States",
+   "lat": 35.813,
+   "lng": -77.095,
+   "state": "NC"
+  },
+  {
+   "county": "Martin County",
+   "label": "Martin County, Kentucky, United States",
+   "lat": 37.802,
+   "lng": -82.508,
+   "state": "KY"
+  },
+  {
+   "county": "Martin County",
+   "label": "Martin County, Indiana, United States",
+   "lat": 38.671,
+   "lng": -86.802,
+   "state": "IN"
+  },
+  {
+   "county": "Weakley County",
+   "label": "Martin, Weakley County, West Tennessee, Tennessee, United States",
+   "lat": 36.343,
+   "lng": -88.85,
+   "state": "TN"
+  },
+  {
+   "county": "Floyd County",
+   "label": "Martin, Floyd County, Kentucky, 41649, United States",
+   "lat": 37.573,
+   "lng": -82.753,
+   "state": "KY"
+  },
+  {
+   "county": "Stephens County",
+   "label": "Martin, Stephens County, Georgia, United States",
+   "lat": 34.487,
+   "lng": -83.185,
+   "state": "GA"
+  },
+  {
+   "county": "Allendale County",
+   "label": "Martin, Allendale County, South Carolina, United States",
+   "lat": 33.069,
+   "lng": -81.476,
+   "state": "SC"
+  },
+  {
+   "county": "Fayette County",
+   "label": "Martin, Nicholson Township, Fayette County, Pennsylvania, 15460, United States",
+   "lat": 39.807,
+   "lng": -79.911,
+   "state": "PA"
+  },
+  {
+   "county": "Red River Parish",
+   "label": "Martin, Red River Parish, Louisiana, United States",
+   "lat": 32.103,
+   "lng": -93.222,
+   "state": "LA"
+  },
+  {
+   "county": "Marion County",
+   "label": "Martin, Marion County, Florida, United States",
+   "lat": 29.294,
+   "lng": -82.19,
+   "state": "FL"
+  }
+ ],
+ "Mcdonough": [
+  {
+   "county": "McDonough County",
+   "label": "McDonough County, Illinois, United States",
+   "lat": 40.438,
+   "lng": -90.678,
+   "state": "IL"
+  },
+  {
+   "county": "Henry County",
+   "label": "McDonough, Henry County, Georgia, 30253, United States",
+   "lat": 33.447,
+   "lng": -84.147,
+   "state": "GA"
+  },
+  {
+   "county": "New Castle County",
+   "label": "McDonough, New Castle County, Delaware, 19709, United States",
+   "lat": 39.492,
+   "lng": -75.65,
+   "state": "DE"
+  }
+ ],
+ "Mebane": [
+  {
+   "county": "Alamance County",
+   "label": "Mebane, Alamance County, North Carolina, United States",
+   "lat": 36.096,
+   "lng": -79.267,
+   "state": "NC"
+  }
+ ],
+ "Meridian": [
+  {
+   "county": "Lauderdale County",
+   "label": "Meridian, Lauderdale County, Mississippi, United States",
+   "lat": 32.364,
+   "lng": -88.704,
+   "state": "MS"
+  },
+  {
+   "county": "Bosque County",
+   "label": "Meridian, Bosque County, Texas, 76665, United States",
+   "lat": 31.925,
+   "lng": -97.656,
+   "state": "TX"
+  },
+  {
+   "county": "Logan County",
+   "label": "Meridian, Logan County, Oklahoma, United States",
+   "lat": 35.844,
+   "lng": -97.246,
+   "state": "OK"
+  },
+  {
+   "county": "Stephens County",
+   "label": "Meridian, Stephens County, Oklahoma, United States",
+   "lat": 34.407,
+   "lng": -97.966,
+   "state": "OK"
+  }
+ ],
+ "Meridian Highway South": [],
+ "Method": [
+  {
+   "county": "Wake County",
+   "label": "Method, Raleigh, Wake County, North Carolina, 27607, United States",
+   "lat": 35.793,
+   "lng": -78.694,
+   "state": "NC"
+  },
+  {
+   "county": "Wake County",
+   "label": "Method, Raleigh, Wake County, North Carolina, United States",
+   "lat": 35.79,
+   "lng": -78.695,
+   "state": "NC"
+  }
+ ],
+ "Middle Fork": [
+  {
+   "county": "Barbour County",
+   "label": "Middle Fork, Barbour County, West Virginia, United States",
+   "lat": 39.062,
+   "lng": -80.047,
+   "state": "WV"
+  },
+  {
+   "county": "Henderson County",
+   "label": "Middle Fork, Henderson County, West Tennessee, Tennessee, United States",
+   "lat": 35.536,
+   "lng": -88.487,
+   "state": "TN"
+  },
+  {
+   "county": "Kanawha County",
+   "label": "Middle Fork, Kanawha County, West Virginia, United States",
+   "lat": 38.358,
+   "lng": -81.323,
+   "state": "WV"
+  },
+  {
+   "county": "Transylvania County",
+   "label": "Middle Fork, Transylvania County, North Carolina, 28772, United States",
+   "lat": 35.117,
+   "lng": -82.824,
+   "state": "NC"
+  }
+ ],
+ "Middletown": [
+  {
+   "county": "Butler County",
+   "label": "Middletown, Butler County, Ohio, 45042, United States",
+   "lat": 39.517,
+   "lng": -84.404,
+   "state": "OH"
+  },
+  {
+   "county": "New Castle County",
+   "label": "Middletown, New Castle County, Delaware, United States",
+   "lat": 39.45,
+   "lng": -75.717,
+   "state": "DE"
+  },
+  {
+   "county": "Jefferson County",
+   "label": "Middletown, Jefferson County, Kentucky, 40243, United States",
+   "lat": 38.245,
+   "lng": -85.54,
+   "state": "KY"
+  },
+  {
+   "county": "Logan County",
+   "label": "Middletown, Logan County, Illinois, United States",
+   "lat": 40.1,
+   "lng": -89.591,
+   "state": "IL"
+  },
+  {
+   "county": "Dauphin County",
+   "label": "Middletown, Dauphin County, Pennsylvania, 17057, United States",
+   "lat": 40.194,
+   "lng": -76.731,
+   "state": "PA"
+  },
+  {
+   "county": "Frederick County",
+   "label": "Middletown, Frederick County, Virginia, United States",
+   "lat": 39.028,
+   "lng": -78.281,
+   "state": "VA"
+  },
+  {
+   "county": "Frederick County",
+   "label": "Middletown, Frederick County, Maryland, 21769, United States",
+   "lat": 39.444,
+   "lng": -77.545,
+   "state": "MD"
+  },
+  {
+   "county": "Henry County",
+   "label": "Middletown, Henry County, Indiana, United States",
+   "lat": 40.057,
+   "lng": -85.537,
+   "state": "IN"
+  },
+  {
+   "county": "Northampton County",
+   "label": "Middletown, Bethlehem Township, Northampton County, Pennsylvania, United States",
+   "lat": 40.647,
+   "lng": -75.325,
+   "state": "PA"
+  },
+  {
+   "county": "Montgomery County",
+   "label": "Middletown, Montgomery County, Missouri, United States",
+   "lat": 39.127,
+   "lng": -91.414,
+   "state": "MO"
+  },
+  {
+   "county": "Shelby County",
+   "label": "Middletown, Shelby County, Indiana, 46182, United States",
+   "lat": 39.46,
+   "lng": -85.649,
+   "state": "IN"
+  },
+  {
+   "county": "Champaign County",
+   "label": "Middletown, Wayne Township, Champaign County, Ohio, 43047, United States",
+   "lat": 40.192,
+   "lng": -83.619,
+   "state": "OH"
+  },
+  {
+   "county": "Crawford County",
+   "label": "Middletown, Jefferson Township, Crawford County, Ohio, 44827, United States",
+   "lat": 40.774,
+   "lng": -82.792,
+   "state": "OH"
+  },
+  {
+   "county": "Northampton County",
+   "label": "Middletown, Northampton County, Virginia, 23413, United States",
+   "lat": 37.484,
+   "lng": -75.867,
+   "state": "VA"
+  }
+ ],
+ "Midway": [
+  {
+   "county": "Madison County",
+   "label": "Midway, Madison County, Texas, United States",
+   "lat": 31.026,
+   "lng": -95.751,
+   "state": "TX"
+  },
+  {
+   "county": "Woodford County",
+   "label": "Midway, Woodford County, Kentucky, United States",
+   "lat": 38.151,
+   "lng": -84.684,
+   "state": "KY"
+  },
+  {
+   "county": "Bullock County",
+   "label": "Midway, Bullock County, Alabama, United States",
+   "lat": 32.077,
+   "lng": -85.522,
+   "state": "AL"
+  },
+  {
+   "county": "Liberty County",
+   "label": "Midway, Liberty County, Georgia, 31320, United States",
+   "lat": 31.806,
+   "lng": -81.431,
+   "state": "GA"
+  },
+  {
+   "county": "Gadsden County",
+   "label": "Midway, Gadsden County, Florida, 32343, United States",
+   "lat": 30.495,
+   "lng": -84.454,
+   "state": "FL"
+  },
+  {
+   "county": "Washington County",
+   "label": "Midway, Washington County, Pennsylvania, 15060, United States",
+   "lat": 40.369,
+   "lng": -80.293,
+   "state": "PA"
+  },
+  {
+   "county": "Adams County",
+   "label": "Midway, Conewago Township, Adams County, Pennsylvania, United States",
+   "lat": 39.803,
+   "lng": -77.006,
+   "state": "PA"
+  },
+  {
+   "county": "Adams County",
+   "label": "Midway, Conewago Township, Adams County, Pennsylvania, 17344, United States",
+   "lat": 39.808,
+   "lng": -77.003,
+   "state": "PA"
+  },
+  {
+   "county": "Fayette County",
+   "label": "Midway, Fayette County, West Virginia, 25866, United States",
+   "lat": 38.003,
+   "lng": -81.148,
+   "state": "WV"
+  },
+  {
+   "county": "Davidson County",
+   "label": "Midway, Davidson County, North Carolina, United States",
+   "lat": 35.953,
+   "lng": -80.218,
+   "state": "NC"
+  },
+  {
+   "county": "Raleigh County",
+   "label": "Midway, Crab Orchard, Raleigh County, West Virginia, 25878, United States",
+   "lat": 37.72,
+   "lng": -81.237,
+   "state": "WV"
+  },
+  {
+   "county": "Hot Spring County",
+   "label": "Midway, Hot Spring County, Arkansas, 71941, United States",
+   "lat": 34.255,
+   "lng": -92.967,
+   "state": "AR"
+  },
+  {
+   "county": "Seminole County",
+   "label": "Midway, Seminole County, Florida, United States",
+   "lat": 28.793,
+   "lng": -81.228,
+   "state": "FL"
+  },
+  {
+   "county": "Madison County",
+   "label": "Midway, Range Township, Madison County, Ohio, United States",
+   "lat": 39.733,
+   "lng": -83.478,
+   "state": "OH"
+  },
+  {
+   "county": "Albemarle County",
+   "label": "Midway, Albemarle County, Virginia, 22924, United States",
+   "lat": 38.028,
+   "lng": -78.706,
+   "state": "VA"
+  },
+  {
+   "county": "Vermilion County",
+   "label": "Midway, Vermilion County, Illinois, 61883, United States",
+   "lat": 40.016,
+   "lng": -87.638,
+   "state": "IL"
+  },
+  {
+   "county": "Spencer County",
+   "label": "Midway, Spencer County, Indiana, United States",
+   "lat": 37.999,
+   "lng": -87.138,
+   "state": "IN"
+  },
+  {
+   "county": "Crawford County",
+   "label": "Midway, Crawford County, Kansas, United States",
+   "lat": 37.449,
+   "lng": -94.631,
+   "state": "KS"
+  },
+  {
+   "county": "Mercer County",
+   "label": "Midway, Brush Fork, Mercer County, West Virginia, 24605, United States",
+   "lat": 37.266,
+   "lng": -81.259,
+   "state": "WV"
+  },
+  {
+   "county": "Parke County",
+   "label": "Midway, Parke County, Indiana, 47862, United States",
+   "lat": 39.775,
+   "lng": -87.318,
+   "state": "IN"
+  },
+  {
+   "county": "LaSalle Parish",
+   "label": "Midway, LaSalle Parish, Louisiana, United States",
+   "lat": 31.68,
+   "lng": -92.155,
+   "state": "LA"
+  },
+  {
+   "county": "Washington County",
+   "label": "Midway, Johnson City, Washington County, East Tennessee, Tennessee, 37614, United States",
+   "lat": 36.3,
+   "lng": -82.424,
+   "state": "TN"
+  },
+  {
+   "county": "Franklin County",
+   "label": "Midway, Franklin County, Indiana, 47024, United States",
+   "lat": 39.46,
+   "lng": -85.217,
+   "state": "IN"
+  },
+  {
+   "county": "Putnam County",
+   "label": "Midway, Putnam County, West Virginia, 25070, United States",
+   "lat": 38.56,
+   "lng": -81.964,
+   "state": "WV"
+  },
+  {
+   "county": "Yazoo County",
+   "label": "Midway, Yazoo County, Mississippi, United States",
+   "lat": 32.887,
+   "lng": -90.192,
+   "state": "MS"
+  },
+  {
+   "county": "King William County",
+   "label": "Midway, Central Garage, King William County, Virginia, 23086, United States",
+   "lat": 37.756,
+   "lng": -77.126,
+   "state": "VA"
+  },
+  {
+   "county": "Calloway County",
+   "label": "Midway, Calloway County, Kentucky, 42049, United States",
+   "lat": 36.551,
+   "lng": -88.324,
+   "state": "KY"
+  },
+  {
+   "county": "Halifax County",
+   "label": "Midway, Halifax County, Virginia, 24589, United States",
+   "lat": 36.798,
+   "lng": -78.778,
+   "state": "VA"
+  },
+  {
+   "county": "Lee County",
+   "label": "Midway, Lee County, Arkansas, United States",
+   "lat": 34.893,
+   "lng": -90.454,
+   "state": "AR"
+  },
+  {
+   "county": "Knox County",
+   "label": "Midway, Knox County, East Tennessee, Tennessee, United States",
+   "lat": 35.981,
+   "lng": -83.694,
+   "state": "TN"
+  },
+  {
+   "county": "Jefferson County",
+   "label": "Midway, Jefferson County, Indiana, United States",
+   "lat": 38.816,
+   "lng": -85.463,
+   "state": "IN"
+  },
+  {
+   "county": "Greene County",
+   "label": "Midway, Greene County, East Tennessee, Tennessee, 37809, United States",
+   "lat": 36.177,
+   "lng": -82.997,
+   "state": "TN"
+  },
+  {
+   "county": "Meade County",
+   "label": "Midway, Meade County, Kentucky, United States",
+   "lat": 37.952,
+   "lng": -86.239,
+   "state": "KY"
+  },
+  {
+   "county": "Franklin County",
+   "label": "Midway, Sewanee, Franklin County, Middle Tennessee, Tennessee, 37375, United States",
+   "lat": 35.209,
+   "lng": -85.883,
+   "state": "TN"
+  },
+  {
+   "county": "Henry County",
+   "label": "Midway, Henry County, West Tennessee, Tennessee, United States",
+   "lat": 36.284,
+   "lng": -88.466,
+   "state": "TN"
+  },
+  {
+   "county": "Crittenden County",
+   "label": "Midway, Crittenden County, Kentucky, United States",
+   "lat": 37.306,
+   "lng": -88.176,
+   "state": "KY"
+  },
+  {
+   "county": "Morgan County",
+   "label": "Midway, Morgan County, East Tennessee, Tennessee, 37872, United States",
+   "lat": 36.279,
+   "lng": -84.657,
+   "state": "TN"
+  },
+  {
+   "county": "Bedford County",
+   "label": "Midway, Bedford County, Middle Tennessee, Tennessee, United States",
+   "lat": 35.429,
+   "lng": -86.323,
+   "state": "TN"
+  },
+  {
+   "county": "Cocke County",
+   "label": "Midway, Cocke County, East Tennessee, Tennessee, 37727, United States",
+   "lat": 35.87,
+   "lng": -83.03,
+   "state": "TN"
+  },
+  {
+   "county": "Warren County",
+   "label": "Midway, Warren County, Middle Tennessee, Tennessee, 38581, United States",
+   "lat": 35.801,
+   "lng": -85.703,
+   "state": "TN"
+  }
+ ],
+ "Milburnie": [
+  {
+   "county": "Wake County",
+   "label": "Milburnie, Wake County, North Carolina, 27620, United States",
+   "lat": 35.799,
+   "lng": -78.536,
+   "state": "NC"
+  }
+ ],
+ "Miller Sp": [],
+ "Mine Shaft": [],
+ "Mobile": [
+  {
+   "county": "Mobile County",
+   "label": "Mobile, Mobile County, Alabama, United States",
+   "lat": 30.691,
+   "lng": -88.044,
+   "state": "AL"
+  },
+  {
+   "county": "Mobile County",
+   "label": "Mobile County, Alabama, United States",
+   "lat": 30.649,
+   "lng": -88.195,
+   "state": "AL"
+  }
+ ],
+ "Monroe": [
+  {
+   "county": "Monroe County",
+   "label": "Monroe County, Illinois, United States",
+   "lat": 38.272,
+   "lng": -90.179,
+   "state": "IL"
+  },
+  {
+   "county": "Monroe County",
+   "label": "Monroe County, Florida, United States",
+   "lat": 25.041,
+   "lng": -80.834,
+   "state": "FL"
+  },
+  {
+   "county": "Monroe County",
+   "label": "Monroe County, Georgia, United States",
+   "lat": 33.014,
+   "lng": -83.904,
+   "state": "GA"
+  },
+  {
+   "county": "Monroe County",
+   "label": "Monroe County, Ohio, United States",
+   "lat": 39.716,
+   "lng": -81.108,
+   "state": "OH"
+  },
+  {
+   "county": "Monroe County",
+   "label": "Monroe County, Missouri, United States",
+   "lat": 39.494,
+   "lng": -91.99,
+   "state": "MO"
+  },
+  {
+   "county": "Ouachita Parish",
+   "label": "Monroe, Ouachita Parish, Louisiana, United States",
+   "lat": 32.503,
+   "lng": -92.116,
+   "state": "LA"
+  },
+  {
+   "county": "Monroe County",
+   "label": "Monroe County, Indiana, United States",
+   "lat": 39.13,
+   "lng": -86.519,
+   "state": "IN"
+  },
+  {
+   "county": "Monroe County",
+   "label": "Monroe County, Kentucky, United States",
+   "lat": 36.699,
+   "lng": -85.728,
+   "state": "KY"
+  },
+  {
+   "county": "Monroe County",
+   "label": "Monroe County, Mississippi, United States",
+   "lat": 33.888,
+   "lng": -88.475,
+   "state": "MS"
+  },
+  {
+   "county": "Monroe County",
+   "label": "Monroe County, Alabama, United States",
+   "lat": 31.559,
+   "lng": -87.378,
+   "state": "AL"
+  },
+  {
+   "county": "Monroe County",
+   "label": "Monroe County, East Tennessee, Tennessee, United States",
+   "lat": 35.44,
+   "lng": -84.24,
+   "state": "TN"
+  },
+  {
+   "county": "Monroe County",
+   "label": "Monroe County, Arkansas, United States",
+   "lat": 34.678,
+   "lng": -91.229,
+   "state": "AR"
+  },
+  {
+   "county": "Union County",
+   "label": "Monroe, Union County, North Carolina, United States",
+   "lat": 34.985,
+   "lng": -80.55,
+   "state": "NC"
+  },
+  {
+   "county": "Monroe County",
+   "label": "Monroe County, West Virginia, United States",
+   "lat": 37.559,
+   "lng": -80.519,
+   "state": "WV"
+  },
+  {
+   "county": "Walton County",
+   "label": "Monroe, Walton County, Georgia, 30655, United States",
+   "lat": 33.795,
+   "lng": -83.713,
+   "state": "GA"
+  },
+  {
+   "county": "Butler County",
+   "label": "Monroe, Lemon Township, Butler County, Ohio, United States",
+   "lat": 39.443,
+   "lng": -84.363,
+   "state": "OH"
+  },
+  {
+   "county": "Adams County",
+   "label": "Monroe, Adams County, Indiana, United States",
+   "lat": 40.745,
+   "lng": -84.937,
+   "state": "IN"
+  }
+ ],
+ "Mooresville": [
+  {
+   "county": "Iredell County",
+   "label": "Mooresville, Iredell County, North Carolina, 28115, United States",
+   "lat": 35.585,
+   "lng": -80.81,
+   "state": "NC"
+  },
+  {
+   "county": "Limestone County",
+   "label": "Mooresville, Limestone County, Alabama, 35649, United States",
+   "lat": 34.628,
+   "lng": -86.88,
+   "state": "AL"
+  },
+  {
+   "county": "Morgan County",
+   "label": "Mooresville, Morgan County, Indiana, United States",
+   "lat": 39.613,
+   "lng": -86.374,
+   "state": "IN"
+  },
+  {
+   "county": "Livingston County",
+   "label": "Mooresville, Livingston County, Missouri, United States",
+   "lat": 39.745,
+   "lng": -93.718,
+   "state": "MO"
+  },
+  {
+   "county": "Monongalia County",
+   "label": "Mooresville, Monongalia County, West Virginia, 26541, United States",
+   "lat": 39.69,
+   "lng": -80.148,
+   "state": "WV"
+  },
+  {
+   "county": "Ross County",
+   "label": "Mooresville, Harrison Township, Ross County, Ohio, United States",
+   "lat": 39.329,
+   "lng": -82.853,
+   "state": "OH"
+  },
+  {
+   "county": "Washington County",
+   "label": "Mooresville, Washington County, Kentucky, 40029, United States",
+   "lat": 37.799,
+   "lng": -85.265,
+   "state": "KY"
+  },
+  {
+   "county": "Marshall County",
+   "label": "Mooresville, Marshall County, Middle Tennessee, Tennessee, United States",
+   "lat": 35.44,
+   "lng": -86.914,
+   "state": "TN"
+  }
+ ],
+ "Morning Hornet 2Nd": [],
+ "Morning Star": [
+  {
+   "county": "Roane County",
+   "label": "Morning Star, Roane County, West Virginia, 25244, United States",
+   "lat": 38.775,
+   "lng": -81.455,
+   "state": "WV"
+  },
+  {
+   "county": "Page County",
+   "label": "Morning Star, Page County, Virginia, United States",
+   "lat": 38.646,
+   "lng": -78.366,
+   "state": "VA"
+  },
+  {
+   "county": "Garland County",
+   "label": "Morning Star, Garland County, Arkansas, 71901, United States",
+   "lat": 34.506,
+   "lng": -92.989,
+   "state": "AR"
+  },
+  {
+   "county": "Phillips County",
+   "label": "Morning Star, Phillips County, Arkansas, 72389, United States",
+   "lat": 34.322,
+   "lng": -90.846,
+   "state": "AR"
+  },
+  {
+   "county": "Searcy County",
+   "label": "Morning Star, Searcy County, Arkansas, United States",
+   "lat": 35.973,
+   "lng": -92.594,
+   "state": "AR"
+  },
+  {
+   "county": "Greene County",
+   "label": "Morning Star, Greene County, Arkansas, United States",
+   "lat": 36.067,
+   "lng": -90.428,
+   "state": "AR"
+  },
+  {
+   "county": "Haywood County",
+   "label": "Morning Star, Haywood County, North Carolina, 28716, United States",
+   "lat": 35.513,
+   "lng": -82.815,
+   "state": "NC"
+  },
+  {
+   "county": "Hinds County",
+   "label": "Morning Star, Hinds County, Mississippi, United States",
+   "lat": 32.22,
+   "lng": -90.574,
+   "state": "MS"
+  },
+  {
+   "county": "Meigs County",
+   "label": "Morning Star, Sutton Township, Meigs County, Ohio, 45771, United States",
+   "lat": 39.021,
+   "lng": -81.923,
+   "state": "OH"
+  }
+ ],
+ "Moss Point East": [],
+ "Mount Jt T1": [],
+ "Mount Meigs Ds": [],
+ "Mountain View": [
+  {
+   "county": "Stone County",
+   "label": "Mountain View, Stone County, Arkansas, 72560, United States",
+   "lat": 35.868,
+   "lng": -92.118,
+   "state": "AR"
+  },
+  {
+   "county": "Howell County",
+   "label": "Mountain View, Howell County, Missouri, United States",
+   "lat": 36.995,
+   "lng": -91.704,
+   "state": "MO"
+  },
+  {
+   "county": "Kiowa County",
+   "label": "Mountain View, Kiowa County, Oklahoma, 73062, United States",
+   "lat": 35.098,
+   "lng": -98.746,
+   "state": "OK"
+  },
+  {
+   "county": "Preston County",
+   "label": "Mountain View, Preston County, West Virginia, 26444, United States",
+   "lat": 39.361,
+   "lng": -79.732,
+   "state": "WV"
+  },
+  {
+   "county": "Preston County",
+   "label": "Mountain View, Preston County, West Virginia, United States",
+   "lat": 39.431,
+   "lng": -79.761,
+   "state": "WV"
+  },
+  {
+   "county": "Clayton County",
+   "label": "Mountain View, Coxs Crossing, Clayton County, Georgia, 30321, United States",
+   "lat": 33.642,
+   "lng": -84.39,
+   "state": "GA"
+  },
+  {
+   "county": "Pulaski County",
+   "label": "Mountain View, Pulaski County, Virginia, 24129, United States",
+   "lat": 37.088,
+   "lng": -80.62,
+   "state": "VA"
+  },
+  {
+   "county": "Catawba County",
+   "label": "Mountain View, Catawba County, North Carolina, 28602, United States",
+   "lat": 35.683,
+   "lng": -81.369,
+   "state": "NC"
+  },
+  {
+   "county": "Marshall County",
+   "label": "Mountain View, Guntersville, Marshall County, Alabama, 35976, United States",
+   "lat": 34.305,
+   "lng": -86.298,
+   "state": "AL"
+  },
+  {
+   "county": "Rhea County",
+   "label": "Mountain View, Dayton, Rhea County, East Tennessee, Tennessee, 37321, United States",
+   "lat": 35.486,
+   "lng": -85.032,
+   "state": "TN"
+  },
+  {
+   "county": "Hall County",
+   "label": "Mountain View, Hall County, Georgia, 30504, United States",
+   "lat": 34.26,
+   "lng": -83.899,
+   "state": "GA"
+  },
+  {
+   "county": "Transylvania County",
+   "label": "Mountain View, Transylvania County, North Carolina, 28768, United States",
+   "lat": 35.251,
+   "lng": -82.703,
+   "state": "NC"
+  },
+  {
+   "county": "Hill County",
+   "label": "Mountain View, Hill County, Texas, United States",
+   "lat": 32.112,
+   "lng": -97.076,
+   "state": "TX"
+  },
+  {
+   "county": "Giles County",
+   "label": "Mountain View, Giles County, Virginia, 24086, United States",
+   "lat": 37.289,
+   "lng": -80.656,
+   "state": "VA"
+  },
+  {
+   "county": "Rockbridge County",
+   "label": "Mountain View, Rockbridge County, Virginia, 24416, United States",
+   "lat": 37.778,
+   "lng": -79.354,
+   "state": "VA"
+  },
+  {
+   "county": "Scott County",
+   "label": "Mountain View, Scott County, East Tennessee, Tennessee, 37755, United States",
+   "lat": 36.382,
+   "lng": -84.586,
+   "state": "TN"
+  },
+  {
+   "county": "Stokes County",
+   "label": "Mountain View, Stokes County, North Carolina, 27021, United States",
+   "lat": 36.309,
+   "lng": -80.304,
+   "state": "NC"
+  },
+  {
+   "county": "Orange County",
+   "label": "Mountain View, Orange County, North Carolina, 27278, United States",
+   "lat": 36.078,
+   "lng": -79.074,
+   "state": "NC"
+  },
+  {
+   "county": "Rockbridge County",
+   "label": "Mountain View, Rockbridge County, Virginia, 24435, United States",
+   "lat": 37.901,
+   "lng": -79.283,
+   "state": "VA"
+  },
+  {
+   "county": "Carroll County",
+   "label": "Mountain View, Carroll County, Maryland, 21157, United States",
+   "lat": 39.518,
+   "lng": -77.001,
+   "state": "MD"
+  },
+  {
+   "county": "Gaston County",
+   "label": "Mountain View, Gaston County, North Carolina, United States",
+   "lat": 35.243,
+   "lng": -81.286,
+   "state": "NC"
+  }
+ ],
+ "New Hampton": [
+  {
+   "county": "Harrison County",
+   "label": "New Hampton, White Oak Township, Harrison County, Missouri, 64471, United States",
+   "lat": 40.264,
+   "lng": -94.196,
+   "state": "MO"
+  }
+ ],
+ "New South Griffin": [],
+ "New Tenaska": [],
+ "Normandy Lake Tullahoma": [],
+ "North Auburn": [
+  {
+   "county": "Lee County",
+   "label": "North Auburn, Opelika, Lee County, Alabama, United States",
+   "lat": 32.655,
+   "lng": -85.451,
+   "state": "AL"
+  }
+ ],
+ "North Columbus": [
+  {
+   "county": "Bartholomew County",
+   "label": "North Columbus, Columbus, Bartholomew County, Indiana, 47203, United States",
+   "lat": 39.233,
+   "lng": -85.908,
+   "state": "IN"
+  }
+ ],
+ "North Druid Hills": [
+  {
+   "county": "DeKalb County",
+   "label": "North Druid Hills, Brookhaven, DeKalb County, Georgia, 30329, United States",
+   "lat": 33.821,
+   "lng": -84.319,
+   "state": "GA"
+  },
+  {
+   "county": "DeKalb County",
+   "label": "North Druid Hills, DeKalb County, Georgia, 30329, United States",
+   "lat": 33.817,
+   "lng": -84.313,
+   "state": "GA"
+  }
+ ],
+ "North Dublin": [
+  {
+   "county": "Bladen County",
+   "label": "Dublin, Bladen County, North Carolina, United States",
+   "lat": 34.657,
+   "lng": -78.726,
+   "state": "NC"
+  }
+ ],
+ "North Georgia": [],
+ "North Greensboro": [
+  {
+   "county": "Guilford County",
+   "label": "Greensboro, Guilford County, North Carolina, United States",
+   "lat": 36.073,
+   "lng": -79.792,
+   "state": "NC"
+  }
+ ],
+ "North Greenville": [],
+ "North Theodore": [],
+ "Northwest": [
+  {
+   "county": "Brunswick County",
+   "label": "Northwest, Brunswick County, North Carolina, United States",
+   "lat": 34.313,
+   "lng": -78.161,
+   "state": "NC"
+  },
+  {
+   "county": "Nueces County",
+   "label": "Northwest, Corpus Christi, Nueces County, Texas, 78409, United States",
+   "lat": 27.829,
+   "lng": -97.54,
+   "state": "TX"
+  }
+ ],
+ "Oak Hollow": [
+  {
+   "county": "Tulsa",
+   "label": "Oak Hollow, Tulsa, Oklahoma, United States",
+   "lat": 36.076,
+   "lng": -95.938,
+   "state": "OK"
+  },
+  {
+   "county": "Lee County",
+   "label": "Oak Hollow, Auburn, Lee County, Alabama, 36830, United States",
+   "lat": 32.563,
+   "lng": -85.465,
+   "state": "AL"
+  },
+  {
+   "county": "Anne Arundel County",
+   "label": "Oak Hollow, Pasadena, Anne Arundel County, Maryland, 21122, United States",
+   "lat": 39.108,
+   "lng": -76.547,
+   "state": "MD"
+  },
+  {
+   "county": "Greenville County",
+   "label": "Oak Hollow, Greenville County, South Carolina, 29698, United States",
+   "lat": 34.944,
+   "lng": -82.369,
+   "state": "SC"
+  },
+  {
+   "county": "Oklahoma County",
+   "label": "Oak Hollow, Oklahoma City, Oklahoma County, Oklahoma, United States",
+   "lat": 35.611,
+   "lng": -97.446,
+   "state": "OK"
+  },
+  {
+   "county": "Robertson County",
+   "label": "Oak Hollow, Greenbrier, Robertson County, Middle Tennessee, Tennessee, United States",
+   "lat": 36.401,
+   "lng": -86.808,
+   "state": "TN"
+  },
+  {
+   "county": "Harris County",
+   "label": "Oak Hollow, Fall Creek, Harris County, Texas, United States",
+   "lat": 29.923,
+   "lng": -95.271,
+   "state": "TX"
+  }
+ ],
+ "Oakboro": [
+  {
+   "county": "Stanly County",
+   "label": "Oakboro, Stanly County, North Carolina, 28129, United States",
+   "lat": 35.224,
+   "lng": -80.327,
+   "state": "NC"
+  }
+ ],
+ "Oakvale": [
+  {
+   "county": "Mercer County",
+   "label": "Oakvale, Mercer County, West Virginia, United States",
+   "lat": 37.334,
+   "lng": -80.963,
+   "state": "WV"
+  },
+  {
+   "county": "Sumner County",
+   "label": "Oakvale, Hendersonville, Sumner County, Middle Tennessee, Tennessee, 37075, United States",
+   "lat": 36.313,
+   "lng": -86.616,
+   "state": "TN"
+  },
+  {
+   "county": "Jefferson County",
+   "label": "Oakvale, Plattin Township, Jefferson County, Missouri, United States",
+   "lat": 38.092,
+   "lng": -90.46,
+   "state": "MO"
+  }
+ ],
+ "Pascagoula Bayou Casotte": [],
+ "Pear Tree": [],
+ "Pell City": [
+  {
+   "county": "St. Clair County",
+   "label": "Pell City, St. Clair County, Alabama, United States",
+   "lat": 33.586,
+   "lng": -86.286,
+   "state": "AL"
+  }
+ ],
+ "Philadelphia": [
+  {
+   "county": "Philadelphia County",
+   "label": "Philadelphia, Philadelphia County, Pennsylvania, United States",
+   "lat": 39.953,
+   "lng": -75.164,
+   "state": "PA"
+  },
+  {
+   "county": "Philadelphia County",
+   "label": "Philadelphia County, Pennsylvania, United States",
+   "lat": 40.011,
+   "lng": -75.133,
+   "state": "PA"
+  },
+  {
+   "county": "Neshoba County",
+   "label": "Philadelphia, Neshoba County, Mississippi, 39350, United States",
+   "lat": 32.77,
+   "lng": -89.115,
+   "state": "MS"
+  }
+ ],
+ "Pin Oaks": [],
+ "Pio Nono": [],
+ "Pittman Road": [],
+ "Pitts": [
+  {
+   "county": "Wilcox County",
+   "label": "Pitts, Wilcox County, Georgia, United States",
+   "lat": 31.945,
+   "lng": -83.541,
+   "state": "GA"
+  },
+  {
+   "county": "Dodge County",
+   "label": "Pitts, Dodge County, Georgia, 31011, United States",
+   "lat": 32.159,
+   "lng": -83.038,
+   "state": "GA"
+  },
+  {
+   "county": "Estill County",
+   "label": "Pitts, Estill County, Kentucky, 40472, United States",
+   "lat": 37.709,
+   "lng": -83.884,
+   "state": "KY"
+  },
+  {
+   "county": "Pike County",
+   "label": "Pitts, Pike County, Mississippi, 39635, United States",
+   "lat": 31.189,
+   "lng": -90.413,
+   "state": "MS"
+  },
+  {
+   "county": "Poinsett County",
+   "label": "Pitts, Poinsett County, Arkansas, 72431, United States",
+   "lat": 35.675,
+   "lng": -91.032,
+   "state": "AR"
+  }
+ ],
+ "Pond Fork": [
+  {
+   "county": "Kanawha County",
+   "label": "Pond Fork, Kanawha County, West Virginia, 25160, United States",
+   "lat": 38.326,
+   "lng": -81.311,
+   "state": "WV"
+  }
+ ],
+ "Porterdale": [
+  {
+   "county": "Newton County",
+   "label": "Porterdale, Newton County, Georgia, 30070, United States",
+   "lat": 33.575,
+   "lng": -83.894,
+   "state": "GA"
+  }
+ ],
+ "Possum Branch": [],
+ "Post Road": [],
+ "Powers Ferry": [],
+ "Rainbow Drive": [],
+ "Reservation": [
+  {
+   "county": "Winston County",
+   "label": "Crystal Ridge, Nanih Waiya, Winston County, Mississippi, United States",
+   "lat": 33.024,
+   "lng": -88.941,
+   "state": "MS"
+  }
+ ],
+ "Rice Hope": [
+  {
+   "county": "Berkeley County",
+   "label": "Rice Hope, Berkeley County, South Carolina, United States",
+   "lat": 33.09,
+   "lng": -79.933,
+   "state": "SC"
+  }
+ ],
+ "Riddleville": [
+  {
+   "county": "Washington County",
+   "label": "Riddleville, Washington County, Georgia, United States",
+   "lat": 32.907,
+   "lng": -82.666,
+   "state": "GA"
+  },
+  {
+   "county": "Lawrence County",
+   "label": "Riddleville, Lawrence County, Illinois, 62427, United States",
+   "lat": 38.852,
+   "lng": -87.651,
+   "state": "IL"
+  }
+ ],
+ "Rockhouse Road": [],
+ "Rockville": [
+  {
+   "county": "Montgomery County",
+   "label": "Rockville, Montgomery County, Maryland, United States",
+   "lat": 39.082,
+   "lng": -77.152,
+   "state": "MD"
+  },
+  {
+   "county": "Parke County",
+   "label": "Rockville, Parke County, Indiana, 47872, United States",
+   "lat": 39.763,
+   "lng": -87.229,
+   "state": "IN"
+  },
+  {
+   "county": "Clarke County",
+   "label": "Rockville, Clarke County, Alabama, United States",
+   "lat": 31.403,
+   "lng": -87.843,
+   "state": "AL"
+  },
+  {
+   "county": "Bates County",
+   "label": "Rockville, Bates County, Missouri, United States",
+   "lat": 38.071,
+   "lng": -94.08,
+   "state": "MO"
+  },
+  {
+   "county": "Charleston County",
+   "label": "Rockville, Charleston County, South Carolina, United States",
+   "lat": 32.601,
+   "lng": -80.195,
+   "state": "SC"
+  },
+  {
+   "county": "Dauphin County",
+   "label": "Rockville, Susquehanna Township, Dauphin County, Pennsylvania, 17093, United States",
+   "lat": 40.336,
+   "lng": -76.905,
+   "state": "PA"
+  },
+  {
+   "county": "Preston County",
+   "label": "Rockville, Preston County, West Virginia, United States",
+   "lat": 39.621,
+   "lng": -79.705,
+   "state": "WV"
+  },
+  {
+   "county": "Hanover County",
+   "label": "Rockville, Hanover County, Virginia, 23146, United States",
+   "lat": 37.726,
+   "lng": -77.678,
+   "state": "VA"
+  },
+  {
+   "county": "Putnam County",
+   "label": "Rockville, Putnam County, Georgia, United States",
+   "lat": 33.328,
+   "lng": -83.219,
+   "state": "GA"
+  }
+ ],
+ "Rocky Ridge Radial": [],
+ "Rome": [
+  {
+   "county": "Floyd County",
+   "label": "Rome, Floyd County, Georgia, United States",
+   "lat": 34.257,
+   "lng": -85.165,
+   "state": "GA"
+  },
+  {
+   "county": "Adams County",
+   "label": "Rome, Green Township, Adams County, Ohio, United States",
+   "lat": 38.665,
+   "lng": -83.38,
+   "state": "OH"
+  },
+  {
+   "county": "Douglas County",
+   "label": "Rome, Douglas County, Missouri, United States",
+   "lat": 36.841,
+   "lng": -92.774,
+   "state": "MO"
+  },
+  {
+   "county": "Delaware County",
+   "label": "Rome, Berkshire Township, Delaware County, Ohio, 43021, United States",
+   "lat": 40.246,
+   "lng": -82.912,
+   "state": "OH"
+  },
+  {
+   "county": "Perry County",
+   "label": "Rome, Perry County, Indiana, 47574, United States",
+   "lat": 37.923,
+   "lng": -86.524,
+   "state": "IN"
+  },
+  {
+   "county": "Daviess County",
+   "label": "Rome, Daviess County, Kentucky, 42301, United States",
+   "lat": 37.721,
+   "lng": -87.181,
+   "state": "KY"
+  },
+  {
+   "county": "Smith County",
+   "label": "Rome, Smith County, Middle Tennessee, Tennessee, United States",
+   "lat": 36.262,
+   "lng": -86.072,
+   "state": "TN"
+  },
+  {
+   "county": "Lawrence County",
+   "label": "Rome, Rome Township, Lawrence County, Ohio, 25702, United States",
+   "lat": 38.446,
+   "lng": -82.364,
+   "state": "OH"
+  },
+  {
+   "county": "Livingston Parish",
+   "label": "Rome, Livingston Parish, Louisiana, 70462, United States",
+   "lat": 30.377,
+   "lng": -90.551,
+   "state": "LA"
+  }
+ ],
+ "Rum Creek": [],
+ "Rural Hall Shattalon": [],
+ "Saint Elmo Ky": [
+  {
+   "county": "Christian County",
+   "label": "Saint Elmo, Christian County, Kentucky, 42262, United States",
+   "lat": 36.703,
+   "lng": -87.393,
+   "state": "KY"
+  }
+ ],
+ "Scottdale": [
+  {
+   "county": "Westmoreland County",
+   "label": "Scottdale, Westmoreland County, Pennsylvania, 15683, United States",
+   "lat": 40.1,
+   "lng": -79.587,
+   "state": "PA"
+  },
+  {
+   "county": "DeKalb County",
+   "label": "Scottdale, Clarkston, DeKalb County, Georgia, 30079, United States",
+   "lat": 33.797,
+   "lng": -84.27,
+   "state": "GA"
+  },
+  {
+   "county": "DeKalb County",
+   "label": "Scottdale, DeKalb County, Georgia, 30079, United States",
+   "lat": 33.79,
+   "lng": -84.264,
+   "state": "GA"
+  }
+ ],
+ "Selma": [
+  {
+   "county": "Dallas County",
+   "label": "Selma, Dallas County, Alabama, 36701, United States",
+   "lat": 32.408,
+   "lng": -87.021,
+   "state": "AL"
+  },
+  {
+   "county": "Bexar County",
+   "label": "Selma, Bexar County, Texas, United States",
+   "lat": 29.585,
+   "lng": -98.306,
+   "state": "TX"
+  },
+  {
+   "county": "Johnston County",
+   "label": "Selma, Johnston County, North Carolina, United States",
+   "lat": 35.537,
+   "lng": -78.284,
+   "state": "NC"
+  },
+  {
+   "county": "Jefferson County",
+   "label": "Selma, Plattin Township, Jefferson County, Missouri, United States",
+   "lat": 38.15,
+   "lng": -90.342,
+   "state": "MO"
+  },
+  {
+   "county": "Delaware County",
+   "label": "Selma, Delaware County, Indiana, United States",
+   "lat": 40.191,
+   "lng": -85.269,
+   "state": "IN"
+  },
+  {
+   "county": "Clark County",
+   "label": "Selma, Madison Township, Clark County, Ohio, United States",
+   "lat": 39.787,
+   "lng": -83.709,
+   "state": "OH"
+  },
+  {
+   "county": "Alleghany County",
+   "label": "Selma, Alleghany County, Virginia, 24474, United States",
+   "lat": 37.804,
+   "lng": -79.85,
+   "state": "VA"
+  },
+  {
+   "county": "Alleghany County",
+   "label": "Selma, Alleghany County, Virginia, 24474, United States",
+   "lat": 37.807,
+   "lng": -79.848,
+   "state": "VA"
+  },
+  {
+   "county": "Anderson County",
+   "label": "Selma, Anderson County, Kansas, United States",
+   "lat": 38.135,
+   "lng": -95.123,
+   "state": "KS"
+  }
+ ],
+ "Sewell": [
+  {
+   "county": "Gloucester County",
+   "label": "Sewell, Mantua Township, Gloucester County, New Jersey, United States",
+   "lat": 39.771,
+   "lng": -75.144,
+   "state": "NJ"
+  },
+  {
+   "county": "Gloucester County",
+   "label": "Sewell, Mantua Township, Gloucester County, New Jersey, 08090, United States",
+   "lat": 39.767,
+   "lng": -75.144,
+   "state": "NJ"
+  },
+  {
+   "county": "Fayette County",
+   "label": "Sewell, Fayette County, West Virginia, United States",
+   "lat": 37.997,
+   "lng": -81.021,
+   "state": "WV"
+  },
+  {
+   "county": "Randolph County",
+   "label": "Sewell, Randolph County, Alabama, United States",
+   "lat": 33.39,
+   "lng": -85.306,
+   "state": "AL"
+  },
+  {
+   "county": "Breathitt County",
+   "label": "Sewell, Breathitt County, Kentucky, 41385, United States",
+   "lat": 37.626,
+   "lng": -83.389,
+   "state": "KY"
+  }
+ ],
+ "Shelby": [
+  {
+   "county": "Shelby County",
+   "label": "Shelby County, Texas, United States",
+   "lat": 31.772,
+   "lng": -94.13,
+   "state": "TX"
+  },
+  {
+   "county": "Shelby County",
+   "label": "Shelby County, Illinois, United States",
+   "lat": 39.367,
+   "lng": -88.789,
+   "state": "IL"
+  },
+  {
+   "county": "Shelby County",
+   "label": "Shelby County, Ohio, United States",
+   "lat": 40.349,
+   "lng": -84.159,
+   "state": "OH"
+  },
+  {
+   "county": "Shelby County",
+   "label": "Shelby County, Missouri, United States",
+   "lat": 39.8,
+   "lng": -92.071,
+   "state": "MO"
+  },
+  {
+   "county": "Shelby County",
+   "label": "Shelby County, West Tennessee, Tennessee, United States",
+   "lat": 35.178,
+   "lng": -89.874,
+   "state": "TN"
+  },
+  {
+   "county": "Shelby County",
+   "label": "Shelby County, Kentucky, United States",
+   "lat": 38.222,
+   "lng": -85.211,
+   "state": "KY"
+  },
+  {
+   "county": "Shelby County",
+   "label": "Shelby County, Indiana, United States",
+   "lat": 39.493,
+   "lng": -85.819,
+   "state": "IN"
+  },
+  {
+   "county": "Shelby County",
+   "label": "Shelby County, Alabama, United States",
+   "lat": 33.25,
+   "lng": -86.664,
+   "state": "AL"
+  },
+  {
+   "county": "Cleveland County",
+   "label": "Shelby, Cleveland County, North Carolina, 28051, United States",
+   "lat": 35.292,
+   "lng": -81.536,
+   "state": "NC"
+  },
+  {
+   "county": "Shelby County",
+   "label": "Shelby, Shelby County, Alabama, 35143, United States",
+   "lat": 33.11,
+   "lng": -86.584,
+   "state": "AL"
+  },
+  {
+   "county": "Bolivar County",
+   "label": "Shelby, Bolivar County, Mississippi, 38774, United States",
+   "lat": 33.951,
+   "lng": -90.768,
+   "state": "MS"
+  }
+ ],
+ "Shoal Creek": [
+  {
+   "county": "Shelby County",
+   "label": "Shoal Creek, Shelby County, Alabama, United States",
+   "lat": 33.427,
+   "lng": -86.614,
+   "state": "AL"
+  }
+ ],
+ "Shugart Farms": [],
+ "Slappey Drive": [],
+ "South Bessemmer": [],
+ "South Columbia": [],
+ "South Griffin": [],
+ "Stanton Sp": [],
+ "Stonewater": [
+  {
+   "county": "Wake County",
+   "label": "Stonewater, Cary, Wake County, North Carolina, United States",
+   "lat": 35.847,
+   "lng": -78.907,
+   "state": "NC"
+  },
+  {
+   "county": "Travis County",
+   "label": "Stonewater, Manor, Travis County, Texas, 78653, United States",
+   "lat": 30.368,
+   "lng": -97.521,
+   "state": "TX"
+  },
+  {
+   "county": "Gaston County",
+   "label": "Stonewater, Mount Holly, Gaston County, North Carolina, United States",
+   "lat": 35.355,
+   "lng": -80.964,
+   "state": "NC"
+  }
+ ],
+ "Summer Lake": [
+  {
+   "county": "Chesterfield County",
+   "label": "Summer Lake, Otterdale, Chesterfield County, Virginia, 23120, United States",
+   "lat": 37.439,
+   "lng": -77.718,
+   "state": "VA"
+  }
+ ],
+ "Sumter": [
+  {
+   "county": "Sumter County",
+   "label": "Sumter County, Florida, United States",
+   "lat": 28.669,
+   "lng": -82.076,
+   "state": "FL"
+  },
+  {
+   "county": "Sumter County",
+   "label": "Sumter County, Georgia, United States",
+   "lat": 32.049,
+   "lng": -84.186,
+   "state": "GA"
+  },
+  {
+   "county": "Sumter County",
+   "label": "Sumter County, Alabama, United States",
+   "lat": 32.523,
+   "lng": -88.184,
+   "state": "AL"
+  },
+  {
+   "county": "Sumter County",
+   "label": "Sumter, Sumter County, South Carolina, United States",
+   "lat": 33.92,
+   "lng": -80.341,
+   "state": "SC"
+  },
+  {
+   "county": "Sumter County",
+   "label": "Sumter County, South Carolina, United States",
+   "lat": 33.9,
+   "lng": -80.324,
+   "state": "SC"
+  }
+ ],
+ "Sunny South": [
+  {
+   "county": "Wilcox County",
+   "label": "Sunny South, Wilcox County, Alabama, United States",
+   "lat": 31.965,
+   "lng": -87.64,
+   "state": "AL"
+  }
+ ],
+ "Talbot Co": [
+  {
+   "county": "Talbot County",
+   "label": "Talbot County, Georgia, United States",
+   "lat": 32.698,
+   "lng": -84.505,
+   "state": "GA"
+  },
+  {
+   "county": "Talbot County",
+   "label": "Talbot County, Maryland, United States",
+   "lat": 38.754,
+   "lng": -76.192,
+   "state": "MD"
+  }
+ ],
+ "Tallulah Lodge": [],
+ "Tenaska": [],
+ "Tensaw": [
+  {
+   "county": "Baldwin County",
+   "label": "Tensaw, Baldwin County, Alabama, United States",
+   "lat": 31.157,
+   "lng": -87.799,
+   "state": "AL"
+  }
+ ],
+ "Thornton Road": [],
+ "Thumbs Up": [],
+ "Thurlow": [
+  {
+   "county": "Green County",
+   "label": "Thurlow, Green County, Kentucky, 42743, United States",
+   "lat": 37.213,
+   "lng": -85.536,
+   "state": "KY"
+  }
+ ],
+ "Tiger": [
+  {
+   "county": "Rabun County",
+   "label": "Tiger, Rabun County, Georgia, United States",
+   "lat": 34.847,
+   "lng": -83.433,
+   "state": "GA"
+  },
+  {
+   "county": "Rabun County",
+   "label": "Tiger, Rabun County, Georgia, United States",
+   "lat": 34.846,
+   "lng": -83.433,
+   "state": "GA"
+  },
+  {
+   "county": "Rogers County",
+   "label": "Tiger, Rogers County, Oklahoma, 74116, United States",
+   "lat": 36.189,
+   "lng": -95.805,
+   "state": "OK"
+  }
+ ],
+ "Tiger Creek Warthen": [],
+ "Tomochichi": [],
+ "Town Creek": [
+  {
+   "county": "Allegany County",
+   "label": "Town Creek, Allegany County, Maryland, 25431, United States",
+   "lat": 39.526,
+   "lng": -78.539,
+   "state": "MD"
+  },
+  {
+   "county": "Lawrence County",
+   "label": "Town Creek, Lawrence County, Alabama, United States",
+   "lat": 34.681,
+   "lng": -87.406,
+   "state": "AL"
+  },
+  {
+   "county": "Saint Mary's County",
+   "label": "Town Creek, California, Saint Mary's County, Maryland, 20688, United States",
+   "lat": 38.322,
+   "lng": -76.479,
+   "state": "MD"
+  },
+  {
+   "county": "Brunswick County",
+   "label": "Town Creek, Brunswick County, North Carolina, United States",
+   "lat": 34.165,
+   "lng": -78.093,
+   "state": "NC"
+  },
+  {
+   "county": "Union County",
+   "label": "Town Creek, Union County, Georgia, United States",
+   "lat": 34.822,
+   "lng": -83.87,
+   "state": "GA"
+  },
+  {
+   "county": "Claiborne County",
+   "label": "Town Creek, Claiborne County, East Tennessee, Tennessee, 37724, United States",
+   "lat": 36.529,
+   "lng": -83.738,
+   "state": "TN"
+  },
+  {
+   "county": "Wilson County",
+   "label": "Town Creek, Wilson County, North Carolina, United States",
+   "lat": 35.815,
+   "lng": -77.801,
+   "state": "NC"
+  }
+ ],
+ "Tributary": [
+  {
+   "county": "Douglas County",
+   "label": "Tributary, Douglasville, Douglas County, Georgia, United States",
+   "lat": 33.713,
+   "lng": -84.643,
+   "state": "GA"
+  }
+ ],
+ "Trifecta": [],
+ "Truman Parkway": [],
+ "Ts25": [],
+ "Tyrone": [
+  {
+   "county": "Blair County",
+   "label": "Tyrone, Blair County, Pennsylvania, 16686, United States",
+   "lat": 40.671,
+   "lng": -78.238,
+   "state": "PA"
+  },
+  {
+   "county": "Fayette County",
+   "label": "Tyrone, Fayette County, Georgia, 30290, United States",
+   "lat": 33.471,
+   "lng": -84.597,
+   "state": "GA"
+  },
+  {
+   "county": "Coshocton County",
+   "label": "Tyrone, Jackson Township, Coshocton County, Ohio, United States",
+   "lat": 40.253,
+   "lng": -81.978,
+   "state": "OH"
+  },
+  {
+   "county": "Monongalia County",
+   "label": "Tyrone, Monongalia County, West Virginia, 26508, United States",
+   "lat": 39.64,
+   "lng": -79.859,
+   "state": "WV"
+  },
+  {
+   "county": "Anderson County",
+   "label": "Tyrone, Anderson County, Kentucky, United States",
+   "lat": 38.033,
+   "lng": -84.836,
+   "state": "KY"
+  },
+  {
+   "county": "Evangeline Parish",
+   "label": "Tyrone, Evangeline Parish, Louisiana, United States",
+   "lat": 30.495,
+   "lng": -92.497,
+   "state": "LA"
+  },
+  {
+   "county": "Texas County",
+   "label": "Tyrone, Texas County, Missouri, 65464, United States",
+   "lat": 37.203,
+   "lng": -91.877,
+   "state": "MO"
+  },
+  {
+   "county": "Carroll County",
+   "label": "Tyrone, Carroll County, Maryland, United States",
+   "lat": 39.619,
+   "lng": -77.094,
+   "state": "MD"
+  },
+  {
+   "county": "Wilkes County",
+   "label": "Tyrone, Wilkes County, Georgia, United States",
+   "lat": 33.672,
+   "lng": -82.861,
+   "state": "GA"
+  }
+ ],
+ "Union City": [
+  {
+   "county": "Obion County",
+   "label": "Union City, Obion County, West Tennessee, Tennessee, 38261, United States",
+   "lat": 36.424,
+   "lng": -89.057,
+   "state": "TN"
+  },
+  {
+   "county": "Fulton County",
+   "label": "Union City, Fulton County, Georgia, United States",
+   "lat": 33.587,
+   "lng": -84.542,
+   "state": "GA"
+  },
+  {
+   "county": "Darke County",
+   "label": "Union City, Jackson Township, Darke County, Ohio, United States",
+   "lat": 40.199,
+   "lng": -84.805,
+   "state": "OH"
+  },
+  {
+   "county": "Randolph County",
+   "label": "Union City, Randolph County, Indiana, 47390, United States",
+   "lat": 40.202,
+   "lng": -84.809,
+   "state": "IN"
+  },
+  {
+   "county": "Canadian County",
+   "label": "Union City, Canadian County, Oklahoma, 73090, United States",
+   "lat": 35.392,
+   "lng": -97.941,
+   "state": "OK"
+  },
+  {
+   "county": "McDowell County",
+   "label": "Union City, McDowell County, West Virginia, 24811, United States",
+   "lat": 37.431,
+   "lng": -81.797,
+   "state": "WV"
+  },
+  {
+   "county": "Johnson County",
+   "label": "Union City, Johnson County, Arkansas, United States",
+   "lat": 35.488,
+   "lng": -93.548,
+   "state": "AR"
+  },
+  {
+   "county": "Madison County",
+   "label": "Union City, Madison County, Kentucky, 40575, United States",
+   "lat": 37.797,
+   "lng": -84.198,
+   "state": "KY"
+  },
+  {
+   "county": "Edmonson County",
+   "label": "Union City, Edmonson County, Kentucky, United States",
+   "lat": 37.137,
+   "lng": -86.072,
+   "state": "KY"
+  },
+  {
+   "county": "Stone County",
+   "label": "Union City, Stone County, Missouri, 65631, United States",
+   "lat": 36.979,
+   "lng": -93.466,
+   "state": "MO"
+  }
+ ],
+ "Union City Fiber Installation": [],
+ "V Rica": [
+  {
+   "county": "Carroll County",
+   "label": "Villa Rica, Carroll County, Georgia, 30180, United States",
+   "lat": 33.732,
+   "lng": -84.919,
+   "state": "GA"
+  }
+ ],
+ "Vanderbilt West Asheville": [],
+ "Virginia Avenue": [],
+ "Wabash Avenue": [],
+ "Wellston": [
+  {
+   "county": "Houston County",
+   "label": "Warner Robins, Houston County, Georgia, United States",
+   "lat": 32.62,
+   "lng": -83.607,
+   "state": "GA"
+  },
+  {
+   "county": "Saint Louis County",
+   "label": "Wellston, Saint Louis County, Missouri, United States",
+   "lat": 38.676,
+   "lng": -90.288,
+   "state": "MO"
+  },
+  {
+   "county": "Jackson County",
+   "label": "Wellston, Jackson County, Ohio, 45692, United States",
+   "lat": 39.123,
+   "lng": -82.533,
+   "state": "OH"
+  },
+  {
+   "county": "Lincoln County",
+   "label": "Wellston, Lincoln County, Oklahoma, United States",
+   "lat": 35.694,
+   "lng": -97.063,
+   "state": "OK"
+  }
+ ],
+ "West Mcintosh Replacement Of": [],
+ "West Spartanburg": [],
+ "West Valdosta": [
+  {
+   "county": "Lowndes County",
+   "label": "West Valdosta, Valdosta, Lowndes County, Georgia, 31603, United States",
+   "lat": 30.816,
+   "lng": -83.315,
+   "state": "GA"
+  }
+ ],
+ "Westfork": [
+  {
+   "county": "Paulding County",
+   "label": "Westfork, Paulding County, Georgia, United States",
+   "lat": 34.005,
+   "lng": -84.837,
+   "state": "GA"
+  }
+ ],
+ "Westover": [
+  {
+   "county": "Shelby County",
+   "label": "Westover, Shelby County, Alabama, United States",
+   "lat": 33.35,
+   "lng": -86.536,
+   "state": "AL"
+  },
+  {
+   "county": "Monongalia County",
+   "label": "Westover, Monongalia County, West Virginia, 86501, United States",
+   "lat": 39.635,
+   "lng": -79.97,
+   "state": "WV"
+  },
+  {
+   "county": "Clearfield County",
+   "label": "Westover, Clearfield County, Pennsylvania, United States",
+   "lat": 40.75,
+   "lng": -78.671,
+   "state": "PA"
+  },
+  {
+   "county": "Crawford County",
+   "label": "Westover, Crawford County, Missouri, United States",
+   "lat": 37.923,
+   "lng": -91.228,
+   "state": "MO"
+  },
+  {
+   "county": "Somerset County",
+   "label": "Westover, Somerset County, Maryland, 21890, United States",
+   "lat": 38.124,
+   "lng": -75.706,
+   "state": "MD"
+  },
+  {
+   "county": "Wake County",
+   "label": "Westover, Raleigh, Wake County, North Carolina, 27607, United States",
+   "lat": 35.79,
+   "lng": -78.715,
+   "state": "NC"
+  },
+  {
+   "county": "Marion County",
+   "label": "Westover, Indianapolis, Pike Township, Marion County, Indiana, 46268, United States",
+   "lat": 39.899,
+   "lng": -86.227,
+   "state": "IN"
+  },
+  {
+   "county": "Dougherty County",
+   "label": "Westover, Albany, Dougherty County, Georgia, 31707, United States",
+   "lat": 31.589,
+   "lng": -84.211,
+   "state": "GA"
+  },
+  {
+   "county": "Wayne County",
+   "label": "Westover, Wayne County, North Carolina, 27530, United States",
+   "lat": 35.404,
+   "lng": -78.036,
+   "state": "NC"
+  },
+  {
+   "county": "Davidson County",
+   "label": "Westover, Lexington, Davidson County, North Carolina, 27295, United States",
+   "lat": 35.831,
+   "lng": -80.26,
+   "state": "NC"
+  },
+  {
+   "county": "Washington County",
+   "label": "Westover, Washington County, North Carolina, United States",
+   "lat": 35.904,
+   "lng": -76.674,
+   "state": "NC"
+  },
+  {
+   "county": "West Baton Rouge Parish",
+   "label": "Westover, West Baton Rouge Parish, Louisiana, 70767, United States",
+   "lat": 30.491,
+   "lng": -91.275,
+   "state": "LA"
+  },
+  {
+   "county": "Baylor County",
+   "label": "Westover, Baylor County, Texas, United States",
+   "lat": 33.497,
+   "lng": -99.018,
+   "state": "TX"
+  },
+  {
+   "county": "Iredell County",
+   "label": "Westover, Iredell County, North Carolina, 28677, United States",
+   "lat": 35.79,
+   "lng": -80.947,
+   "state": "NC"
+  },
+  {
+   "county": "Madison County",
+   "label": "Westover, Madison County, West Tennessee, Tennessee, United States",
+   "lat": 35.611,
+   "lng": -88.877,
+   "state": "TN"
+  },
+  {
+   "county": "Greenwood County",
+   "label": "Westover, Greenwood County, South Carolina, 29649, United States",
+   "lat": 34.187,
+   "lng": -82.207,
+   "state": "SC"
+  },
+  {
+   "county": "Mississippi County",
+   "label": "Westover, Mississippi County, Arkansas, United States",
+   "lat": 35.521,
+   "lng": -90.213,
+   "state": "AR"
+  },
+  {
+   "county": "Phillips County",
+   "label": "Westover, Phillips County, Arkansas, 38631, United States",
+   "lat": 34.388,
+   "lng": -90.665,
+   "state": "AR"
+  },
+  {
+   "county": "Cecil County",
+   "label": "Westover, Cecil County, Maryland, 21901, United States",
+   "lat": 39.6,
+   "lng": -75.937,
+   "state": "MD"
+  },
+  {
+   "county": "Tarrant County",
+   "label": "Westover Hills, Tarrant County, Texas, United States",
+   "lat": 32.745,
+   "lng": -97.414,
+   "state": "TX"
+  }
+ ],
+ "Wilson": [
+  {
+   "county": "Wilson County",
+   "label": "Wilson County, Texas, United States",
+   "lat": 29.159,
+   "lng": -98.125,
+   "state": "TX"
+  },
+  {
+   "county": "Wilson County",
+   "label": "Wilson County, North Carolina, United States",
+   "lat": 35.706,
+   "lng": -77.918,
+   "state": "NC"
+  },
+  {
+   "county": "Wilson County",
+   "label": "Wilson County, Kansas, United States",
+   "lat": 37.569,
+   "lng": -95.745,
+   "state": "KS"
+  },
+  {
+   "county": "Wilson County",
+   "label": "Wilson, Wilson County, North Carolina, United States",
+   "lat": 35.724,
+   "lng": -77.912,
+   "state": "NC"
+  },
+  {
+   "county": "Wilson County",
+   "label": "Wilson County, Middle Tennessee, Tennessee, United States",
+   "lat": 36.147,
+   "lng": -86.312,
+   "state": "TN"
+  },
+  {
+   "county": "Ellsworth County",
+   "label": "Wilson, Ellsworth County, Kansas, United States",
+   "lat": 38.825,
+   "lng": -98.475,
+   "state": "KS"
+  },
+  {
+   "county": "Monroe County",
+   "label": "Wilson, Sunsbury Township, Monroe County, Ohio, United States",
+   "lat": 39.857,
+   "lng": -81.067,
+   "state": "OH"
+  },
+  {
+   "county": "Carter County",
+   "label": "Wilson, Carter County, Oklahoma, 73463, United States",
+   "lat": 34.162,
+   "lng": -97.426,
+   "state": "OK"
+  },
+  {
+   "county": "Northampton County",
+   "label": "Wilson, Northampton County, Pennsylvania, United States",
+   "lat": 40.684,
+   "lng": -75.242,
+   "state": "PA"
+  },
+  {
+   "county": "Mississippi County",
+   "label": "Wilson, Mississippi County, Arkansas, United States",
+   "lat": 35.569,
+   "lng": -90.045,
+   "state": "AR"
+  },
+  {
+   "county": "Kanawha County",
+   "label": "Wilson, Kanawha County, West Virginia, 25302, United States",
+   "lat": 38.385,
+   "lng": -81.593,
+   "state": "WV"
+  },
+  {
+   "county": "East Feliciana Parish",
+   "label": "Wilson, East Feliciana Parish, Louisiana, 70789, United States",
+   "lat": 30.92,
+   "lng": -91.116,
+   "state": "LA"
+  }
+ ],
+ "Winecoff": [
+  {
+   "county": "Cabarrus County",
+   "label": "Villas at Winecoff, Concord, Cabarrus County, North Carolina, United States",
+   "lat": 35.435,
+   "lng": -80.623,
+   "state": "NC"
+  }
+ ],
+ "Yum Yum": [
+  {
+   "county": "Fayette County",
+   "label": "Yum Yum, Fayette County, West Tennessee, Tennessee, United States",
+   "lat": 35.345,
+   "lng": -89.364,
+   "state": "TN"
+  }
+ ],
+ "Zebulon": [
+  {
+   "county": "Pike County",
+   "label": "Zebulon, Pike County, Georgia, United States",
+   "lat": 33.102,
+   "lng": -84.343,
+   "state": "GA"
+  },
+  {
+   "county": "Wake County",
+   "label": "Zebulon, Wake County, North Carolina, United States",
+   "lat": 35.821,
+   "lng": -78.313,
+   "state": "NC"
+  },
+  {
+   "county": "Pike County",
+   "label": "Zebulon, Pike County, Kentucky, 41557, United States",
+   "lat": 37.533,
+   "lng": -82.467,
+   "state": "KY"
+  },
+  {
+   "county": "Hancock County",
+   "label": "Zebulon, Hancock County, Georgia, United States",
+   "lat": 33.188,
+   "lng": -83.001,
+   "state": "GA"
+  }
+ ]
+}

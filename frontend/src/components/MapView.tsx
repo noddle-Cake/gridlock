@@ -199,7 +199,7 @@ export function MapView({
           </span>
         ))}
         <span className="legend-item">
-          <span className="swatch swatch-paired" /> in a flagged pair
+          <span className="swatch swatch-paired" /> in a potential coordination opportunity
         </span>
         <span className="legend-item">
           <span className="swatch swatch-approx" /> approximate location

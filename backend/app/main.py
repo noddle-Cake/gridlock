@@ -22,6 +22,7 @@ from app.services.briefs import BriefGenerator
 from app.services.extraction import ExtractionService
 from app.services.geocoding import Geocoder, GeocodingService, default_geocoder
 from app.services.llm import LLMClient, default_llm
+from app.sources import snapshot as public_sources
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -50,6 +51,11 @@ def create_app(
                     await lines_db.load_snapshot_if_empty(app.state.pool)
                 except Exception:  # the reference layer is optional; never block startup
                     log.exception("could not load the HIFLD transmission-line snapshot")
+            if settings.autoload_public_sources:
+                try:
+                    await public_sources.load_snapshots_if_missing(app.state.pool)
+                except Exception:  # optional data; never block startup
+                    log.exception("could not load the EIA-860M / SERTP snapshots")
         try:
             yield
         finally:

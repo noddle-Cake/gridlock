@@ -9,7 +9,9 @@
 **/.ruff_cache
 **/.env
 **/.env.*
-source_docs/
+# Raw filings stay out of the image; only the extracted project CSVs ship (autoloaded).
+source_docs/*
+!source_docs/extracted/
 .idea
 .kiro
 .vscode
