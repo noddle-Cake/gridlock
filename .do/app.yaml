@@ -1,0 +1,71 @@
+# DigitalOcean App Platform spec for GridLock (Requirement 16 / task 17.1).
+# The repo is a monorepo, so each component points at its own source_dir.
+#
+#   doctl apps create --spec .do/app.yaml          # first deploy
+#   doctl apps update <app-id> --spec .do/app.yaml # later changes
+#
+# Or in the control panel: Create App -> GitHub -> noddle-Cake/gridlock, then
+# replace the generated spec with this file (Settings -> App Spec -> Edit).
+name: gridlock
+region: nyc
+
+services:
+  - name: api
+    github:
+      repo: noddle-Cake/gridlock
+      branch: master
+      deploy_on_push: true
+    source_dir: backend
+    environment_slug: python
+    run_command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    health_check:
+      http_path: /health
+    envs:
+      # Tiger Data (managed Postgres + PostGIS) connection string, with sslmode=require.
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: CHANGE_ME
+      - key: GEMINI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: CHANGE_ME
+      - key: GEMINI_MODEL
+        scope: RUN_TIME
+        value: gemini-2.5-flash
+      - key: GEOCODER
+        scope: RUN_TIME
+        value: nominatim
+
+static_sites:
+  - name: web
+    github:
+      repo: noddle-Cake/gridlock
+      branch: master
+      deploy_on_push: true
+    source_dir: frontend
+    environment_slug: node-js
+    build_command: npm run build
+    output_dir: dist
+    envs:
+      - key: VITE_API_BASE
+        scope: BUILD_TIME
+        value: /api
+
+# The browser talks to one origin: /api/* goes to FastAPI (prefix stripped), the rest to the SPA.
+ingress:
+  rules:
+    - component:
+        name: api
+        preserve_path_prefix: false
+      match:
+        path:
+          prefix: /api
+    - component:
+        name: web
+      match:
+        path:
+          prefix: /

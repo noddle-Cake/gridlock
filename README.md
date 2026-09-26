@@ -72,6 +72,19 @@ cd frontend && npm test         # 22 tests
 All 18 design properties have a property-based test (Hypothesis / fast-check, ≥100 cases),
 tagged `Feature: gridlock, Property N`. P1, P2, P13, P14 run against real PostGIS.
 
+## Deploy (DigitalOcean App Platform)
+
+The app spec lives in [`.do/app.yaml`](.do/app.yaml): a Python service (`backend/`) at `/api`
+and a static site (`frontend/`) at `/`, on one origin. App Platform can't auto-detect
+components in this monorepo, so create the app from the spec:
+
+```bash
+doctl apps create --spec .do/app.yaml
+```
+
+Then set the `DATABASE_URL` (Postgres with PostGIS, e.g. Tiger Data) and `GEMINI_API_KEY`
+secrets on the `api` component. The schema is applied automatically on startup.
+
 ## Design notes and deviations
 
 - **Review threshold boundary.** Requirements 3.3/13.1 say "equal to or below" the
