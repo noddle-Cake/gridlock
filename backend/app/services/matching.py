@@ -151,13 +151,18 @@ async def rematch_project(conn: asyncpg.Connection, project_id: int) -> RematchR
     """
     radius = get_settings().default_radius_miles
     rows = await repo.candidate_pairs(conn, radius, project_id=project_id)
-    projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
+    briefs = await repo.briefs_for_project(conn, project_id)
+    # Re-check every briefed pair in one query instead of a match query per brief.
+    qualifying = await repo.qualifying_brief_pairs(conn, project_id) if briefs else {}
+    ids = {i for r in [*rows, *qualifying.values()] for i in (r.a_id, r.b_id)}
+    projects = await repo.get_projects(conn, sorted(ids))
     pairs = [_build_pair(r, projects, radius) for r in rows]
 
     invalidated: list[str] = []
     updated: list[str] = []
-    for brief in await repo.briefs_for_project(conn, project_id):
-        still = await find_pair(conn, brief.a_id, brief.b_id, brief.radius)
+    for brief in briefs:
+        row = qualifying.get(brief.pair_id)
+        still = _build_pair(row, projects, brief.radius) if row else None
         if still is None:
             await repo.delete_brief(conn, brief.pair_id)
             invalidated.append(brief.pair_id)

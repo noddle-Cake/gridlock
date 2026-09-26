@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS projects (
 
 CREATE INDEX IF NOT EXISTS projects_geom_gix ON projects USING GIST (geom);
 CREATE INDEX IF NOT EXISTS projects_dates_ix ON projects (start_date, end_date);
+-- Deleting a plan cascades to its projects; without this each delete scans the table.
+CREATE INDEX IF NOT EXISTS projects_plan_ix ON projects (plan_id);
 
 -- Coordination briefs, keyed by the stable pair id "a_id-b_id" (a_id < b_id).
 -- radius records the threshold the pair was flagged under so an edit can re-run
@@ -61,6 +63,10 @@ CREATE TABLE IF NOT EXISTS briefs (
 );
 -- Date padding no longer exists: timing is scored from the projects' own build windows.
 ALTER TABLE briefs DROP COLUMN IF EXISTS pad;
+-- A project edit looks up its briefs by either side (Req 13.4), and deleting a project
+-- cascades through both foreign keys; index each so neither scans the table.
+CREATE INDEX IF NOT EXISTS briefs_a_ix ON briefs (a_id);
+CREATE INDEX IF NOT EXISTS briefs_b_ix ON briefs (b_id);
 
 -- Existing transmission lines from HIFLD: a reference layer (map backdrop, owner roster,
 -- real routes for Req 17), never matched as planned projects. Loaded from the committed

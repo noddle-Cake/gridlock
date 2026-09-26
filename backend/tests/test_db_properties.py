@@ -234,6 +234,31 @@ def test_edit_round_trip_and_rematch(projects, data, edit):
             assert pid not in briefs and pid in result.invalidated
 
 
+# Briefs flagged under different radii are each re-checked under their own radius, exactly
+# as a per-brief find_pair would.
+@settings(max_examples=50)
+@given(st.lists(new_projects(), min_size=2, max_size=10), st.data())
+def test_rematch_rechecks_each_brief_at_its_radius(projects, data):
+    async def body(conn):
+        ids = await repo.insert_projects(conn, projects)
+        target = ids[data.draw(st.integers(0, len(ids) - 1))]
+        for p in await matching.overlaps(conn, 25.0):
+            await repo.upsert_brief(
+                conn, pair_id=p.id, a_id=p.project_a.id, b_id=p.project_b.id,
+                text="brief", miles=p.miles, overlap_days=p.overlap_days,
+                radius=data.draw(st.floats(0.0, 25.0)),
+            )
+        expected = {}
+        for b in await repo.briefs_for_project(conn, target):
+            expected[b.pair_id] = await matching.find_pair(conn, b.a_id, b.b_id, b.radius)
+        result = await matching.rematch_project(conn, target)
+        return expected, result
+
+    expected, result = run_db(body)
+    assert set(result.invalidated) == {pid for pid, pair in expected.items() if pair is None}
+    assert not set(result.updated) & set(result.invalidated)
+
+
 # Stretch 15.2: with 3+ utilities every distinct utility combination is evaluated.
 @given(st.lists(st.sampled_from(["A", "B", "C", "D", "E"]), min_size=3, max_size=10))
 def test_cross_utility_coverage(utilities):
