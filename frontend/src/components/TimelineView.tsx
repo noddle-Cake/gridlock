@@ -63,8 +63,11 @@ export function TimelineView({ projects, pairs, selectedPair, colors, onSelectPr
     )
     const next = timelineItems(projects, pairedIds, selectedIds, colors)
     groups.current.clear()
+    // `colors` also covers owners of existing (HIFLD) lines; only utilities with
+    // planned projects get a timeline row.
+    const withProjects = new Set(projects.map((p) => p.utility))
     groups.current.add(
-      Object.keys(colors).map((u) => ({
+      Object.keys(colors).filter((u) => withProjects.has(u)).map((u) => ({
         id: u,
         content: `<span class="tl-group" style="--tl-color:${colors[u]}">${escapeHtml(u)}</span>`,
       })),

@@ -120,3 +120,15 @@ class PlanDTO(BaseModel):
     error: str | None = None
     project_count: int = 0
     created_at: datetime
+    page_range: str | None = None
+
+
+class LineOwnerDTO(BaseModel):
+    """One owner in the HIFLD reference layer (GET /lines/owners)."""
+
+    owner: str | None  # None groups lines HIFLD publishes without an owner
+    line_count: int
+    km: float
+    min_kv: float | None = None
+    max_kv: float | None = None
+    raw_names: list[str] = []

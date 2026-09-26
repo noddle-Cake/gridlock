@@ -50,7 +50,19 @@ export const FACTOR_LABELS: Record<string, string> = {
   voltage_similarity: 'Voltage similarity',
 }
 
-const PALETTE = ['#2f6fdf', '#d9480f', '#2b8a3e', '#9c36b5', '#c2255c', '#0b7285', '#e8590c', '#5c940d']
+// Distinct hues (no two oranges): project utilities and HIFLD line owners share this map.
+const PALETTE = [
+  '#2f6fdf',
+  '#d9480f',
+  '#2b8a3e',
+  '#9c36b5',
+  '#c2255c',
+  '#0b7285',
+  '#8c5a2b',
+  '#5c940d',
+  '#b8860b',
+  '#e64980',
+]
 
 /** Stable categorical color per utility (sorted order, so colors don't shuffle). */
 export function utilityColors(utilities: string[]): Record<string, string> {

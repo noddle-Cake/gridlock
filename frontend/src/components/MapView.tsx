@@ -1,13 +1,23 @@
 import 'leaflet/dist/leaflet.css'
 
-import type { LatLngBoundsExpression } from 'leaflet'
-import { useEffect, useMemo, useRef } from 'react'
-import { CircleMarker, MapContainer, Polyline, Tooltip, useMap } from 'react-leaflet'
+import type { GeoJsonObject } from 'geojson'
+import type { LatLngBoundsExpression, Layer } from 'leaflet'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  CircleMarker,
+  GeoJSON,
+  MapContainer,
+  Pane,
+  Polyline,
+  Tooltip,
+  useMap,
+} from 'react-leaflet'
 
+import { lineBounds, lineOwners, lineStyle, lineTooltip, UNKNOWN_OWNER } from '../lib/lines'
 import { markerStyle } from '../lib/mapStyle'
 import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE } from '../lib/powerGrid'
 import { enableSmoothWheelZoom } from '../lib/smoothWheelZoom'
-import type { CoordinationPair, Project } from '../types'
+import type { CoordinationPair, LineCollection, LineFeature, Project } from '../types'
 import { PowerGridLayer } from './PowerGridLayer'
 
 function FitBounds({ bounds }: { bounds: LatLngBoundsExpression | null }) {
@@ -35,10 +45,26 @@ interface Props {
   pairs: CoordinationPair[]
   selectedPair: CoordinationPair | null
   colors: Record<string, string>
+  lines?: LineCollection | null
+  linesFailed?: boolean
   onSelectProject: (p: Project) => void
 }
 
-export function MapView({ projects, pairs, selectedPair, colors, onSelectProject }: Props) {
+export function MapView({
+  projects,
+  pairs,
+  selectedPair,
+  colors,
+  lines = null,
+  linesFailed = false,
+  onSelectProject,
+}: Props) {
+  const [showLines, setShowLines] = useState(true)
+  const owners = useMemo(() => (lines ? lineOwners(lines) : []), [lines])
+  const projectUtilities = useMemo(
+    () => [...new Set(projects.map((p) => p.utility))].sort((a, b) => a.localeCompare(b)),
+    [projects],
+  )
   const placed = projects.filter((p) => p.lat != null && p.lng != null)
   const pairedIds = useMemo(
     () => new Set(pairs.flatMap((p) => [p.project_a.id, p.project_b.id])),
@@ -50,9 +76,10 @@ export function MapView({ projects, pairs, selectedPair, colors, onSelectProject
 
   const allBounds = useMemo<LatLngBoundsExpression | null>(() => {
     const pts = placed.map((p) => [p.lat!, p.lng!] as [number, number])
-    return pts.length ? pts : null
+    // With no placed projects yet, frame the reference lines instead.
+    return pts.length ? pts : lines ? lineBounds(lines) : null
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placed.length])
+  }, [placed.length, lines])
 
   // Keyed on coordinates, not the pair object, so a data refresh doesn't re-trigger the fly.
   const a = selectedPair?.project_a
@@ -84,6 +111,19 @@ export function MapView({ projects, pairs, selectedPair, colors, onSelectProject
         <SmoothWheelZoom />
         <PowerGridLayer />
         <FitBounds bounds={pairBounds ?? allBounds} />
+        {/* Existing lines sit in their own pane under the project markers. */}
+        <Pane name="reference-lines" style={{ zIndex: 350 }}>
+          {lines && showLines ? (
+            <GeoJSON
+              key={lines.features.length}
+              data={lines as unknown as GeoJsonObject}
+              style={(f) => lineStyle(f as unknown as LineFeature, colors)}
+              onEachFeature={(f, layer: Layer) =>
+                layer.bindTooltip(lineTooltip(f as unknown as LineFeature), { sticky: true })
+              }
+            />
+          ) : null}
+        </Pane>
         {pairs.map((pair) => {
           const { project_a: a, project_b: b } = pair
           if (a.lat == null || b.lat == null) return null
@@ -134,9 +174,9 @@ export function MapView({ projects, pairs, selectedPair, colors, onSelectProject
         })}
       </MapContainer>
       <div className="map-legend" aria-label="Map legend">
-        {Object.entries(colors).map(([u, c]) => (
+        {projectUtilities.map((u) => (
           <span key={u} className="legend-item">
-            <span className="swatch" style={{ background: c }} />
+            <span className="swatch" style={{ background: colors[u] ?? '#555' }} />
             {u}
           </span>
         ))}
@@ -166,6 +206,32 @@ export function MapView({ projects, pairs, selectedPair, colors, onSelectProject
           <span className="swatch swatch-plant" /> power plant
         </span>
       </div>
+      {lines && owners.length ? (
+        <div className="map-legend lines-legend" aria-label="Existing transmission lines">
+          <label className="legend-item">
+            <input
+              type="checkbox"
+              checked={showLines}
+              onChange={(e) => setShowLines(e.target.checked)}
+            />
+            Existing lines (HIFLD)
+          </label>
+          {showLines
+            ? owners.map(({ owner, count }) => (
+                <span key={owner ?? UNKNOWN_OWNER} className="legend-item">
+                  <span
+                    className="swatch swatch-line"
+                    style={{ background: owner ? (colors[owner] ?? '#555') : undefined }}
+                  />
+                  {owner ?? UNKNOWN_OWNER} ({count})
+                </span>
+              ))
+            : null}
+        </div>
+      ) : null}
+      {linesFailed ? (
+        <p className="map-note">Existing transmission lines could not be loaded.</p>
+      ) : null}
       {projects.length > placed.length ? (
         <p className="map-note">
           {projects.length - placed.length} project(s) have no location yet — see Review.

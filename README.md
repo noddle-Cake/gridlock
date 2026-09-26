@@ -11,7 +11,13 @@ Spec: [`.kiro/specs/gridmerge`](.kiro/specs/gridmerge) (requirements, design, ta
 backend/    FastAPI + asyncpg + PostGIS, Gemini extraction/briefs, Hypothesis tests
 frontend/   React + Vite + TypeScript, Leaflet map, vis-timeline, Vitest + fast-check
 sample_data/  generated demo plans for three fictional utilities (real towns/counties)
+deploy/     Lightsail stack (app + PostGIS + Caddy), CI deploy script, instance bootstrap
+source_docs/  public FL–GA filings to ingest: page ranges + upload script
 ```
+
+Toolchain: Python 3.11+ (`backend/.python-version`), Node 22 (`.nvmrc`; Vite 8's
+dependencies need ^22.22), Docker. `.gitattributes` pins line endings to LF so a Windows
+checkout still builds working Linux containers.
 
 ## Quick start
 
@@ -19,11 +25,13 @@ sample_data/  generated demo plans for three fictional utilities (real towns/cou
 # 1. Database (Postgres 16 + PostGIS)
 docker compose up -d db
 
-# 2. Backend
+# 2. Backend (native Windows: .venv\Scripts\ instead of .venv/bin/)
 cd backend
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 cp .env.example .env            # set GEMINI_API_KEY to enable upload extraction + briefs
 .venv/bin/python -m scripts.seed_demo   # optional: sample files + 19 demo projects
+#   --region fl-ga: 24 ILLUSTRATIVE projects for real FL/GA utilities on the HIFLD lines
+#   (placeholders, not from filings); --region all loads both sets
 .venv/bin/uvicorn app.main:app --reload --port 8000
 
 # 3. Frontend (proxies /api -> localhost:8000)
@@ -37,36 +45,114 @@ Without `GEMINI_API_KEY` everything works except the two LLM steps: uploads fail
 projects are created), and brief generation returns a 502. The seed script loads
 pre-extracted projects so the rest of the demo loop works offline.
 
+### Whole stack in Docker (any OS)
+
+The production stack runs the same way on Windows, macOS and Linux. Build the single image
+(API at `/api`, React app at `/`) and start `deploy/docker-compose.yml` with a local `.env`:
+
+```bash
+docker build -f backend/Dockerfile -t gridmerge:local .
+cp deploy/.env.example deploy/.env      # APP_TAG=local, a POSTGRES_PASSWORD, your key
+docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy/.env up -d
+# http://localhost:8080   (HTTP_PORT in deploy/.env)
+docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy/.env   exec app python -m scripts.seed_demo --region fl-ga --db-only   # demo data
+```
+
+`-p gridmerge-local` keeps it apart from the dev `db`/`testdb` containers.
+
 ### Configuration (`backend/.env`)
 
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | `postgresql://gridmerge:gridmerge@localhost:5432/gridmerge` | Set by `deploy/docker-compose.yml` in prod |
 | `GEMINI_API_KEY` | — | Extraction + briefs |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | `gemini-2.5-flash` is closed to new keys |
+| `GEMINI_RPM` | `5` | requests/minute across the app (free tier: 5); `0` = unpaced |
 | `GEOCODER` | `nominatim` | `none` = offline county gazetteer only |
 | `CORS_ORIGINS` | `http://localhost:5173` | comma-separated |
+| `HIFLD_LINES_URL` | HIFLD ArcGIS FeatureServer layer | only used by `load_hifld --fetch` |
+| `HIFLD_BBOX` | `-86.0,29.8,-80.8,31.6` | FL–GA region fetched by `load_hifld --fetch` |
+| `AUTOLOAD_LINES` | `true` | load the committed snapshot into an empty table on startup |
 
 ## API
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| POST | `/ingest` | multipart `file` + `utility` + `source_url` → `202 {plan_id}`; processing runs in the background |
+| POST | `/ingest` | multipart `file` + `utility` + `source_url` (+ optional `pages`, e.g. `27-102`) → `202 {plan_id}`; processing runs in the background |
 | GET | `/plans`, `/plans/{id}` | ingestion status (`processing` / `complete` / `failed`) |
 | GET | `/projects` | all stored projects |
 | PATCH | `/projects/{id}` | review/edit; geom/date edits immediately re-match that project |
 | GET | `/overlaps?radius=&pad=` | scored coordination pairs (defaults 25 mi / 30 days) |
 | POST | `/overlaps/{id}/brief?radius=&pad=` | generate a brief (30 s budget) |
 | GET | `/export?format=csv\|pdf` | briefs export (stretch) |
+| GET | `/lines?bbox=&min_kv=&owner=` | existing transmission lines (HIFLD) as GeoJSON; `owner` may repeat |
+| GET | `/lines/owners` | owner roster: line count, km, voltage range, raw HIFLD spellings |
 
 Errors always look like `{"error": {"code", "message", "field?", "fields?", "detected_format?"}}`.
+
+## Existing transmission lines (HIFLD)
+
+The map draws existing transmission lines from HIFLD *Electric Power Transmission Lines*
+(the dataset behind the Felt "US Electric Power Transmission Lines" map) beneath the
+planned projects, colored by owner with the same color as that utility's projects. They
+are a **reference layer only**, kept in their own `transmission_lines` table and never
+matched as planned projects.
+
+- **Snapshot, not a live dependency.** DHS retired the public HIFLD portal in 2025; the
+  ArcGIS service still answers but may disappear. `backend/app/data/hifld_lines.geojson.gz`
+  (857 lines, ~220 KB) is committed and loaded on startup, so the app, tests and
+  deployments never call HIFLD. Refresh it, or change the region, with:
+
+  ```bash
+  cd backend
+  .venv/bin/python -m scripts.load_hifld --fetch                       # uses HIFLD_BBOX
+  .venv/bin/python -m scripts.load_hifld --fetch --bbox=-86,29.8,-80.8,31.6
+  ```
+
+  Mirror if the service goes away: Data Rescue Project, *HIFLD Open Transmission Lines*.
+- **Owner names are normalized** in `app/services/owners.py` (`ALIASES`): Duke's
+  `INC`/`LLC` spellings merge and Gulf Power folds into Florida Power & Light (merged
+  2021). The raw HIFLD name stays in `owner`. Add aliases as new owners appear.
+- **Gaps:** ~15% of lines in the FL–GA box have no published owner; co-ops and
+  municipals (Seminole, Tallahassee, Talquin, MEAG, Oglethorpe) are thin or missing; most
+  source dates are 2014-era. Planned projects still come from the utilities' filings
+  (SERTP / Georgia Power IRP, Florida PSC Ten-Year Site Plans, FRCC) via `/ingest`.
+
+## Real planned projects (source filings)
+
+Planned projects come from public filings uploaded through `/ingest` (or the UI), with an
+optional **page range** (`pages=27-102` / "Pages" box) so only the planned-transmission
+section of a long filing is extracted. Page numbers stay those of the original PDF.
+Multi-owner filings (SERTP, FRCC) keep each project's owner (`GTC:`, `MEAG:`, owner
+columns), canonicalized in `app/services/owners.py` to the same names as HIFLD owners.
+The FL–GA filing set, page ranges, and a one-shot upload script are in
+[`source_docs/`](source_docs/README.md).
+
+Gemini free tier: 5 requests/minute and 20/day per model. The app paces all Gemini calls
+to `GEMINI_RPM` (default 5) and fails fast with a clear message once the daily quota is
+used up.
+
+## Deploy to AWS Lightsail
+
+Deploys are automatic: every push to `master` that passes CI ships to one Lightsail
+instance (see [CI/CD](#cicd)). One-time instance setup:
+
+1. Create an Ubuntu 24.04 instance with **2 GB RAM or more**, attach a static IP, and in
+   *Networking* open TCP 22, 80 and 443.
+2. On the instance, install Docker and add swap:
+   `curl -fsSL https://raw.githubusercontent.com/noddle-Cake/gridlock/master/deploy/lightsail-setup.sh | bash`
+3. Add the deploy public key to `~/.ssh/authorized_keys` and set the repo secrets listed
+   under CI/CD. Optionally point a domain at the IP and set the `SITE_ADDRESS` variable.
+
+Real planned projects are loaded after a deploy by uploading the filings in
+[`source_docs/`](source_docs/README.md): `bash source_docs/ingest.sh https://<host>/api`.
 
 ## Tests
 
 ```bash
 docker compose up -d testdb     # disposable PostGIS on :5433 (tmpfs)
-cd backend && .venv/bin/pytest  # 65 tests; DB-backed ones skip if testdb is down
-cd frontend && npm test         # 22 tests
+cd backend && .venv/bin/pytest  # 120 tests; DB-backed ones skip if testdb is down
+cd frontend && npm test         # 27 tests
 ```
 
 All 18 design properties have a property-based test (Hypothesis / fast-check, ≥100 cases),
@@ -119,5 +205,7 @@ backups.
 ## Not yet done
 
 - Golden-set extraction accuracy harness (task 10.3) — needs a hand-labeled corpus.
-- Transmission-line geometry (stretch 16) and the custom domain (stretch 17).
+- Matching on transmission-line geometry (stretch 16): the HIFLD layer supplies real routes
+  with `sub_1`/`sub_2` endpoints, but planned line projects are still stored as points.
+- Custom domain (stretch 17).
 - Export property tests (14.2); only example tests exist.

@@ -1,8 +1,15 @@
+.git/
 **/.venv
+**/venv
 **/node_modules
 **/dist
 **/__pycache__
 **/.pytest_cache
 **/.hypothesis
+**/.ruff_cache
 **/.env
-.git/
+**/.env.*
+source_docs/
+.idea
+.kiro
+.vscode

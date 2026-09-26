@@ -10,7 +10,7 @@ import { UploadPanel } from './components/UploadPanel'
 import { WhyFlaggedPanel } from './components/WhyFlaggedPanel'
 import { utilityColors } from './lib/format'
 import { DEFAULT_CONFIDENCE_THRESHOLD, needsReview } from './lib/review'
-import type { CoordinationPair, Project, ProjectPatch } from './types'
+import type { CoordinationPair, LineCollection, Project, ProjectPatch } from './types'
 
 const DEFAULT_RADIUS = 25
 const DEFAULT_PAD = 30
@@ -28,6 +28,8 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('radar')
   const [loadingPairs, setLoadingPairs] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lines, setLines] = useState<LineCollection | null>(null)
+  const [linesFailed, setLinesFailed] = useState(false)
   const [version, setVersion] = useState(0)
   const requestSeq = useRef(0)
 
@@ -39,6 +41,15 @@ export default function App() {
       .then(setProjects)
       .catch((e) => setError(describe(e)))
   }, [version])
+
+  // Existing transmission lines are a static backdrop: fetch once. A failure only hides
+  // the layer (with a note on the map); it never blocks the planning views.
+  useEffect(() => {
+    api
+      .lines()
+      .then(setLines)
+      .catch(() => setLinesFailed(true))
+  }, [])
 
   // Re-query matching whenever a threshold slider moves (Req 10.3, 10.4).
   useEffect(() => {
@@ -58,7 +69,16 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [radius, pad, version])
 
-  const colors = useMemo(() => utilityColors(projects.map((p) => p.utility)), [projects])
+  // One color per company across planned projects and existing-line owners, so a
+  // utility reads the same on both layers.
+  const colors = useMemo(
+    () =>
+      utilityColors([
+        ...projects.map((p) => p.utility),
+        ...(lines?.features.flatMap((f) => f.properties.owner_norm ?? []) ?? []),
+      ]),
+    [projects, lines],
+  )
   const selectedPair = pairs.find((p) => p.id === selectedId) ?? null
   const reviewCount = projects.filter(
     (p) => !p.reviewed && (needsReview(p.confidence, confidenceThreshold) || p.requires_review),
@@ -149,6 +169,8 @@ export default function App() {
             pairs={pairs}
             selectedPair={selectedPair}
             colors={colors}
+            lines={lines}
+            linesFailed={linesFailed}
             onSelectProject={selectProject}
           />
           <TimelineView

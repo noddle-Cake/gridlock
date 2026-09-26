@@ -107,3 +107,134 @@ def test_extract_parses_model_output():
     assert projects[0].source_page == 2
     assert "=== PAGE 2 ===" in llm.prompts[0]
     assert json.loads(json.dumps(projects[0].name))
+
+
+# ---------------------------------------------------------------- rate limits (real filings)
+
+
+def test_extraction_caps_concurrent_chunks():
+    """A long filing is many chunks; only `concurrency` of them may be in flight."""
+    in_flight = peak = 0
+
+    class SlowLLM(FakeLLM):
+        async def generate_json(self, prompt, schema):
+            nonlocal in_flight, peak
+            in_flight += 1
+            peak = max(peak, in_flight)
+            await asyncio.sleep(0.01)
+            in_flight -= 1
+            return await super().generate_json(prompt, schema)
+
+    pages = ["x" * 50_000 for _ in range(8)]  # ~8 chunks
+    doc = ParsedDocument("pdf", pages)
+    asyncio.run(ExtractionService(SlowLLM(), concurrency=2).extract(doc, utility="U"))
+    assert peak == 2
+
+
+def test_retries_transient_errors_only():
+    from app.services import llm as llm_mod
+
+    class ApiErr(Exception):
+        def __init__(self, code):
+            self.code = code
+
+    calls = {"n": 0}
+
+    async def flaky():
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise ApiErr(429)
+        return "ok"
+
+    assert asyncio.run(llm_mod.with_retries(flaky, attempts=5, base_delay=0)) == "ok"
+    assert calls["n"] == 3
+
+    async def bad_request():
+        raise ApiErr(400)
+
+    with pytest.raises(ApiErr):
+        asyncio.run(llm_mod.with_retries(bad_request, attempts=5, base_delay=0))
+
+
+# ---------------------------------------------------------------- multi-owner filings
+
+
+@pytest.mark.parametrize(("owner", "expected"), [
+    ("", "SERTP"),
+    ("GTC", "Georgia Transmission Corp"),
+    ("DEF", "Duke Energy Florida"),
+    ("Duke Energy Florida, LLC", "Duke Energy Florida"),
+    ("MEAG Power", "MEAG Power"),
+    ("SOCO", "Southern Company"),
+    ("PS", "PowerSouth"),
+    ("Southern Company", "Southern Company"),
+    ("DEF/SEC", "Duke Energy Florida / Seminole Electric Cooperative"),
+    ("DEF-SEC", "Duke Energy Florida / Seminole Electric Cooperative"),
+    ("LAK-TEC", "City of Lakeland / Tampa Electric"),
+    ("Wolverine Power Supply-Coop", "Wolverine Power Supply-coop"),
+])
+def test_owner_overrides_plan_utility(owner, expected):
+    rec = normalize_record({"name": "X", "owner": owner}, utility="SERTP", page_count=3)
+    assert rec.utility == expected
+
+
+def test_missing_owner_keeps_plan_utility():
+    assert normalize_record({"name": "X"}, utility="JEA", page_count=1).utility == "JEA"
+
+
+def test_retry_after_reads_server_hint():
+    from app.services.llm import retry_after
+
+    class Err(Exception):
+        code = 429
+        details = {"error": {"details": [
+            {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "40s"}]}}
+
+    assert retry_after(Err()) == 40.0
+    assert retry_after(Exception("Please retry in 12.5s.")) == 12.5
+    assert retry_after(Exception("boom")) is None
+
+
+def test_pacer_spaces_requests():
+    import time
+
+    from app.services.llm import RequestPacer
+
+    async def go():
+        pacer = RequestPacer(per_minute=1200)  # 50 ms apart
+        start = time.monotonic()
+        for _ in range(4):
+            await pacer.wait()
+        return time.monotonic() - start
+
+    assert asyncio.run(go()) >= 0.14
+    assert asyncio.run(_instant(RequestPacer(0))) < 0.05
+
+
+async def _instant(pacer):
+    import time
+
+    start = time.monotonic()
+    for _ in range(10):
+        await pacer.wait()
+    return time.monotonic() - start
+
+
+def test_daily_quota_is_not_retried():
+    from app.services import llm as llm_mod
+
+    class Daily(Exception):
+        code = 429
+
+        def __str__(self):
+            return "quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier; retry in 53s"
+
+    calls = {"n": 0}
+
+    async def exhausted():
+        calls["n"] += 1
+        raise Daily()
+
+    with pytest.raises(Daily):
+        asyncio.run(llm_mod.with_retries(exhausted, attempts=5, base_delay=0))
+    assert calls["n"] == 1

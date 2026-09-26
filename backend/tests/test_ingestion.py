@@ -146,3 +146,32 @@ def test_errors_are_gridmerge_errors():
     from app.services.ingestion import validate_upload
 
     assert inspect.iscoroutinefunction(validate_upload)
+
+
+# ---------------------------------------------------------------- page ranges
+
+
+def test_parse_page_range_normalizes():
+    from app.services.ingestion import parse_page_range
+
+    assert parse_page_range(None, 10) == (None, None)
+    assert parse_page_range("  ", 10) == (None, None)
+    spec, keep = parse_page_range(" 3 - 5, 8 ,8", 10)
+    assert spec == "3-5,8,8" and keep == {3, 4, 5, 8}
+
+
+@pytest.mark.parametrize("bad", ["0", "5-3", "11", "2-11", "a-b", "3-", "1,,2"])
+def test_parse_page_range_rejects(bad):
+    from app.core.errors import InvalidFieldError
+    from app.services.ingestion import parse_page_range
+
+    with pytest.raises(InvalidFieldError) as err:
+        parse_page_range(bad, 10)
+    assert err.value.field == "pages"
+
+
+def test_only_pages_keeps_original_numbering():
+    from app.services.parsing import ParsedDocument
+
+    doc = ParsedDocument("pdf", ["a", "b", "c", "d"]).only_pages({2, 4})
+    assert doc.pages == ["", "b", "", "d"] and doc.page_count == 4
