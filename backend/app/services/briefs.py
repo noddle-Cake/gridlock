@@ -52,7 +52,8 @@ def _day(d) -> str:
 def window_text(pair: CoordinationPairDTO) -> str:
     """The shared build window, or how far apart the schedules are when there isn't one."""
     if pair.window_start and pair.window_end:
-        return f"overlapping build window {_day(pair.window_start)} – {_day(pair.window_end)}"
+        share = f"{round((pair.overlap_ratio or 0) * 100)}% overlapping build windows"
+        return f"{share}, shared {_day(pair.window_start)} – {_day(pair.window_end)}"
     if pair.time_gap_days is not None:
         return f"in-service dates about {gap_text(pair.time_gap_days)} apart"
     return "schedule not published for one of the projects"

@@ -17,6 +17,7 @@ describe('WhyFlaggedPanel (Req 11)', () => {
     expect(screen.getByText('Westminster breakers')).toBeInTheDocument()
     expect(screen.getByTestId('km')).toHaveTextContent('25.1') // 15.62 mi
     expect(screen.getByTestId('overlap-days')).toHaveTextContent('213')
+    expect(screen.getByTestId('overlap-pct')).toHaveTextContent('58%')
     const factors = screen.getByRole('table', { name: 'Score factors' })
     for (const label of ['Distance', 'Time overlap', 'Same project type', 'Voltage similarity', 'Composite']) {
       expect(within(factors).getByText(label)).toBeInTheDocument()
@@ -41,6 +42,16 @@ describe('WhyFlaggedPanel (Req 11)', () => {
     expect(within(section).getByTestId('impact-total')).toHaveTextContent('$50k–$200k')
     expect(section).toHaveTextContent('up to $200k–$600k if aligned')
     expect(within(section).getByText('Ranges are planning assumptions.')).toBeInTheDocument()
+  })
+
+  it('shows 0% and the in-service gap when build windows never meet', () => {
+    const apart = pair({
+      overlap_days: 0, overlap_ratio: 0, time_gap_days: 400, window_start: null, window_end: null,
+    })
+    render(<WhyFlaggedPanel pair={apart} colors={colors} onGenerateBrief={vi.fn()} />)
+    expect(screen.getByTestId('overlap-pct')).toHaveTextContent('0%')
+    expect(screen.getByTestId('time-gap')).toHaveTextContent('13 months')
+    expect(screen.getByTestId('overlap-days')).toHaveTextContent('None')
   })
 
   it('says explicitly when no brief exists, and shows one when it does', () => {
@@ -98,21 +109,19 @@ describe('ReviewTable (Req 3.3, 13.1-13.3)', () => {
 })
 
 describe('ThresholdControls (Req 10.1, 10.2)', () => {
-  it('reports slider changes', () => {
-    const onPad = vi.fn()
+  it('reports confidence changes and has no date-padding control', () => {
+    const onConfidence = vi.fn()
     render(
       <ThresholdControls
         bands={['touching', '1.6', '8', '25', '40']}
-        pad={30}
         confidenceThreshold={0.7}
         onBands={vi.fn()}
-        onPad={onPad}
-        onConfidenceThreshold={vi.fn()}
+        onConfidenceThreshold={onConfidence}
       />,
     )
-    const pad = screen.getByLabelText('Build window (days either side of in-service)') as HTMLInputElement
-    fireEvent.change(pad, { target: { value: '90' } })
-    expect(onPad).toHaveBeenCalledWith(90)
+    fireEvent.change(screen.getByLabelText('Confidence threshold'), { target: { value: '0.5' } })
+    expect(onConfidence).toHaveBeenCalledWith(0.5)
+    expect(screen.queryByText(/Build window/)).toBeNull()
   })
 
   it('toggles non-overlapping distance bands from the dropdown', async () => {
@@ -120,10 +129,8 @@ describe('ThresholdControls (Req 10.1, 10.2)', () => {
     render(
       <ThresholdControls
         bands={['touching', '8', '40']}
-        pad={30}
         confidenceThreshold={0.7}
         onBands={onBands}
-        onPad={vi.fn()}
         onConfidenceThreshold={vi.fn()}
       />,
     )

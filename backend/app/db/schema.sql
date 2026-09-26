@@ -57,8 +57,8 @@ CREATE INDEX IF NOT EXISTS projects_shape_gix
 CREATE INDEX IF NOT EXISTS projects_dates_ix ON projects (start_date, end_date);
 
 -- Coordination briefs, keyed by the stable pair id "a_id-b_id" (a_id < b_id).
--- radius/pad record the thresholds the pair was flagged under so an edit can
--- re-run matching for exactly that pair (Req 13.4).
+-- radius records the threshold the pair was flagged under so an edit can re-run
+-- matching for exactly that pair (Req 13.4).
 CREATE TABLE IF NOT EXISTS briefs (
   pair_id text PRIMARY KEY,
   a_id int NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -67,10 +67,11 @@ CREATE TABLE IF NOT EXISTS briefs (
   miles double precision NOT NULL,
   overlap_days int NOT NULL,
   radius double precision NOT NULL,
-  pad int NOT NULL,
   stale bool NOT NULL DEFAULT false,
   generated_at timestamptz NOT NULL DEFAULT now()
 );
+-- Date padding no longer exists: timing is scored from the projects' own build windows.
+ALTER TABLE briefs DROP COLUMN IF EXISTS pad;
 
 -- Existing transmission lines from HIFLD: a reference layer (map backdrop, owner roster,
 -- real routes for Req 17), never matched as planned projects. Loaded from the committed

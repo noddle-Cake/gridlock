@@ -12,7 +12,8 @@ from app.models.dto import CoordinationPairDTO
 CSV_COLUMNS = [
     "pair_id", "utility_a", "project_a", "type_a", "utility_b", "project_b", "type_b",
     "distance_miles", "time_gap_days", "window_start", "window_end", "overlap_days",
-    "composite_score", "value_low_usd", "value_high_usd", "value_if_aligned_high_usd", "brief",
+    "overlap_pct", "composite_score", "value_low_usd", "value_high_usd",
+    "value_if_aligned_high_usd", "brief",
 ]
 
 
@@ -30,6 +31,7 @@ class ExportRecord:
     window_start: str
     window_end: str
     overlap_days: int
+    overlap_pct: str  # share of the combined build span both projects are building
     composite_score: float
     value_low_usd: str
     value_high_usd: str
@@ -62,7 +64,9 @@ def to_records(pairs: list[CoordinationPairDTO]) -> list[ExportRecord]:
             time_gap_days="" if p.time_gap_days is None else str(p.time_gap_days),
             window_start=p.window_start.isoformat() if p.window_start else "",
             window_end=p.window_end.isoformat() if p.window_end else "",
-            overlap_days=p.overlap_days, composite_score=round(p.scores.composite, 3),
+            overlap_days=p.overlap_days,
+            overlap_pct="" if p.overlap_ratio is None else str(round(p.overlap_ratio * 100)),
+            composite_score=round(p.scores.composite, 3),
             value_low_usd=str(p.impact.total_low) if p.impact else "",
             value_high_usd=str(p.impact.total_high) if p.impact else "",
             value_if_aligned_high_usd=str(p.impact.if_aligned_high) if p.impact else "",
@@ -108,8 +112,10 @@ def render_pdf(records: list[ExportRecord]) -> bytes:
         ))
         story.append(Paragraph(escape(
             f"{r.distance_miles} miles apart · "
-            + (f"overlapping window {r.window_start} to {r.window_end} ({r.overlap_days} days)"
-               if r.window_start else f"schedules {r.time_gap_days or 'unknown'} days apart")
+            + (f"build windows {r.overlap_pct}% overlapping, shared {r.window_start} to "
+               f"{r.window_end} ({r.overlap_days} days)"
+               if r.window_start
+               else f"in-service dates {r.time_gap_days or 'unknown'} days apart")
             + f" · score {r.composite_score}"
         ), styles["Normal"]))
         story.append(Spacer(1, 4))

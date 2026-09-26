@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -25,8 +25,6 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
         const bands = params.get('bands')?.split(',') ?? []
         return jsonResponse({
           radius: Number(params.get('radius')),
-          pad: Number(params.get('pad')),
-          max_overlap_days: 365,
           pairs: bands.includes('40') ? [pair()] : [],
         })
       }
@@ -42,13 +40,13 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     return fetchMock.mock.calls.map((c) => c[0] as string).filter((u) => u.includes('/overlaps'))
   }
 
-  it('re-queries overlaps with the ticked bands and pad', async () => {
+  it('re-queries overlaps with the ticked bands', async () => {
     render(<App />)
     await screen.findByText('Hanover breakers')
     const params = () => new URL(overlapCalls().at(-1)!, 'http://x').searchParams
     expect(params().get('bands')).toBe('touching,1.6,8,25,40')
     expect(Number(params().get('radius'))).toBeCloseTo(24.855, 3) // 40 km
-    expect(params().get('pad')).toBe('365')
+    expect(params().has('pad')).toBe(false)
 
     await userEvent.click(screen.getByText(/Distance apart:/))
     await userEvent.click(screen.getByRole('checkbox', { name: '25–40 km' }))
@@ -58,11 +56,6 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
       'href',
       expect.stringContaining('bands=touching%2C1.6%2C8%2C25'),
     )
-
-    const pad = screen.getByLabelText('Build window (days either side of in-service)') as HTMLInputElement
-    fireEvent.change(pad, { target: { value: '120' } })
-    await vi.waitFor(() => expect(params().get('pad')).toBe('120'))
-    expect(params().get('bands')).toBe('touching,1.6,8,25')
   })
 
   it('no longer shows the timeline under the map', async () => {

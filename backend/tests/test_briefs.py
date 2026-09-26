@@ -20,7 +20,7 @@ def make_pair() -> CoordinationPairDTO:
                    type=ProjectType.SUBSTATION, voltage_kv=115, confidence=0.8,
                    location_ref="Westminster, MD")
     return CoordinationPairDTO(
-        id="1-2", project_a=a, project_b=b, miles=12.34, overlap_days=92,
+        id="1-2", project_a=a, project_b=b, miles=12.34, overlap_days=92, overlap_ratio=0.4,
         window_start=date(2026, 4, 1), window_end=date(2026, 7, 1),
         scores=ScoreFactorsDTO(distance=0.5, overlap=0.25, type_similarity=1,
                                voltage_similarity=0.95, composite=0.6),
@@ -33,6 +33,7 @@ def test_prompt_contains_required_facts():
     prompt = llm.prompts[0]
     assert "substation" in prompt and "12.3 miles" in prompt
     assert "Apr 1, 2026" in prompt and "Jul 1, 2026" in prompt
+    assert "40% overlapping build windows" in prompt
     # The model omitted the facts, so the deterministic facts sentence was prepended.
     assert "12.3 miles" in text and "substation" in text and "2026" in text
     assert "crane" in text

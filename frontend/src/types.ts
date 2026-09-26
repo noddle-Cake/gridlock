@@ -94,10 +94,13 @@ export interface CoordinationPair {
   band: string | null
   /** Ranking tier: 0 touching, 1 under 1.6 km, 2 under 8 km, 3 under 40 km. */
   tier: number | null
-  /** Days the padded build windows share; 0 when they don't meet or a date is unknown. */
+  /** Days both build windows share; 0 when they don't meet or a date is unknown. */
   overlap_days: number
-  /** Days between the two schedules (0 when they overlap); null when either is undated. */
+  /** Shared days / days either project is building (0–1); null when either is undated. */
+  overlap_ratio: number | null
+  /** Days between the two in-service dates; null when either is undated. */
   time_gap_days: number | null
+  /** The shared stretch of the two build windows, when there is one. */
   window_start: string | null
   window_end: string | null
   /** km of shared corridor when both projects are routed lines. */
@@ -109,8 +112,6 @@ export interface CoordinationPair {
 
 export interface OverlapsResponse {
   radius: number
-  pad: number
-  max_overlap_days: number
   pairs: CoordinationPair[]
 }
 

@@ -60,7 +60,7 @@ def test_shared_corridor_length_between_parallel_lines():
     async def body(conn):
         await repo.insert_projects(conn, [a, b, c])
         return {(r.a_id, r.b_id): r for r in
-                await repo.candidate_pairs(conn, 40 / matching.KM_PER_MILE, 365)}
+                await repo.candidate_pairs(conn, 40 / matching.KM_PER_MILE)}
 
     rows = run_db(body)
     assert 28 < rows[(1, 2)].shared_km < 31

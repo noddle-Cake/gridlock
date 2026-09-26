@@ -10,6 +10,7 @@ const far = pair({
   project_b: project({ id: 4, name: 'Lakeland tap', utility: 'Keystone Electric', lat: 28, lng: -82 }),
   miles: 4,
   overlap_days: 400,
+  overlap_ratio: 0.9,
   window_start: '2025-01-01',
   scores: { ...near.scores, composite: 0.8 },
 })
@@ -58,8 +59,16 @@ describe('sortPairs', () => {
     expect(sortPairs(input, 'score').map((p) => p.id)).toEqual(['3-4', '1-2'])
     expect(sortPairs(input, 'distance').map((p) => p.id)).toEqual(['3-4', '1-2'])
     expect(sortPairs(input, 'start').map((p) => p.id)).toEqual(['3-4', '1-2'])
-    expect(sortPairs([far, near], 'overlap').map((p) => p.id)).toEqual(['3-4', '1-2'])
+    expect(sortPairs(input, 'overlap').map((p) => p.id)).toEqual(['3-4', '1-2'])
     expect(input.map((p) => p.id)).toEqual(['1-2', '3-4'])
+  })
+
+  it('sorts by share of build time, then nearest in-service dates, undated last', () => {
+    const apart = (id: string, gap: number) =>
+      pair({ id, overlap_days: 0, overlap_ratio: 0, time_gap_days: gap, window_start: null })
+    const undated = pair({ id: 'u', overlap_ratio: null, time_gap_days: null })
+    const got = sortPairs([undated, apart('far', 900), near, apart('soon', 30), far], 'overlap')
+    expect(got.map((p) => p.id)).toEqual(['3-4', '1-2', 'soon', 'far', 'u'])
   })
 })
 

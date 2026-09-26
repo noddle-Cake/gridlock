@@ -111,7 +111,7 @@ def test_sperry_reference_overlaps_are_all_flagged():
 
     async def body(conn):
         await repo.insert_projects(conn, projects)
-        return await matching.overlaps(conn, 40 / matching.KM_PER_MILE, 365)
+        return await matching.overlaps(conn, 40 / matching.KM_PER_MILE)
 
     pairs = run_db(body)
     found = {}

@@ -45,6 +45,7 @@ export function pair(overrides: Partial<CoordinationPair> = {}): CoordinationPai
     band: '25',
     tier: 3,
     overlap_days: 213,
+    overlap_ratio: 0.58,
     time_gap_days: 0,
     window_start: '2026-04-01',
     window_end: '2026-10-30',
