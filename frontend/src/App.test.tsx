@@ -48,7 +48,7 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     const params = () => new URL(overlapCalls().at(-1)!, 'http://x').searchParams
     expect(params().get('bands')).toBe('touching,1.6,8,25,40')
     expect(Number(params().get('radius'))).toBeCloseTo(24.855, 3) // 40 km
-    expect(params().get('pad')).toBe('30')
+    expect(params().get('pad')).toBe('365')
 
     await userEvent.click(screen.getByText(/Distance apart:/))
     await userEvent.click(screen.getByRole('checkbox', { name: '25–40 km' }))
@@ -59,7 +59,7 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
       expect.stringContaining('bands=touching%2C1.6%2C8%2C25'),
     )
 
-    const pad = screen.getByLabelText('Date padding (days)') as HTMLInputElement
+    const pad = screen.getByLabelText('Build window (days either side of in-service)') as HTMLInputElement
     fireEvent.change(pad, { target: { value: '120' } })
     await vi.waitFor(() => expect(params().get('pad')).toBe('120'))
     expect(params().get('bands')).toBe('touching,1.6,8,25')

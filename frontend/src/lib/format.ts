@@ -27,6 +27,23 @@ export function dayLabel(iso: string): string {
   return dateLabel(iso, 'day')
 }
 
+/** "3 days", "5 months", "8.4 years" for a gap between schedules. */
+export function gapLabel(days: number): string {
+  if (days < 60) return `${days} ${days === 1 ? 'day' : 'days'}`
+  if (days < 730) return `${Math.round(days / 30.4)} months`
+  return `${(days / 365.25).toFixed(1)} years`
+}
+
+/** One-line timing summary for a pair: shared window, or how far apart the schedules are. */
+export function timingLabel(p: {
+  overlap_days: number
+  time_gap_days: number | null
+}): string {
+  if (p.time_gap_days == null) return 'schedule unknown'
+  if (p.overlap_days > 0) return `${p.overlap_days} d build-window overlap`
+  return `in service ${gapLabel(p.time_gap_days)} apart`
+}
+
 export function rangeLabel(
   start: string | null,
   end: string | null,

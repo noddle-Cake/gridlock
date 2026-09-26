@@ -15,6 +15,7 @@ import {
 } from 'react-leaflet'
 
 import { milesToKm } from '../lib/distanceBands'
+import { timingLabel } from '../lib/format'
 import { lineBounds, lineOwners, lineStyle, lineTooltip, UNKNOWN_OWNER } from '../lib/lines'
 import { markerStyle } from '../lib/mapStyle'
 import type { ViewBounds } from '../lib/pairs'
@@ -259,7 +260,7 @@ export function MapView({
               eventHandlers={onSelectPair ? { click: () => onSelectPair(pair) } : undefined}
             >
               <Tooltip sticky>
-                {milesToKm(pair.miles).toFixed(1)} km · {pair.overlap_days} days overlap
+                {milesToKm(pair.miles).toFixed(1)} km · {timingLabel(pair)}
               </Tooltip>
             </Polyline>
           )

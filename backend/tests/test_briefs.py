@@ -38,6 +38,18 @@ def test_prompt_contains_required_facts():
     assert "crane" in text
 
 
+def test_no_shared_window_states_the_gap():
+    pair = make_pair()
+    pair.project_a.end_date = date(2026, 6, 1)
+    pair.project_b.end_date = date(2033, 6, 1)
+    pair.window_start = pair.window_end = None
+    pair.overlap_days, pair.time_gap_days = 0, 2557
+    llm = FakeLLM(brief="Both utilities could share a line crew.")
+    text = asyncio.run(BriefGenerator(llm).generate(pair))
+    assert "in-service dates about 7.0 years apart" in llm.prompts[0]
+    assert "12.3 miles" in text and "7.0 years" in text
+
+
 def test_model_brief_with_facts_kept_verbatim():
     brief = ("Met-Ed's 138 kV substation work at Hanover and BGE's 115 kV substation upgrade "
              "at Westminster are 12.3 miles apart and overlap Apr 1, 2026 – Jul 1, 2026. "

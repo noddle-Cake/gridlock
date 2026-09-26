@@ -34,7 +34,9 @@ class Settings(BaseSettings):
 
     # Matching defaults (Req 6.5, 6.6, 7.2)
     default_radius_miles: float = 25.0
-    default_pad_days: int = 30
+    # Build window = in-service date +/- this many days. Timing only ranks pairs, so a wide
+    # default (transmission work runs 1-2 years ahead of in-service) loses nothing.
+    default_pad_days: int = 365
     max_overlap_days: int = 365
 
     # Ingestion limits (Req 1.4, 1.5)

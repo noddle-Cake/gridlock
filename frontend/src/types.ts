@@ -66,9 +66,12 @@ export interface CoordinationPair {
   project_a: Project
   project_b: Project
   miles: number
+  /** Days the padded build windows share; 0 when they don't meet or a date is unknown. */
   overlap_days: number
-  window_start: string
-  window_end: string
+  /** Days between the two schedules (0 when they overlap); null when either is undated. */
+  time_gap_days: number | null
+  window_start: string | null
+  window_end: string | null
   scores: ScoreFactors
   brief: CoordinationBrief | null
 }

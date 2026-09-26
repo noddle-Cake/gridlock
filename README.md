@@ -82,7 +82,7 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | GET | `/plans`, `/plans/{id}` | ingestion status (`processing` / `complete` / `failed`) |
 | GET | `/projects` | all stored projects |
 | PATCH | `/projects/{id}` | review/edit; geom/date edits immediately re-match that project |
-| GET | `/overlaps?radius=&pad=` | scored coordination pairs (defaults 25 mi / 30 days) |
+| GET | `/overlaps?radius=&pad=` | scored coordination pairs (defaults 25 mi / ±365-day build window) |
 | POST | `/overlaps/{id}/brief?radius=&pad=` | generate a brief (30 s budget) |
 | GET | `/export?format=csv\|pdf` | briefs export (stretch) |
 | GET | `/lines?bbox=&min_kv=&owner=` | existing transmission lines (HIFLD) as GeoJSON; `owner` may repeat |
@@ -207,12 +207,20 @@ backups.
 - **Review threshold boundary.** Requirements 3.3/13.1 say "equal to or below" the
   Confidence_Threshold; design Property 17 says `<`. The implementation follows the
   requirements (`confidence <= threshold`).
+- **Geography decides, timing ranks.** Per the Sperry challenge ("geographic overlap as
+  the primary signal, timeline overlap as a strong secondary signal"), a pair is flagged on
+  distance alone. This replaces Req 6.4, which also required the padded date ranges to
+  overlap. Under that rule the default ±30 days found 0 of the 6 overlaps in Sperry's
+  reference table (their time gaps are 152–3,074 days). Each pair reports
+  `time_gap_days`, the days between the two schedules (0 when they overlap, `null` when
+  either is undated), and `pad` only sets the build window used for `overlap_days` and the
+  timing score.
 - **Overlap days** are the inclusive day count of the intersection of the two *padded*
-  ranges (Req 6.10). The design's sample SQL padded only one side; both are padded here.
+  ranges (Req 6.10), or 0 when they don't meet. Both ranges are padded.
 - **Pair identity** is `"{a_id}-{b_id}"` with `a_id < b_id`, joined on
   `lower(trim(utility))` inequality, so "Met-Ed" and "met-ed " are the same utility.
-- **Projects missing both dates** can't be tested for temporal overlap and are excluded
-  from matching (like projects with no geom). One known date is used for both ends.
+- **Projects missing both dates** still match on distance; their timing factor is
+  flagged indeterminate. One known date is used for both ends.
 - **Briefs** are the only persisted pair state. They record the thresholds they were
   generated under; a geom/date edit re-checks them — pairs that no longer qualify lose
   their brief, pairs that still qualify get refreshed facts and an "outdated" flag.

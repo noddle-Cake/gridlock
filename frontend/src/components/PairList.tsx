@@ -1,5 +1,5 @@
 import { milesToKm } from '../lib/distanceBands'
-import { pct, rangeLabel } from '../lib/format'
+import { pct, rangeLabel, timingLabel } from '../lib/format'
 import { SORT_LABELS, type SortKey, scoreBand } from '../lib/pairs'
 import type { CoordinationPair, Project } from '../types'
 
@@ -96,7 +96,7 @@ export function PairList({
         <p className="empty">
           {offscreen > 0
             ? 'Nothing in this part of the map. Zoom out or turn off “Only pairs in map view”.'
-            : 'No project pairs at these thresholds. Try ticking more distance bands or widening the date padding.'}
+            : 'No project pairs at these thresholds. Try ticking more distance bands.'}
         </p>
       ) : null}
       <ol className="cards">
@@ -124,7 +124,7 @@ export function PairList({
                   </span>
                   <span className="card-stats">
                     <strong>{milesToKm(pair.miles).toFixed(1)} km</strong> apart ·{' '}
-                    <strong>{pair.overlap_days} d</strong> overlap
+                    {timingLabel(pair)}
                   </span>
                   {pair.brief ? (
                     <span className={`badge ${pair.brief.stale ? 'badge-warn' : 'badge-ok'}`}>
@@ -136,7 +136,9 @@ export function PairList({
                 <ProjectLine p={b} color={colors[b.utility] ?? '#555'} />
                 <span className="card-foot">
                   <span>
-                    Shared window {rangeLabel(pair.window_start, pair.window_end, 'month', 'month')}
+                    {pair.window_start
+                      ? `Shared window ${rangeLabel(pair.window_start, pair.window_end, 'month', 'month')}`
+                      : 'No shared build window'}
                   </span>
                   {approximate ? <span className="badge badge-approx">approx. location</span> : null}
                 </span>
