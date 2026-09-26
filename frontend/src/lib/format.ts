@@ -1,4 +1,4 @@
-import type { DatePrecision } from '../types'
+import type { CostScope, DatePrecision } from '../types'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -107,3 +107,31 @@ export function utilityColors(names: string[]): Record<string, string> {
 }
 
 export const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
+
+/** $M -> "$850K", "$12.3M", "$240M", "$1.25B". */
+export function money(musd: number | null | undefined): string {
+  if (musd == null || !Number.isFinite(musd)) return '—'
+  const sign = musd < 0 ? '−' : ''
+  const x = Math.abs(musd)
+  if (x >= 1000) return `${sign}$${(x / 1000).toFixed(2)}B`
+  if (x >= 100) return `${sign}$${Math.round(x)}M`
+  if (x >= 1) return `${sign}$${x.toFixed(1)}M`
+  return `${sign}$${Math.round(x * 1000)}K`
+}
+
+export const SCOPE_LABELS: Record<CostScope, string> = {
+  new_line: 'New line',
+  line_rebuild: 'Line rebuild',
+  reconductor: 'Reconductor',
+  uprate: 'Line uprate (clearances)',
+  line_terminal: 'Line terminal equipment',
+  new_substation: 'New substation',
+  substation_rebuild: 'Substation rebuild',
+  expansion: 'Substation expansion / new terminal',
+  transformer: 'Transformer',
+  reactive: 'Capacitor / reactor / STATCOM',
+  breaker: 'Breaker',
+  protection: 'Protection / relay',
+  retirement: 'Retirement',
+  substation_general: 'Substation upgrade (scope unclear)',
+}

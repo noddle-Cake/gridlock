@@ -91,6 +91,19 @@ def test_confidence_rewards_completeness():
     assert len(COMPLETENESS_FIELDS) == 6
 
 
+def test_stated_pricing_inputs_are_kept_when_sane():
+    raw = {**FULL, "length_mi": 12.5, "capacity_mw": "150", "estimated_cost_musd": 42,
+           "cost_year": 2025}
+    p = normalize_record(raw, utility="U", page_count=1)
+    assert (p.length_mi, p.capacity_mw, p.stated_cost_musd, p.cost_year) == (
+        12.5, 150, 42, 2025)
+    junk = {**FULL, "length_mi": -3, "capacity_mw": True, "estimated_cost_musd": "n/a",
+            "cost_year": 25.5}
+    p = normalize_record(junk, utility="U", page_count=1)
+    assert (p.length_mi, p.capacity_mw, p.stated_cost_musd, p.cost_year) == (
+        None, None, None, None)
+
+
 def test_whole_document_failure_creates_nothing():
     """Req 2.9 at the service level: a failing chunk fails the whole document."""
     doc = ParsedDocument("pdf", ["page one text", "page two text"])

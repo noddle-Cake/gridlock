@@ -1,5 +1,7 @@
 import type { BandId } from './lib/distanceBands'
 import type {
+  Allocation,
+  AllocationInputs,
   ApiErrorBody,
   CoordinationBrief,
   IngestResult,
@@ -68,6 +70,12 @@ export const api = {
   brief: (pairId: string, radius: number): Promise<CoordinationBrief> =>
     request(`/overlaps/${encodeURIComponent(pairId)}/brief?${thresholdQuery(radius)}`, {
       method: 'POST',
+    }),
+  allocation: (pairId: string, radius: number, inputs: AllocationInputs = {}): Promise<Allocation> =>
+    request(`/overlaps/${encodeURIComponent(pairId)}/allocation?${thresholdQuery(radius)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inputs),
     }),
   lines: (): Promise<LineCollection> => request('/lines'),
   exportUrl: (format: 'csv' | 'pdf', radius: number, bands?: BandId[]): string =>

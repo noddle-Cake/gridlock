@@ -4,13 +4,24 @@ import { ApiError } from '../api'
 import { milesToKm } from '../lib/distanceBands'
 import { FACTOR_LABELS, dayLabel, gapLabel, overlapPct, pct, rangeLabel } from '../lib/format'
 import { scoreBand } from '../lib/pairs'
-import type { CoordinationBrief, CoordinationPair, PairProject } from '../types'
+import type {
+  Allocation,
+  AllocationInputs,
+  CoordinationBrief,
+  CoordinationPair,
+  PairProject,
+  ProjectPatch,
+} from '../types'
+import { CostPanel } from './CostPanel'
 import { SourceLink } from './SourceLink'
 
 interface Props {
   pair: CoordinationPair | null
   colorOf: (p: PairProject) => string
   onGenerateBrief: (pair: CoordinationPair) => Promise<CoordinationBrief>
+  /** Prices the pair; the cost section is hidden without it. */
+  onAllocate?: (pair: CoordinationPair, inputs: AllocationInputs) => Promise<Allocation>
+  onPatchProject?: (id: number, patch: ProjectPatch) => Promise<unknown>
 }
 
 function ProjectCard({ p, color }: { p: PairProject; color: string }) {
@@ -43,7 +54,13 @@ function ProjectCard({ p, color }: { p: PairProject; color: string }) {
   )
 }
 
-export function WhyFlaggedPanel({ pair, colorOf, onGenerateBrief }: Props) {
+export function WhyFlaggedPanel({
+  pair,
+  colorOf,
+  onGenerateBrief,
+  onAllocate,
+  onPatchProject,
+}: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -173,6 +190,10 @@ export function WhyFlaggedPanel({ pair, colorOf, onGenerateBrief }: Props) {
           </tr>
         </tbody>
       </table>
+
+      {onAllocate ? (
+        <CostPanel pair={pair} onAllocate={onAllocate} onPatchProject={onPatchProject} />
+      ) : null}
 
       <div className="brief">
         <header className="panel-head">

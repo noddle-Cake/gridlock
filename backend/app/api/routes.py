@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, Query, Request, Response, UploadFile
@@ -17,7 +19,10 @@ from app.core.errors import (
 from app.db import lines as lines_db
 from app.db import repository as repo
 from app.models.dto import (
+    AllocationDTO,
+    AllocationRequest,
     CoordinationBriefDTO,
+    CostEstimateDTO,
     IngestResult,
     LineOwnerDTO,
     OverlapsResponse,
@@ -26,7 +31,8 @@ from app.models.dto import (
     ProjectPatch,
 )
 from app.services import export as export_service
-from app.services import hifld, matching
+from app.services import hifld, matching, pricing
+from app.services.cost_reference import reference_records
 from app.services.ingestion import validate_upload
 from app.services.pipeline import process_plan
 
@@ -110,22 +116,26 @@ def _validate_patch(body: Any) -> dict[str, Any]:
     try:
         patch = ProjectPatch.model_validate(body)
     except ValidationError as exc:
-        fields: list[str] = []
-        messages: list[str] = []
-        for err in exc.errors():
-            loc = [str(x) for x in err["loc"]]
-            if loc:
-                names = [loc[0]]
-            else:  # model-level check: name the fields its message is about
-                names = [f for f in ("lat", "lng", "utility", "reviewed") if f in err["msg"]]
-            for name in names or ["body"]:
-                if name not in fields:
-                    fields.append(name)
-            messages.append(f"{', '.join(names or ['body'])}: {err['msg']}")
-        raise InvalidFieldError(
-            "Invalid field values: " + "; ".join(messages), field=fields[0], fields=fields
-        ) from exc
+        raise _invalid_fields(exc) from exc
     return patch.model_dump(include=patch.model_fields_set)
+
+
+def _invalid_fields(exc: ValidationError) -> InvalidFieldError:
+    fields: list[str] = []
+    messages: list[str] = []
+    for err in exc.errors():
+        loc = [str(x) for x in err["loc"]]
+        if loc:
+            names = [loc[0]]
+        else:  # model-level check: name the fields its message is about
+            names = [f for f in ("lat", "lng", "utility", "reviewed") if f in err["msg"]]
+        for name in names or ["body"]:
+            if name not in fields:
+                fields.append(name)
+        messages.append(f"{', '.join(names or ['body'])}: {err['msg']}")
+    return InvalidFieldError(
+        "Invalid field values: " + "; ".join(messages), field=fields[0], fields=fields
+    )
 
 
 @router.patch("/projects/{project_id}", response_model=ProjectDTO)
@@ -206,6 +216,70 @@ async def create_brief(
             miles=pair.miles, overlap_days=pair.overlap_days, radius=radius_v,
         )
     return stored.to_dto()
+
+
+# ---------------------------------------------------------------- pricing
+
+
+def _dollar_year() -> int:
+    return get_settings().cost_dollar_year or date.today().year
+
+
+async def _cost_records(conn: Any, year: int) -> list[pricing.CostRecord]:
+    """Comparables: owner-stated costs in the database plus reference_costs.csv."""
+    stated = [pricing.record_from_project(p, year) for p in await repo.costed_projects(conn)]
+    return [r for r in stated if r is not None] + list(reference_records())
+
+
+def _estimate(p: ProjectDTO, records: list[pricing.CostRecord], year: int) -> CostEstimateDTO:
+    return pricing.estimate(p, records, year=year, rate=get_settings().cost_escalation_rate)
+
+
+@router.get("/projects/{project_id}/estimate", response_model=CostEstimateDTO)
+async def get_estimate(project_id: str, request: Request) -> CostEstimateDTO:
+    pid = int(project_id) if project_id.isdigit() else None
+    year = _dollar_year()
+    async with _state(request).pool.acquire() as conn:
+        project = await repo.get_project(conn, pid) if pid is not None else None
+        if project is None:
+            raise ProjectNotFoundError(f"Project {project_id} was not found.", field="id")
+        records = await _cost_records(conn, year)
+    return _estimate(project, records, year)
+
+
+@router.post("/overlaps/{pair_id}/allocation", response_model=AllocationDTO)
+async def get_allocation(
+    pair_id: str,
+    request: Request,
+    radius: str | None = Query(default=None),
+) -> AllocationDTO:
+    """Stand-alone vs joint cost for a flagged pair and how to split it. Computes only;
+    nothing is stored. The body (AllocationRequest) is optional."""
+    raw = await request.body()
+    try:
+        body = json.loads(raw) if raw.strip() else {}
+    except ValueError as exc:
+        raise InvalidFieldError("The request body is not valid JSON.", fields=["body"]) from exc
+    if not isinstance(body, dict):
+        raise InvalidFieldError("The request body must be a JSON object.", fields=["body"])
+    try:
+        inputs = AllocationRequest.model_validate(body)
+    except ValidationError as exc:
+        raise _invalid_fields(exc) from exc
+
+    radius_v = matching.parse_radius(radius)
+    ids = matching.parse_pair_id(pair_id)
+    year = _dollar_year()
+    async with _state(request).pool.acquire() as conn:
+        pair = await matching.find_pair(conn, *ids, radius_v) if ids else None
+        if pair is None:
+            raise PairNotFoundError(f"Coordination pair {pair_id} was not found.")
+        records = await _cost_records(conn, year)
+    est_a = _estimate(pair.project_a, records, year)
+    est_b = _estimate(pair.project_b, records, year)
+    return pricing.allocate(
+        pair.id, est_a, est_b, synergy=pair.scores.composite, inputs=inputs
+    )
 
 
 # ---------------------------------------------------------------- reference lines (HIFLD)

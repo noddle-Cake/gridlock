@@ -42,6 +42,14 @@ CREATE TABLE IF NOT EXISTS projects (
   requires_review bool NOT NULL DEFAULT false   -- geocoding could not place it (Req 4.4, 4.5)
 );
 
+-- Pricing inputs (services/pricing.py); all optional. Stated cost is the owner's own
+-- estimate in $M of cost_year dollars. cost_scope overrides the scope read from the text.
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS length_mi real;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS capacity_mw real;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS stated_cost_musd real;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS cost_year int;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS cost_scope text;
+
 CREATE INDEX IF NOT EXISTS projects_geom_gix ON projects USING GIST (geom);
 CREATE INDEX IF NOT EXISTS projects_dates_ix ON projects (start_date, end_date);
 -- Deleting a plan cascades to its projects; without this each delete scans the table.

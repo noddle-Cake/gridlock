@@ -41,3 +41,22 @@ class PlanStatus(StrEnum):
     PROCESSING = "processing"
     COMPLETE = "complete"
     FAILED = "failed"
+
+
+class CostScope(StrEnum):
+    """What a project physically does, which drives its cost (services/pricing.py)."""
+
+    NEW_LINE = "new_line"
+    LINE_REBUILD = "line_rebuild"
+    RECONDUCTOR = "reconductor"
+    UPRATE = "uprate"
+    LINE_TERMINAL = "line_terminal"
+    NEW_SUBSTATION = "new_substation"
+    SUBSTATION_REBUILD = "substation_rebuild"
+    EXPANSION = "expansion"
+    TRANSFORMER = "transformer"
+    REACTIVE = "reactive"
+    BREAKER = "breaker"
+    PROTECTION = "protection"
+    RETIREMENT = "retirement"
+    SUBSTATION_GENERAL = "substation_general"

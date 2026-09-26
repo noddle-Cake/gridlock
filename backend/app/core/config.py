@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # at startup when their plan is missing or its CSV changed (scripts.load_public_sources).
     autoload_public_sources: bool = True
 
+    # Pricing (services/pricing.py): annual cost escalation, and the dollar year estimates
+    # are stated in (0 = the current year).
+    cost_escalation_rate: float = 0.04
+    cost_dollar_year: int = 0
+
     # Matching defaults (Req 6.5, 6.6, 7.2)
     default_radius_miles: float = 25.0
 

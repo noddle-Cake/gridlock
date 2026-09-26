@@ -41,6 +41,11 @@ class ExtractedProject:
     source_page: int | None = None
     raw_excerpt: str = ""
     reviewed: bool = False
+    # Pricing inputs, only when the plan states them (services/pricing.py).
+    length_mi: float | None = None
+    capacity_mw: float | None = None
+    stated_cost_musd: float | None = None
+    cost_year: int | None = None
 
 
 # JSON schema handed to Gemini (structured output). Mirrors ExtractedProject.
@@ -69,6 +74,10 @@ RESPONSE_SCHEMA: dict[str, Any] = {
                     "source_page": {"type": "integer"},
                     "raw_excerpt": {"type": "string"},
                     "certainty": {"type": "number"},
+                    "length_mi": {"type": ["number", "null"]},
+                    "capacity_mw": {"type": ["number", "null"]},
+                    "estimated_cost_musd": {"type": ["number", "null"]},
+                    "cost_year": {"type": ["integer", "null"]},
                 },
                 "required": [
                     "name", "owner", "type", "voltage_kv", "location_ref", "location_kind", "state",
@@ -102,6 +111,11 @@ state if given (e.g. "Hanover Substation, PA", "Adams County, PA", "Gettysburg, 
 quarter, "YYYY-MM" for a month, "YYYY-MM-DD" for a day. Never invent a finer precision.
 - source_page: the page number (from the PAGE markers) where the project appears.
 - raw_excerpt: the verbatim source text the project was read from (max 2000 characters).
+- length_mi: line miles of the work, when stated (km -> mi). null otherwise.
+- capacity_mw: MW or MVA rating of the project, when stated. null otherwise.
+- estimated_cost_musd: the project's stated cost or budget in millions of US dollars \
+("$12.5M" -> 12.5, "$1.2 billion" -> 1200, "$850,000" -> 0.85). null if no cost is given.
+- cost_year: the dollar year that cost is stated in, when the document says. null otherwise.
 - certainty: your confidence from 0.0 to 1.0 that this entry is a real project and its \
 fields are correct.
 
@@ -172,6 +186,18 @@ def _number(value: Any) -> float | None:
     return None
 
 
+def _positive(value: Any, upper: float) -> float | None:
+    """A stated quantity, or None when absent or outside (0, upper]."""
+    number = _number(value)
+    return number if number is not None and 0 < number <= upper else None
+
+
+def _year(value: Any) -> int | None:
+    number = _number(value)
+    return int(number) if number is not None and number.is_integer() and (
+        1950 <= number <= 2100) else None
+
+
 def normalize_record(
     raw: Any, *, utility: str, page_count: int
 ) -> ExtractedProject:
@@ -210,6 +236,10 @@ def normalize_record(
         source_page=page,
         raw_excerpt=_text(raw.get("raw_excerpt"))[:MAX_EXCERPT_CHARS],
         reviewed=False,
+        length_mi=_positive(raw.get("length_mi"), 2000),
+        capacity_mw=_positive(raw.get("capacity_mw"), 20000),
+        stated_cost_musd=_positive(raw.get("estimated_cost_musd"), 100000),
+        cost_year=_year(raw.get("cost_year")),
     )
     # A reversed range is not trustworthy: keep the start, drop the end.
     if record.start_date and record.end_date and (

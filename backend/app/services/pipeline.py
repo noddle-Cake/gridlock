@@ -43,6 +43,10 @@ async def to_new_project(
         confidence=p.confidence,
         source_url=source_url,
         source_page=p.source_page,
+        length_mi=p.length_mi,
+        capacity_mw=p.capacity_mw,
+        stated_cost_musd=p.stated_cost_musd,
+        cost_year=p.cost_year,
         raw_excerpt=p.raw_excerpt or None,
         reviewed=False,  # Req 3.2
     )

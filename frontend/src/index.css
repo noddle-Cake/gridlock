@@ -1346,6 +1346,101 @@ td > .badge:first-child {
   padding-left: 8px;
 }
 
+/* ---------------------------------------------------------------- cost & allocation */
+
+.cost-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  margin: 0 0 8px;
+}
+
+.cost-table th,
+.cost-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 4px 8px 4px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+
+.cost-table thead th {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.cost-table tbody th {
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.cost-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cost-central {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cost-table.splits tr.recommended {
+  background: var(--ok-bg);
+}
+
+.cost-details {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+}
+
+.cost-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.cost-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  margin: 8px 0;
+  align-items: end;
+}
+
+.cost-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.cost-form input,
+.cost-form select {
+  min-width: 0;
+}
+
+.side-by-side .cost-form {
+  grid-template-columns: 1fr;
+}
+
+.cost-form-title {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.assumptions {
+  margin: 8px 0;
+  padding-left: 18px;
+  color: var(--ink-2);
+}
+
+.assumptions li + li {
+  margin-top: 3px;
+}
+
 .brief {
   margin-top: 14px;
   border-top: 1px solid var(--line);

@@ -365,3 +365,64 @@ def test_ingest_page_range_is_validated_and_recorded(api_client):
                          files={"file": ("plan.csv", CSV)})
     assert ok.status_code == 202
     assert api_client.get(f"/plans/{ok.json()['plan_id']}").json()["page_range"] == "1"
+
+
+# ---------------------------------------------------------------- pricing
+
+
+def test_estimate_endpoint(api_client):
+    seed(two_nearby())
+    body = api_client.get("/projects/1/estimate").json()
+    assert body["available"] and body["basis"] == "benchmark"
+    assert body["scope"] == "breaker" and body["low"] < body["central"] < body["high"]
+    assert body["dollar_year"] >= 2026 and body["assumptions"]
+    r = api_client.get("/projects/999/estimate")
+    assert r.status_code == 404 and r.json()["error"]["code"] == "project_not_found"
+
+
+def test_stated_costs_become_comparables(api_client):
+    seed(two_nearby())
+    r = api_client.patch("/projects/2", json={"stated_cost_musd": 3.5, "cost_year": 2025,
+                                               "cost_scope": "breaker"})
+    assert r.status_code == 200
+    assert (r.json()["stated_cost_musd"], r.json()["cost_scope"]) == (3.5, "breaker")
+    own = api_client.get("/projects/2/estimate").json()
+    assert own["basis"] == "stated" and own["comparable_count"] == 0
+    other = api_client.get("/projects/1/estimate").json()
+    assert other["comparable_count"] == 1 and other["comparables"][0]["utility"] == "BGE"
+
+
+def test_patch_rejects_bad_cost_fields(api_client):
+    seed(two_nearby())
+    r = api_client.patch("/projects/1", json={"cost_scope": "teleporter", "length_mi": -1})
+    assert r.status_code == 422
+    assert set(r.json()["error"]["fields"]) == {"cost_scope", "length_mi"}
+
+
+def test_allocation_endpoint(api_client):
+    seed(two_nearby())
+    body = api_client.post("/overlaps/1-2/allocation").json()
+    assert body["available"] and body["joint_basis"] == "modeled"
+    assert body["joint_cost"] <= body["standalone_a"] + body["standalone_b"]
+    assert {s["key"] for s in body["splits"]} == {"equal", "standalone", "equal_savings"}
+    assert body["recommended"] == "equal_savings"
+    for s in body["splits"]:
+        assert s["pays_a"] + s["pays_b"] == pytest.approx(body["joint_cost"], abs=0.02)
+
+    body = api_client.post("/overlaps/1-2/allocation", json={
+        "joint_cost_musd": 3, "benefit_a_musd": 2, "benefit_b_musd": 2,
+        "usage_a_mw": 300, "usage_b_mw": 100,
+    }).json()
+    assert body["joint_basis"] == "planner" and body["joint_cost"] == 3
+    assert {s["key"] for s in body["splits"]} >= {"usage", "benefit"}
+
+
+def test_allocation_errors(api_client):
+    seed(two_nearby())
+    r = api_client.post("/overlaps/1-2/allocation", json={"shareable_fraction": 2, "x": 1})
+    assert r.status_code == 422 and r.json()["error"]["code"] == "invalid_fields"
+    assert set(r.json()["error"]["fields"]) == {"shareable_fraction", "x"}
+    r = api_client.post("/overlaps/1-2/allocation", content=b"[1]")
+    assert r.status_code == 422
+    r = api_client.post("/overlaps/1-9/allocation")
+    assert r.status_code == 404 and r.json()["error"]["code"] == "pair_not_found"

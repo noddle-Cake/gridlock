@@ -22,7 +22,14 @@ import {
 } from './lib/pairs'
 import { DEFAULT_CONFIDENCE_THRESHOLD, needsReview } from './lib/review'
 import { useColorScheme } from './lib/useColorScheme'
-import type { CoordinationPair, LineCollection, PairProject, Project, ProjectPatch } from './types'
+import type {
+  AllocationInputs,
+  CoordinationPair,
+  LineCollection,
+  PairProject,
+  Project,
+  ProjectPatch,
+} from './types'
 
 const REQUERY_DEBOUNCE_MS = 150
 
@@ -186,6 +193,12 @@ export default function App() {
     return brief
   }
 
+  const allocate = useCallback(
+    (pair: CoordinationPair, inputs: AllocationInputs) =>
+      api.allocation(pair.id, MAX_RADIUS_MILES, inputs),
+    [],
+  )
+
   async function patchProject(id: number, patch: ProjectPatch) {
     const updated = await api.patchProject(id, patch)
     setProjects((prev) => prev.map((p) => (p.id === id ? updated : p)))
@@ -328,6 +341,8 @@ export default function App() {
                   pair={selectedPair}
                   colorOf={colorOf}
                   onGenerateBrief={generateBrief}
+                  onAllocate={allocate}
+                  onPatchProject={patchProject}
                 />
               </div>
             ) : (

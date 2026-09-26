@@ -73,6 +73,8 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | `HIFLD_LINES_URL` | HIFLD ArcGIS FeatureServer layer | only used by `load_hifld --fetch` |
 | `HIFLD_BBOX` | `-86.0,29.8,-80.8,31.6` | FL–GA region fetched by `load_hifld --fetch` |
 | `AUTOLOAD_LINES` | `true` | load the committed snapshot into an empty table on startup |
+| `COST_ESCALATION_RATE` | `0.04` | annual escalation applied to benchmark and comparable costs |
+| `COST_DOLLAR_YEAR` | `0` | dollar year of estimates; `0` = the current year |
 
 ## API
 
@@ -84,6 +86,8 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | PATCH | `/projects/{id}` | review/edit; geom/date edits immediately re-match that project |
 | GET | `/overlaps?radius=&bands=` | scored coordination pairs (default 25 mi; `bands` e.g. `touching,1.6,8,25,40`) |
 | POST | `/overlaps/{id}/brief?radius=` | generate a brief (30 s budget) |
+| GET | `/projects/{id}/estimate` | planning-level cost estimate with range, basis, confidence and assumptions |
+| POST | `/overlaps/{id}/allocation?radius=` | stand-alone vs joint cost and several cost splits; optional JSON body: `joint_cost_musd`, `shareable_fraction`, `usage_a_mw`/`usage_b_mw`, `benefit_a_musd`/`benefit_b_musd` |
 | GET | `/export?format=csv\|pdf&radius=&bands=` | briefs export (stretch) |
 | GET | `/lines?bbox=&min_kv=&owner=` | existing transmission lines (HIFLD) as GeoJSON; `owner` may repeat |
 | GET | `/lines/owners` | owner roster: line count, km, voltage range, raw HIFLD spellings |
@@ -153,6 +157,39 @@ not a commitment to build.
 Gemini free tier: 5 requests/minute and 20/day per model. The app paces all Gemini calls
 to `GEMINI_RPM` (default 5) and fails fast with a clear message once the daily quota is
 used up.
+
+## Pricing (cost estimates and allocation)
+
+`backend/app/services/pricing.py` answers two separate questions for a flagged pair, shown
+under **Cost & allocation** in the pair detail:
+
+1. **What would each project cost on its own?** Each project is reduced to a *scope* (new
+   line, rebuild, reconductor, breaker, transformer, new substation, …, read from its name
+   and description or set by the planner), a voltage and a size (line miles, read from the
+   text when the plan states them, else units). A benchmark unit-cost table
+   (`LINE_PER_MILE`, `SUBSTATION_NEW` × scope factor, 2025 $, escalated
+   `COST_ESCALATION_RATE`/yr) is the prior. Projects with known costs are comparables:
+   costs owners state in their plans (extracted, or entered in the panel) and rows in
+   `backend/app/data/reference_costs.csv`. Each is escalated and expressed as a multiple
+   of its own benchmark, weighted by similarity (scope, voltage, age, state, actual vs
+   estimate), and partially pooled with the benchmark. The owning utility's offset is
+   pooled with its peers the same way, so a utility with 3 projects doesn't set its own
+   price. Output: central (median), 80% range, basis, confidence (effective sample size and
+   spread), top comparables, and every assumption. When a plan states a cost, that is the
+   estimate, and the model cross-checks it (flagged if outside the model's 80% range).
+   Generation plants aren't priced; their cost is the developer's, not a shared one.
+2. **Who pays what?** Joint cost = both stand-alone costs minus a shareable fraction
+   (default 30%) of the smaller one, scaled by the pair's coordination score, or a
+   planner-entered joint estimate. Splits shown side by side: 50/50 (baseline only),
+   stand-alone cost, equal savings (the two-party Shapley value), usage (MW) and
+   benefits (when entered). Each is checked against the stand-alone test (nobody pays more
+   than building alone), and benefit splits against each side's benefit. The recommendation
+   is benefits > usage > equal savings, skipping any split that fails the test.
+
+The benchmark numbers are planning-level placeholders; calibrate them (or fill
+`reference_costs.csv`) with real cost history before relying on the dollar figures. On
+the loaded SERTP data, 441 of 460 line/substation pairs fail the stand-alone test under
+a 50/50 split, because paired projects differ widely in size.
 
 ## Deploy to AWS Lightsail
 
@@ -243,3 +280,5 @@ backups.
   with `sub_1`/`sub_2` endpoints, but planned line projects are still stored as points.
 - Custom domain (stretch 17).
 - Export property tests (14.2); only example tests exist.
+- Pricing: real cost history in `reference_costs.csv`, a published escalation index in
+  place of the flat rate, and interconnection costs for generation projects.

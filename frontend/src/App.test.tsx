@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { pair, project } from './test/fixtures'
+import { allocation, pair, project } from './test/fixtures'
 
 // Leaflet needs a real layout engine; stub the map.
 vi.mock('./components/MapView', () => ({ MapView: () => <div data-testid="map" /> }))
@@ -19,6 +19,7 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
   beforeEach(() => {
     fetchMock = vi.fn((url: string) => {
       if (url.startsWith('/api/projects')) return jsonResponse([project(), pair().project_b])
+      if (url.includes('/allocation')) return jsonResponse(allocation())
       if (url.startsWith('/api/overlaps')) {
         const params = new URL(url, 'http://x').searchParams
         // The fixture pair is ~25.1 km apart: the 25-40 km band.
@@ -69,6 +70,9 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Hanover breakers/ }))
     expect(screen.getByRole('region', { name: 'Why flagged' })).toHaveTextContent('213')
     expect(screen.getByText('1 of 1')).toBeInTheDocument()
+    // The pair is priced from its own endpoint.
+    expect(await screen.findByTestId('joint-cost')).toHaveTextContent('$41.8M')
+    expect(overlapCalls().some((u) => u.startsWith('/api/overlaps/1-2/allocation'))).toBe(true)
 
     await userEvent.click(screen.getByRole('button', { name: /Back to list/ }))
     expect(screen.queryByRole('region', { name: 'Why flagged' })).toBeNull()

@@ -18,14 +18,15 @@ _PROJECT_COLUMNS = """
     id, plan_id::text AS plan_id, utility, state, name, type, voltage_kv, location_ref,
     ST_Y(geom::geometry) AS lat, ST_X(geom::geometry) AS lng,
     start_date, end_date, start_precision, end_precision, confidence, source_url,
-    source_page, raw_excerpt, reviewed, approximate, requires_review
+    source_page, raw_excerpt, reviewed, approximate, requires_review,
+    length_mi, capacity_mw, stated_cost_musd, cost_year, cost_scope
 """
 
 # Columns a PATCH may write directly (lat/lng are handled via geom).
 EDITABLE_COLUMNS = {
     "utility", "state", "name", "type", "voltage_kv", "location_ref", "start_date",
     "end_date", "confidence", "source_url", "source_page", "raw_excerpt", "reviewed",
-    "approximate",
+    "approximate", "length_mi", "capacity_mw", "stated_cost_musd", "cost_year", "cost_scope",
 }
 
 
@@ -51,6 +52,10 @@ class NewProject:
     approximate: bool = False
     requires_review: bool = False
     plan_id: str | None = None
+    length_mi: float | None = None
+    capacity_mw: float | None = None
+    stated_cost_musd: float | None = None
+    cost_year: int | None = None
 
 
 @dataclass
@@ -162,20 +167,23 @@ _INSERT_PROJECTS_SQL = """
 INSERT INTO projects (
   plan_id, utility, state, name, type, voltage_kv, location_ref, geom,
   start_date, end_date, start_precision, end_precision, confidence,
-  source_url, source_page, raw_excerpt, reviewed, approximate, requires_review)
+  source_url, source_page, raw_excerpt, reviewed, approximate, requires_review,
+  length_mi, capacity_mw, stated_cost_musd, cost_year)
 SELECT plan_id, utility, state, name, type, voltage_kv, location_ref,
   CASE WHEN lat IS NULL OR lng IS NULL THEN NULL
        ELSE ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography END,
   start_date, end_date, start_precision, end_precision, confidence,
-  source_url, source_page, raw_excerpt, reviewed, approximate, requires_review
+  source_url, source_page, raw_excerpt, reviewed, approximate, requires_review,
+  length_mi, capacity_mw, stated_cost_musd, cost_year
 FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::text[], $6::int[],
             $7::text[], $8::float8[], $9::float8[], $10::date[], $11::date[], $12::text[],
             $13::text[], $14::real[], $15::text[], $16::int[], $17::text[], $18::bool[],
-            $19::bool[], $20::bool[])
+            $19::bool[], $20::bool[], $21::real[], $22::real[], $23::real[], $24::int[])
   WITH ORDINALITY AS t(plan_id, utility, state, name, type, voltage_kv, location_ref, lat, lng,
                        start_date, end_date, start_precision, end_precision, confidence,
                        source_url, source_page, raw_excerpt, reviewed, approximate,
-                       requires_review, ord)
+                       requires_review, length_mi, capacity_mw, stated_cost_musd, cost_year,
+                       ord)
 ORDER BY ord
 RETURNING id
 """
@@ -193,7 +201,8 @@ async def insert_projects(conn: asyncpg.Connection, projects: list[NewProject]) 
             p.start_precision.value if p.start_precision else None,
             p.end_precision.value if p.end_precision else None,
             p.confidence, clean(p.source_url), p.source_page, clean(p.raw_excerpt), p.reviewed,
-            p.approximate, p.requires_review,
+            p.approximate, p.requires_review, p.length_mi, p.capacity_mw, p.stated_cost_musd,
+            p.cost_year,
         )
         for p in projects
     ]
@@ -219,6 +228,14 @@ async def get_projects(conn: asyncpg.Connection, ids: list[int]) -> dict[int, Pr
 
 async def list_projects(conn: asyncpg.Connection) -> list[ProjectDTO]:
     rows = await conn.fetch(f"SELECT {_PROJECT_COLUMNS} FROM projects ORDER BY utility, id")
+    return [_project_from_record(r) for r in rows]
+
+
+async def costed_projects(conn: asyncpg.Connection) -> list[ProjectDTO]:
+    """Projects whose owner stated a cost: the comparables pricing learns from."""
+    rows = await conn.fetch(
+        f"SELECT {_PROJECT_COLUMNS} FROM projects WHERE stated_cost_musd > 0 ORDER BY id"
+    )
     return [_project_from_record(r) for r in rows]
 
 
