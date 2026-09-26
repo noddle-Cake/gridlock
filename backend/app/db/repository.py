@@ -87,12 +87,13 @@ class StoredBrief:
     radius: float
     stale: bool
     generated_at: datetime
+    source: str = "llm"  # "llm" or "template"
     extra: dict[str, Any] = field(default_factory=dict)
 
     def to_dto(self) -> CoordinationBriefDTO:
         return CoordinationBriefDTO(
             pair_id=self.pair_id, text=self.text, generated_at=self.generated_at,
-            stale=self.stale,
+            stale=self.stale, source=self.source,
         )
 
 
@@ -393,16 +394,16 @@ def _brief_from_record(r: asyncpg.Record) -> StoredBrief:
 
 async def upsert_brief(
     conn: asyncpg.Connection, *, pair_id: str, a_id: int, b_id: int, text: str, miles: float,
-    overlap_days: int, radius: float,
+    overlap_days: int, radius: float, source: str = "llm",
 ) -> StoredBrief:
     r = await conn.fetchrow(
-        """INSERT INTO briefs (pair_id, a_id, b_id, text, miles, overlap_days, radius)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
+        """INSERT INTO briefs (pair_id, a_id, b_id, text, miles, overlap_days, radius, source)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
            ON CONFLICT (pair_id) DO UPDATE SET text = EXCLUDED.text, miles = EXCLUDED.miles,
              overlap_days = EXCLUDED.overlap_days, radius = EXCLUDED.radius,
-             stale = false, generated_at = now()
+             source = EXCLUDED.source, stale = false, generated_at = now()
            RETURNING *""",
-        pair_id, a_id, b_id, clean(text), miles, overlap_days, radius,
+        pair_id, a_id, b_id, clean(text), miles, overlap_days, radius, source,
     )
     return _brief_from_record(r)
 

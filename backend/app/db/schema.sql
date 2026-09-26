@@ -74,6 +74,8 @@ CREATE TABLE IF NOT EXISTS briefs (
 );
 -- Date padding no longer exists: timing is scored from the projects' own build windows.
 ALTER TABLE briefs DROP COLUMN IF EXISTS pad;
+-- 'llm' = drafted by the model; 'template' = built from the pair's facts (no model configured).
+ALTER TABLE briefs ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'llm';
 -- A project edit looks up its briefs by either side (Req 13.4), and deleting a project
 -- cascades through both foreign keys; index each so neither scans the table.
 CREATE INDEX IF NOT EXISTS briefs_a_ix ON briefs (a_id);

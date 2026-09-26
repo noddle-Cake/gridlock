@@ -61,6 +61,8 @@ export interface CoordinationBrief {
   text: string
   generated_at: string
   stale: boolean
+  /** 'template' = built from the pair's facts because no AI model is configured. */
+  source?: 'llm' | 'template'
 }
 
 export interface ImpactItem {

@@ -83,6 +83,9 @@ class CoordinationBriefDTO(BaseModel):
     text: str
     generated_at: datetime
     stale: bool = False
+    # "llm" = drafted by the model; "template" = built from the pair's facts because no
+    # model is configured.
+    source: Literal["llm", "template"] = "llm"
 
 
 class ImpactItemDTO(BaseModel):

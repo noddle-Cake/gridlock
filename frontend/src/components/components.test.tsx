@@ -107,6 +107,15 @@ describe('WhyFlaggedPanel (Req 11)', () => {
     rerender(<WhyFlaggedPanel pair={pair({ brief })} colorOf={colorOf} onGenerateBrief={vi.fn()} />)
     expect(screen.getByTestId('brief-text')).toHaveTextContent('Share a crane crew.')
     expect(screen.queryByTestId('no-brief')).toBeNull()
+    expect(screen.queryByText('template')).toBeNull()
+    rerender(
+      <WhyFlaggedPanel
+        pair={pair({ brief: { ...brief, source: 'template' } })}
+        colorOf={colorOf}
+        onGenerateBrief={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('template')).toBeInTheDocument()
   })
 
   it('requests a brief for the selected pair', async () => {

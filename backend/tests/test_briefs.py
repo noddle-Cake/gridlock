@@ -9,6 +9,7 @@ from app.core.errors import BriefGenerationError, BriefTimeoutError
 from app.models.dto import CoordinationPairDTO, ProjectDTO, ScoreFactorsDTO
 from app.models.enums import ProjectType
 from app.services.briefs import MAX_CHARS, MAX_SENTENCES, BriefGenerator, _sentences, finalize_brief
+from app.services.llm import UnconfiguredClient
 from tests.conftest import FakeLLM
 
 
@@ -47,8 +48,14 @@ def test_no_shared_window_states_the_gap():
     pair.overlap_days, pair.time_gap_days = 0, 2557
     llm = FakeLLM(brief="Both utilities could share a line crew.")
     text = asyncio.run(BriefGenerator(llm).generate(pair))
-    assert "in-service dates about 7.0 years apart" in llm.prompts[0]
+    assert "in-service dates 2026 and 2033, about 7.0 years apart" in llm.prompts[0]
     assert "12.3 miles" in text and "7.0 years" in text
+
+    # The facts sentence alone satisfies the facts check, so a template keeps its
+    # opportunity sentence instead of repeating the facts and running out of room.
+    pair.tier = 0
+    brief, _ = asyncio.run(BriefGenerator(UnconfiguredClient()).draft(pair))
+    assert brief.count("12.3 miles") == 1 and "outage window" in brief
 
 
 def test_model_brief_with_facts_kept_verbatim():
@@ -79,3 +86,19 @@ def test_timeout_returns_error_not_partial():
 def test_other_failure_is_identified():
     with pytest.raises(BriefGenerationError, match="model unavailable"):
         asyncio.run(BriefGenerator(FakeLLM(fail=True)).generate(make_pair()))
+
+
+def test_unconfigured_model_drafts_a_template_brief():
+    """No GEMINI_API_KEY: a brief from the pair's facts, labelled as a template."""
+    pair = make_pair()
+    pair.tier = 2
+    text, source = asyncio.run(BriefGenerator(UnconfiguredClient()).draft(pair))
+    assert source == "template"
+    assert "12.3 miles" in text and "2026" in text and "substation" in text
+    assert "laydown yard" in text  # the tier's sharing opportunity
+    assert 1 <= len(_sentences(text)) <= MAX_SENTENCES and len(text) <= MAX_CHARS
+
+    # A configured model is still used, and still fails loudly (Req 8.7).
+    assert asyncio.run(BriefGenerator(FakeLLM()).draft(pair))[1] == "llm"
+    with pytest.raises(BriefGenerationError):
+        asyncio.run(BriefGenerator(FakeLLM(fail=True)).draft(pair))

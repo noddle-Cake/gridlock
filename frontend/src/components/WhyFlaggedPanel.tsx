@@ -304,6 +304,14 @@ export function WhyFlaggedPanel({ pair, colorOf, onGenerateBrief }: Props) {
               outdated
             </span>
           ) : null}
+          {pair.brief?.source === 'template' ? (
+            <span
+              className="badge badge-approx"
+              title="No AI model is configured, so this brief is assembled from the pair's facts"
+            >
+              template
+            </span>
+          ) : null}
         </header>
         {pair.brief ? (
           <blockquote data-testid="brief-text">{pair.brief.text}</blockquote>

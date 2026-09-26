@@ -202,12 +202,13 @@ async def create_brief(
     if pair is None:
         raise PairNotFoundError(f"Coordination pair {pair_id} was not found.")
 
-    text = await state.brief_generator.generate(pair)  # raises 504 / 502; pair untouched
+    # raises 504 / 502 (pair untouched); a template when no model is configured
+    text, source = await state.brief_generator.draft(pair)
 
     async with state.pool.acquire() as conn:
         stored = await repo.upsert_brief(
             conn, pair_id=pair.id, a_id=pair.project_a.id, b_id=pair.project_b.id, text=text,
-            miles=pair.miles, overlap_days=pair.overlap_days, radius=radius_v,
+            miles=pair.miles, overlap_days=pair.overlap_days, radius=radius_v, source=source,
         )
     return stored.to_dto()
 

@@ -358,6 +358,19 @@ def test_brief_success(api_client):
     assert api_client.get("/overlaps").json()["pairs"][0]["brief"]["text"] == body["text"]
 
 
+def test_brief_without_a_model_is_a_stored_template(api_client):
+    from app.services.briefs import BriefGenerator
+    from app.services.llm import UnconfiguredClient
+
+    seed(two_nearby())
+    api_client.app_state.brief_generator = BriefGenerator(UnconfiguredClient())
+    r = api_client.post("/overlaps/1-2/brief")
+    assert r.status_code == 200 and r.json()["source"] == "template"
+    assert "miles apart" in r.json()["text"]
+    stored = api_client.get("/overlaps").json()["pairs"][0]["brief"]
+    assert stored["source"] == "template" and stored["text"] == r.json()["text"]
+
+
 def test_brief_timeout_and_failure_leave_pair_unchanged(api_client):
     seed(two_nearby())
     before = api_client.get("/overlaps").json()
