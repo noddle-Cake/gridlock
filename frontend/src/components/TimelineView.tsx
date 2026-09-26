@@ -71,14 +71,17 @@ export function TimelineView({ projects, pairs, selectedPair, colors, onSelectPr
     )
     items.current.clear()
     items.current.add(next.map((i) => ({ ...i, content: escapeHtml(i.content) })))
-    if (selectedPair && timeline.current) {
-      timeline.current.setWindow(
-        new Date(selectedPair.window_start),
-        new Date(selectedPair.window_end),
-        { animation: true },
-      )
-    }
   }, [projects, pairs, selectedPair, colors])
+
+  // Separate from the data effect so refreshes don't restart the zoom animation.
+  const windowStart = selectedPair?.window_start
+  const windowEnd = selectedPair?.window_end
+  useEffect(() => {
+    if (!windowStart || !windowEnd || !timeline.current) return
+    timeline.current.setWindow(new Date(windowStart), new Date(windowEnd), {
+      animation: { duration: 600, easingFunction: 'easeInOutCubic' },
+    })
+  }, [selectedPair?.id, windowStart, windowEnd])
 
   return <div ref={container} className="timeline" aria-label="Project timeline" />
 }
