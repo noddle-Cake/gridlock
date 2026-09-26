@@ -51,14 +51,14 @@ The production stack runs the same way on Windows, macOS and Linux. Build the si
 (API at `/api`, React app at `/`) and start `deploy/docker-compose.yml` with a local `.env`:
 
 ```bash
-docker build -f backend/Dockerfile -t gridlock:local .
+docker build -f backend/Dockerfile -t gridmerge:local .
 cp deploy/.env.example deploy/.env      # APP_TAG=local, a POSTGRES_PASSWORD, your key
-docker compose -p gridlock-local -f deploy/docker-compose.yml --env-file deploy/.env up -d
+docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy/.env up -d
 # http://localhost:8080   (HTTP_PORT in deploy/.env)
-docker compose -p gridlock-local -f deploy/docker-compose.yml --env-file deploy/.env   exec app python -m scripts.seed_demo --region fl-ga --db-only   # demo data
+docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy/.env   exec app python -m scripts.seed_demo --region fl-ga --db-only   # demo data
 ```
 
-`-p gridlock-local` keeps it apart from the dev `db`/`testdb` containers.
+`-p gridmerge-local` keeps it apart from the dev `db`/`testdb` containers.
 
 ### Configuration (`backend/.env`)
 

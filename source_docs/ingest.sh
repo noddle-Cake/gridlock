@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Upload the FL–GA border filings to a running GridLock with only the planned-transmission
+# Upload the FL–GA border filings to a running GridMerge with only the planned-transmission
 # pages. Usage: bash source_docs/ingest.sh [api base, default http://localhost:8080/api]
 # Download the PDFs first (see README.md in this folder).
 set -euo pipefail
