@@ -37,6 +37,8 @@ class Settings(BaseSettings):
 
     # Matching defaults (Req 6.5, 6.6, 7.2)
     default_radius_miles: float = 25.0
+    # Search bar: a ZIP code matches projects within this distance of its centroid.
+    search_zip_radius_miles: float = 25.0
 
     # Ingestion limits (Req 1.4, 1.5)
     max_upload_bytes: int = 50 * 1024 * 1024

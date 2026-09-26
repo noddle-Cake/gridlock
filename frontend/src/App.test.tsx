@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { pair, project } from './test/fixtures'
+import type { SearchResponse } from './types'
 
 // Leaflet needs a real layout engine; stub the map.
 vi.mock('./components/MapView', () => ({ MapView: () => <div data-testid="map" /> }))
@@ -13,11 +14,57 @@ function jsonResponse(body: unknown) {
   return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }))
 }
 
+// GET /search for a ZIP near Westminster: the server matches project 2 by distance, which
+// local text matching could never do.
+const zipSearch: SearchResponse = {
+  query: '21157',
+  interpretation: {
+    zip: '21157', zip_found: true, zip_label: 'ZIP 21157 · near Carroll County, MD',
+    radius_miles: 25, states: [], utilities: [], types: [], terms: [], fuzzy: false,
+  },
+  companies: [],
+  locations: [
+    { kind: 'zip', code: '21157', label: 'ZIP 21157 · near Carroll County, MD · 25 mi', project_count: 1 },
+  ],
+  projects: [
+    {
+      ...project({ id: 2, utility: 'Chesapeake Power', name: 'Westminster breakers', lat: 39.58, lng: -77 }),
+      miles: 1.2,
+    },
+  ],
+  project_ids: [2],
+  total: 1,
+  bounds: [39.58, -77.0, 39.58, -77.0],
+  suggest_ai: false,
+}
+
 describe('App (Req 10.3, 10.4, 11.1)', () => {
   let fetchMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    fetchMock = vi.fn((url: string) => {
+    history.replaceState(null, '', '/') // an open pair lives in the hash; start from the list
+    fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.startsWith('/api/search')) {
+        const q = new URL(url, 'http://x').searchParams.get('q')
+        return q === '21157' ? jsonResponse(zipSearch) : Promise.reject(new Error('offline'))
+      }
+      if (url.startsWith('/api/ask')) {
+        const { question } = JSON.parse(String(init?.body))
+        if (question === 'no key') {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ error: { code: 'ai_unavailable', message: 'AI answers are off.' } }),
+              { status: 503 },
+            ),
+          )
+        }
+        return jsonResponse({
+          question,
+          answer: 'One pair crosses the state line:\n- **Keystone Electric** [#1] near Hanover',
+          projects: [project()],
+          tool_calls: [{ name: 'search_gridmerge', arguments: { state: 'PA' }, summary: '1 projects' }],
+        })
+      }
       if (url.startsWith('/api/projects')) return jsonResponse([project(), pair().project_b])
       if (url.startsWith('/api/overlaps')) {
         const params = new URL(url, 'http://x').searchParams
@@ -91,11 +138,68 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
   it('filters the list by search text', async () => {
     render(<App />)
     await screen.findByRole('button', { name: /Hanover breakers/ })
-    await userEvent.type(screen.getByLabelText('Search pairs'), 'nowhere')
+    await userEvent.type(screen.getByLabelText('Search GridMerge'), 'nowhere')
     expect(screen.queryByRole('button', { name: /Hanover breakers/ })).toBeNull()
-    await userEvent.clear(screen.getByLabelText('Search pairs'))
-    await userEvent.type(screen.getByLabelText('Search pairs'), 'westminster')
+    await userEvent.clear(screen.getByLabelText('Search GridMerge'))
+    await userEvent.type(screen.getByLabelText('Search GridMerge'), 'westminster')
     expect(screen.getByRole('button', { name: /Hanover breakers/ })).toBeInTheDocument()
+  })
+
+  it('filters by the server matches for a ZIP code and suggests the place', async () => {
+    render(<App />)
+    await screen.findByRole('button', { name: /Hanover breakers/ })
+    await userEvent.type(screen.getByLabelText('Search GridMerge'), '21157')
+    // Locally "21157" matches nothing; once /search answers, its ids drive the list.
+    expect(await screen.findByRole('option', { name: /ZIP 21157 · near Carroll County/ }))
+      .toHaveTextContent('1 project')
+    expect(screen.getByRole('option', { name: /Westminster breakers/ })).toHaveTextContent('1.2 mi')
+    expect(screen.getByRole('button', { name: /Hanover breakers/ })).toBeInTheDocument()
+  })
+
+  it('answers with Ask GridMerge and links cited projects to their pair', async () => {
+    render(<App />)
+    await screen.findByRole('button', { name: /Hanover breakers/ })
+    await userEvent.type(screen.getByLabelText('Search GridMerge'), 'Which pairs cross into MD?')
+    await userEvent.click(screen.getByRole('button', { name: 'Ask GridMerge' }))
+
+    const panel = await screen.findByRole('region', { name: 'Ask GridMerge' })
+    await vi.waitFor(() => expect(panel).toHaveTextContent('One pair crosses the state line'))
+    expect(panel.querySelector('li strong')).toHaveTextContent('Keystone Electric')
+    expect(panel).toHaveTextContent(/Searched projects \(state: PA\) → 1 projects/)
+    const [body] = fetchMock.mock.calls.filter((c) => String(c[0]).startsWith('/api/ask'))
+    expect(JSON.parse(String(body[1].body))).toEqual({ question: 'Which pairs cross into MD?' })
+
+    await userEvent.click(screen.getByRole('button', { name: '#1' }))
+    expect(screen.getByRole('region', { name: 'Why flagged' })).toBeInTheDocument()
+  })
+
+  it('explains when AI answers are unavailable', async () => {
+    render(<App />)
+    await screen.findByRole('button', { name: /Hanover breakers/ })
+    await userEvent.type(screen.getByLabelText('Search GridMerge'), 'no key')
+    await userEvent.click(screen.getByRole('button', { name: 'Ask GridMerge' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('AI answers are off.')
+    await userEvent.click(screen.getByRole('button', { name: 'Close answer' }))
+    expect(screen.queryByRole('region', { name: 'Ask GridMerge' })).toBeNull()
+  })
+
+  it('lifts the opening utility focus when a search is applied', async () => {
+    const desc = project({ id: 7, utility: 'Dominion Energy South Carolina', name: 'Jasper – Okatie' })
+    const gpc = project({ id: 8, utility: 'Georgia Power', name: 'McIntosh reactors' })
+    const inner = fetchMock.getMockImplementation() as (u: string, i?: RequestInit) => unknown
+    fetchMock.mockImplementation((url: string, init?: RequestInit) =>
+      url.startsWith('/api/projects')
+        ? jsonResponse([project(), pair().project_b, desc, gpc])
+        : url.startsWith('/api/search')
+          ? jsonResponse({ ...zipSearch, query: 'westminster', project_ids: [2] })
+          : inner(url, init),
+    )
+    render(<App />)
+    expect(await screen.findByText('Dominion SC ↔ Georgia Power')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Hanover breakers/ })).toBeNull()
+
+    await userEvent.type(screen.getByLabelText('Search GridMerge'), 'westminster{Enter}')
+    expect(await screen.findByRole('button', { name: /Hanover breakers/ })).toBeInTheDocument()
   })
 
   it('opens on Dominion SC ↔ Georgia Power when both are loaded', async () => {

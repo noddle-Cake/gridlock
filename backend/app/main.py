@@ -19,6 +19,7 @@ from app.core.config import get_settings
 from app.core.errors import install_error_handlers
 from app.db import lines as lines_db
 from app.db.pool import apply_schema, create_pool
+from app.services.ask import AskService
 from app.services.briefs import BriefGenerator
 from app.services.extraction import ExtractionService
 from app.services.geocoding import Geocoder, GeocodingService, default_geocoder
@@ -67,6 +68,7 @@ def create_app(
     llm_client = llm or default_llm()
     app.state.extraction = ExtractionService(llm_client)
     app.state.brief_generator = BriefGenerator(llm_client)
+    app.state.ask = AskService(llm_client)
     app.state.geocoding = GeocodingService(geocoder or default_geocoder())
 
     app.add_middleware(

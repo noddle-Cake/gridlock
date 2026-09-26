@@ -181,6 +181,16 @@ async def find_pair(
     return _build_pair(rows[0], projects, radius)
 
 
+async def pairs_for_project(
+    conn: asyncpg.Connection, project_id: int, radius: float
+) -> list[CoordinationPairDTO]:
+    """Every pair one project belongs to, ranked like `overlaps`."""
+    rows = await repo.candidate_pairs(conn, radius, project_id=project_id)
+    projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
+    rows = _cross_entity(rows, projects)
+    return sorted((_build_pair(r, projects, radius) for r in rows), key=rank_key)
+
+
 @dataclass
 class RematchResult:
     pairs: list[CoordinationPairDTO]

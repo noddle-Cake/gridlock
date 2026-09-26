@@ -9,10 +9,12 @@ import {
 } from 'react'
 
 import { ApiError, api } from './api'
+import { AskPanel, type AskState } from './components/AskPanel'
 import { FilterMenu } from './components/FilterMenu'
-import { MapView } from './components/MapView'
+import { type MapFocus, MapView } from './components/MapView'
 import { PairList } from './components/PairList'
 import { ReviewTable } from './components/ReviewTable'
+import { SmartSearch } from './components/SmartSearch'
 import { ThresholdControls } from './components/ThresholdControls'
 import { UploadPanel } from './components/UploadPanel'
 import { UtilityFilter } from './components/UtilityFilter'
@@ -33,7 +35,15 @@ import {
 } from './lib/pairs'
 import { DEFAULT_CONFIDENCE_THRESHOLD, needsReview } from './lib/review'
 import { useColorScheme } from './lib/useColorScheme'
-import type { CoordinationPair, LineCollection, PairProject, Project, ProjectPatch } from './types'
+import { useSearch } from './lib/useSearch'
+import type {
+  CoordinationPair,
+  LineCollection,
+  PairProject,
+  Project,
+  ProjectPatch,
+  SearchResponse,
+} from './types'
 
 const REQUERY_DEBOUNCE_MS = 150
 
@@ -61,9 +71,17 @@ export default function App() {
   const [version, setVersion] = useState(0)
   // Company first: the point of the view is telling two utilities' plans apart.
   const [colorBy, setColorBy] = useState<ColorBy>('utility')
+  const [focus, setFocus] = useState<MapFocus | null>(null)
+  // Set by Enter or a company/place pick (and cleared by typing): frame the matches once
+  // /search answers for the text.
+  const [frameSeq, setFrameSeq] = useState<number | null>(null)
+  const [ask, setAsk] = useState<AskState | null>(null)
   const scheme = useColorScheme()
   const requestSeq = useRef(0)
   const focused = useRef(false)
+  const focusSeq = useRef(0)
+  const askAbort = useRef<AbortController | null>(null)
+  const search = useSearch(query)
 
   const refresh = useCallback(() => setVersion((v) => v + 1), [])
 
@@ -152,9 +170,13 @@ export default function App() {
   )
   // Search and utility filters apply to the map and the list alike; the map-view limit
   // applies only to the list, so the map keeps showing everything that matches.
+  const matchIds = useMemo(
+    () => (search.result ? new Set(search.result.project_ids) : null),
+    [search.result],
+  )
   const shownPairs = useMemo(
-    () => sortPairs(filterPairs(pairs, { query, hiddenUtilities }), sort),
-    [pairs, query, hiddenUtilities, sort],
+    () => sortPairs(filterPairs(pairs, { query, hiddenUtilities, matchIds }), sort),
+    [pairs, query, hiddenUtilities, matchIds, sort],
   )
   const listPairs = useMemo(
     () => (limitToView ? pairsInView(shownPairs, viewBounds) : shownPairs),
@@ -202,6 +224,78 @@ export default function App() {
   )
 
   const selectPair = useCallback((p: CoordinationPair) => setSelectedId(p.id), [])
+
+  const flyTo = useCallback((bounds: MapFocus['bounds']) => {
+    focusSeq.current += 1
+    setFocus({ bounds, seq: focusSeq.current })
+  }, [])
+
+  // The newest of: a project flown to, or a search framed once its answer is in.
+  const searchBounds = search.result?.bounds
+  const mapFocus = useMemo<MapFocus | null>(() => {
+    const framed =
+      frameSeq != null && searchBounds ? { bounds: boundsOf(searchBounds), seq: frameSeq } : null
+    return framed && (!focus || framed.seq > focus.seq) ? framed : focus
+  }, [frameSeq, searchBounds, focus])
+
+  function editQuery(text: string) {
+    setQuery(text)
+    setFrameSeq(null)
+  }
+
+  /**
+   * Keep `text` (or the current text) as the search and frame what it matches. A search
+   * spans every company, so it lifts the utility filter (e.g. the opening two-utility
+   * focus) rather than hiding what it found.
+   */
+  function applySearch(text?: string) {
+    if (text !== undefined) setQuery(text)
+    if (hiddenUtilities.size) setHiddenUtilities(new Set())
+    setTab('radar')
+    setSelectedId(null)
+    focusSeq.current += 1
+    setFrameSeq(focusSeq.current)
+  }
+
+  /** A project picked from search or cited by the AI: open its best pair, else fly to it. */
+  const openProject = useCallback(
+    (p: PairProject) => {
+      setTab('radar')
+      const pair = bestPairFor(p, shownPairs) ?? bestPairFor(p, pairs)
+      if (pair) setSelectedId(pair.id)
+      else if (p.lat != null && p.lng != null) {
+        setSelectedId(null)
+        flyTo([
+          [p.lat - 0.05, p.lng - 0.05],
+          [p.lat + 0.05, p.lng + 0.05],
+        ])
+      }
+    },
+    [shownPairs, pairs, flyTo],
+  )
+
+  function runAsk(question: string) {
+    const q = question.trim()
+    if (!q) return
+    askAbort.current?.abort()
+    const ctrl = new AbortController()
+    askAbort.current = ctrl
+    setTab('radar')
+    setAsk({ status: 'loading', question: q })
+    api
+      .ask(q, ctrl.signal)
+      .then((response) => {
+        if (!ctrl.signal.aborted) setAsk({ status: 'done', question: q, response })
+      })
+      .catch((e) => {
+        if (!ctrl.signal.aborted) setAsk({ status: 'error', question: q, message: describe(e) })
+      })
+  }
+
+  function closeAsk() {
+    askAbort.current?.abort()
+    setAsk(null)
+  }
 
   // The list and the pair detail share one scrolling panel. A pair opens at its top, and
   // "Back to list" returns to where the list was instead of the detail's scroll offset.
@@ -292,19 +386,17 @@ export default function App() {
       </header>
 
       <div className="filterbar">
-        <label className="search">
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            <path d="m10.5 10.5 3 3" stroke="currentColor" strokeWidth="1.6" />
-          </svg>
-          <input
-            type="search"
-            placeholder="Search project, utility, or place"
-            aria-label="Search pairs"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
+        <SmartSearch
+          value={query}
+          onChange={editQuery}
+          result={search.result}
+          loading={search.loading}
+          onApply={() => applySearch()}
+          onPickCompany={(c) => applySearch(c.utility)}
+          onPickLocation={(l) => applySearch(l.kind === 'zip' ? l.code : l.label)}
+          onPickProject={openProject}
+          onAsk={runAsk}
+        />
         <div className="chips">
           <ThresholdControls
             bands={bands}
@@ -350,9 +442,18 @@ export default function App() {
               onSelectPair={selectPair}
               onHoverProject={hoverProject}
               onBoundsChange={onBoundsChange}
+              focus={mapFocus}
             />
           </div>
           <aside className="panel" aria-label="Pairs" ref={panelRef} onScroll={onPanelScroll}>
+            {ask ? (
+              <AskPanel
+                state={ask}
+                onSelectProject={openProject}
+                onClose={closeAsk}
+                onRetry={() => runAsk(ask.question)}
+              />
+            ) : null}
             {selectedPair ? (
               <div className="detail">
                 <nav className="detail-nav" aria-label="Pair navigation">
@@ -423,6 +524,15 @@ export default function App() {
       )}
     </div>
   )
+}
+
+/** A /search [south, west, north, east] box as Leaflet corner points. */
+function boundsOf(b: NonNullable<SearchResponse['bounds']>): MapFocus['bounds'] {
+  const [south, west, north, east] = b
+  return [
+    [south, west],
+    [north, east],
+  ]
 }
 
 function pairFromHash(): string | null {
