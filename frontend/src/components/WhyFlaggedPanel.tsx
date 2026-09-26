@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { ApiError } from '../api'
 import { milesToKm } from '../lib/distanceBands'
 import { FACTOR_LABELS, dayLabel, pct, rangeLabel } from '../lib/format'
+import { scoreBand } from '../lib/pairs'
 import type { CoordinationBrief, CoordinationPair, Project } from '../types'
 import { SourceLink } from './SourceLink'
 
@@ -79,11 +80,20 @@ export function WhyFlaggedPanel({ pair, colors, onGenerateBrief }: Props) {
   const factors = ['distance', 'overlap', 'type_similarity', 'voltage_similarity'] as const
   return (
     <section className="why-panel" aria-label="Why flagged">
-      <h2>Why flagged?</h2>
-      <div className="side-by-side">
-        <ProjectCard p={pair.project_a} color={colors[pair.project_a.utility] ?? '#555'} />
-        <ProjectCard p={pair.project_b} color={colors[pair.project_b.utility] ?? '#555'} />
-      </div>
+      <header className="detail-head">
+        <span className={`score-chip score-lg score-${scoreBand(pair.scores.composite)}`}>
+          {pct(pair.scores.composite)}
+        </span>
+        <div>
+          <h2>
+            {pair.project_a.name || 'Unnamed'} <span className="muted">↔</span>{' '}
+            {pair.project_b.name || 'Unnamed'}
+          </h2>
+          <p className="muted">
+            {pair.project_a.utility} and {pair.project_b.utility} · why this pair was flagged
+          </p>
+        </div>
+      </header>
 
       <div className="facts">
         <div className="fact">
@@ -106,6 +116,13 @@ export function WhyFlaggedPanel({ pair, colors, onGenerateBrief }: Props) {
         </div>
       </div>
 
+      <h3 className="section-title">Projects</h3>
+      <div className="side-by-side">
+        <ProjectCard p={pair.project_a} color={colors[pair.project_a.utility] ?? '#555'} />
+        <ProjectCard p={pair.project_b} color={colors[pair.project_b.utility] ?? '#555'} />
+      </div>
+
+      <h3 className="section-title">Score breakdown</h3>
       <table className="factors" aria-label="Score factors">
         <tbody>
           {factors.map((f) => {

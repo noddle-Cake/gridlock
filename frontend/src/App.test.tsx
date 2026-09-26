@@ -75,5 +75,20 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     render(<App />)
     await userEvent.click(await screen.findByRole('button', { name: /Hanover breakers/ }))
     expect(screen.getByRole('region', { name: 'Why flagged' })).toHaveTextContent('213')
+    expect(screen.getByText('1 of 1')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Back to list/ }))
+    expect(screen.queryByRole('region', { name: 'Why flagged' })).toBeNull()
+    expect(screen.getByRole('region', { name: 'Potential coordination opportunities' })).toBeInTheDocument()
+  })
+
+  it('filters the list by search text', async () => {
+    render(<App />)
+    await screen.findByRole('button', { name: /Hanover breakers/ })
+    await userEvent.type(screen.getByLabelText('Search pairs'), 'nowhere')
+    expect(screen.queryByRole('button', { name: /Hanover breakers/ })).toBeNull()
+    await userEvent.clear(screen.getByLabelText('Search pairs'))
+    await userEvent.type(screen.getByLabelText('Search pairs'), 'westminster')
+    expect(screen.getByRole('button', { name: /Hanover breakers/ })).toBeInTheDocument()
   })
 })
