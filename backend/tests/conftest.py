@@ -16,7 +16,11 @@ from typing import Any
 import pytest
 from hypothesis import HealthCheck, settings
 
-from app.services.geocoding import Candidate
+# Matching keeps only projects still ahead of PLANNING_FROM (default: today). Pin it so the
+# fixtures' 2025-2030 dates mean the same thing whenever the suite runs.
+os.environ.setdefault("PLANNING_FROM", "2026-01-01")
+
+from app.services.geocoding import Candidate  # noqa: E402
 
 settings.register_profile(
     "gridmerge", max_examples=100, deadline=None,

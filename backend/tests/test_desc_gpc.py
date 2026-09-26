@@ -128,10 +128,14 @@ def _norm(name: str) -> str:
 
 
 @requires_db
-def test_sperry_reference_overlaps_are_all_flagged():
-    """Every overlap in Sperry's reference table is flagged from the committed DESC and
-    Georgia Power snapshots, no farther apart than Sperry's centre-to-centre distance
-    (we measure closest points, which can only be nearer)."""
+def test_sperry_reference_overlaps_are_in_range_but_not_current_matches():
+    """Locating and distance: every overlap in Sperry's reference table is found within
+    range of the committed DESC and Georgia Power snapshots, no farther apart than Sperry's
+    centre-to-centre distance (closest points can only be nearer).
+
+    Timing: none of them is a current match. Each involves a DESC project already in
+    service (DESC's list is a 2024-2028 budget; all five reference projects are due by
+    2025) or build windows years apart (Hooks - Thurmond 2024 vs Evans - Thurmond 2033)."""
     openpyxl = pytest.importorskip("openpyxl")
     wb = openpyxl.load_workbook(REFERENCE, data_only=True)
     names = {r[0]: r[3] for r in wb["projects"].iter_rows(min_row=2, values_only=True) if r[0]}
@@ -142,17 +146,26 @@ def test_sperry_reference_overlaps_are_all_flagged():
         *snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.DESC.export),
         *snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.GPC_ITS.export),
     ]
+    radius = 40 / matching.KM_PER_MILE
 
     async def body(conn):
-        await repo.insert_projects(conn, projects)
-        return await matching.overlaps(conn, 40 / matching.KM_PER_MILE)
+        ids = await repo.insert_projects(conn, projects)
+        by_id = await repo.get_projects(conn, ids)
+        rows = await repo.candidate_pairs(conn, radius)
+        return by_id, rows, await matching.overlaps(conn, radius)
 
-    pairs = run_db(body)
-    found = {}
-    for p in pairs:
-        key = frozenset((_norm(p.project_a.name), _norm(p.project_b.name)))
-        found[key] = min(found.get(key, 1e9), p.miles)
+    by_id, rows, pairs = run_db(body)
+
+    def key(a_name: str, b_name: str) -> frozenset[str]:
+        return frozenset((_norm(a_name), _norm(b_name)))
+
+    in_range: dict[frozenset[str], float] = {}
+    for r in rows:
+        k = key(by_id[r.a_id].name, by_id[r.b_id].name)
+        in_range[k] = min(in_range.get(k, 1e9), r.miles)
+    matched = {key(p.project_a.name, p.project_b.name) for p in pairs}
     for ovl_id, miles, _gap, _ua, a, _na, _ub, b, _nb in reference:
-        key = frozenset((_norm(names[a]), _norm(names[b])))
-        assert key in found, f"{ovl_id} ({names[a]} / {names[b]}) not flagged"
-        assert found[key] <= miles + 0.5, (ovl_id, found[key], miles)
+        k = key(names[a], names[b])
+        assert k in in_range, f"{ovl_id} ({names[a]} / {names[b]}) not within range"
+        assert in_range[k] <= miles + 0.5, (ovl_id, in_range[k], miles)
+        assert k not in matched, f"{ovl_id} matched although it is not close in time"

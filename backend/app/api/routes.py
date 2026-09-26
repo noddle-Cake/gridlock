@@ -98,9 +98,18 @@ async def get_plan(plan_id: str, request: Request) -> PlanDTO:
 
 
 @router.get("/projects", response_model=list[ProjectDTO])
-async def list_projects(request: Request) -> list[ProjectDTO]:
+async def list_projects(
+    request: Request,
+    include_past: bool = Query(default=False, description="Also list finished projects"),
+) -> list[ProjectDTO]:
+    """Planned work still ahead (plus undated projects, which need a date in Review).
+    Projects already in service are finished: nothing left to coordinate."""
     async with _state(request).pool.acquire() as conn:
-        return await repo.list_projects(conn)
+        projects = await repo.list_projects(conn)
+    if include_past:
+        return projects
+    cutoff = get_settings().planning_cutoff
+    return [p for p in projects if not matching.is_past(p, cutoff)]
 
 
 def _validate_patch(body: Any) -> dict[str, Any]:
@@ -183,9 +192,12 @@ async def get_overlaps(
     radius_v = matching.parse_radius(radius)
     bands_v = matching.parse_bands(bands)
     utilities = matching.parse_utilities(utility)
+    rules = matching.Rules.current()
     async with _state(request).pool.acquire() as conn:
-        pairs = await matching.overlaps(conn, radius_v, bands=bands_v, utilities=utilities)
-    return OverlapsResponse(radius=radius_v, pairs=pairs)
+        pairs = await matching.overlaps(conn, radius_v, bands=bands_v, utilities=utilities,
+                                        rules=rules)
+    return OverlapsResponse(radius=radius_v, planning_from=rules.planning_from,
+                            min_overlap_days=rules.min_overlap_days, pairs=pairs)
 
 
 @router.post("/overlaps/{pair_id}/brief", response_model=CoordinationBriefDTO)

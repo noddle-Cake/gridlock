@@ -165,25 +165,39 @@ def test_overlaps_defaults_and_scores(api_client):
     assert api_client.get("/overlaps?radius=5").json()["pairs"] == []
 
 
-def test_distant_schedules_still_flagged(api_client):
-    """Geography is primary: years between in-service dates rank a pair lower, never hide it
-    (the Sperry reference Hooks–Thurmond / Evans–Thurmond pair is 3,074 days apart)."""
-    near, far = two_nearby()
-    far.start_date, far.end_date = date(2034, 12, 31), date(2034, 12, 31)
-    undated = repo.NewProject(utility="PPL", name="Undated", lat=39.7, lng=-77.0,
-                              confidence=0.9)
-    seed([near, far, undated])
-    pairs = {p["id"]: p for p in api_client.get("/overlaps").json()["pairs"]}
-    assert set(pairs) == {"1-2", "1-3", "2-3"}
-    gap = pairs["1-2"]
-    assert gap["time_gap_days"] == (date(2034, 12, 31) - date(2026, 6, 30)).days
-    assert gap["overlap_days"] == 0 and gap["window_start"] is None
-    assert gap["overlap_ratio"] == 0 and gap["scores"]["overlap"] == 0
-    assert pairs["1-3"]["time_gap_days"] is None and pairs["1-3"]["overlap_ratio"] is None
-    # An in-service date alone builds for the 12 months before it; undated has no window.
-    assert gap["build_b"] == ["2033-12-31", "2034-12-31"]
-    assert pairs["1-3"]["build_b"] is None
-    assert "overlap" in pairs["1-3"]["scores"]["indeterminate_factors"]
+def test_matches_need_future_overlapping_build_windows(api_client):
+    """Close in space is not enough: both projects must still be ahead of PLANNING_FROM
+    (pinned to 2026-01-01 in tests) and building together for MIN_OVERLAP_DAYS (30).
+    Years apart, finished, undated or barely overlapping pairs are not matches."""
+    near, _ = two_nearby()  # 1: Met-Ed, building Apr 1 - Jun 30, 2026
+
+    def other(utility, start, end):
+        return repo.NewProject(utility=utility, name=utility, lat=39.7, lng=-76.95,
+                               confidence=0.9, start_date=start, end_date=end, source_url=SRC)
+
+    seed([
+        near,
+        other("BGE", date(2026, 5, 1), date(2026, 9, 30)),         # 2: 61 days with 1
+        other("PPL", date(2034, 12, 31), date(2034, 12, 31)),      # 3: in service 8.5 years on
+        other("PECO", None, None),                                 # 4: undated
+        other("Pepco", date(2025, 1, 1), date(2025, 12, 31)),      # 5: finished before 2026
+        other("Delmarva", date(2026, 6, 10), date(2026, 12, 31)),  # 6: 21 days with 1
+    ])
+    body = api_client.get("/overlaps").json()
+    assert (body["planning_from"], body["min_overlap_days"]) == ("2026-01-01", 30)
+    pairs = {p["id"]: p for p in body["pairs"]}
+    assert set(pairs) == {"1-2", "2-6"}  # 2 and 6 share Jun 10 - Sep 30
+    for p in pairs.values():
+        assert p["overlap_days"] >= 30 and p["window_start"] and p["window_end"]
+    assert pairs["1-2"]["build_b"] == ["2026-05-01", "2026-09-30"]
+
+    # A pair that isn't a match can't get a brief either.
+    assert api_client.post("/overlaps/1-3/brief").status_code == 404
+
+    # Finished work drops out of the project list too; undated and future work stays.
+    listed = {p["id"] for p in api_client.get("/projects").json()}
+    assert listed == {1, 2, 3, 4, 6}
+    assert 5 in {p["id"] for p in api_client.get("/projects?include_past=true").json()}
 
 
 def test_padding_no_longer_changes_scores(api_client):
@@ -233,7 +247,8 @@ def test_overlaps_unknown_band(api_client):
 
 def test_overlaps_utility_filter(api_client):
     """`utility` keeps pairs whose two projects are both among the named utilities."""
-    third = repo.NewProject(utility="PPL", name="York tap", lat=39.7, lng=-76.9, confidence=0.9)
+    third = repo.NewProject(utility="PPL", name="York tap", lat=39.7, lng=-76.9, confidence=0.9,
+                            start_date=date(2026, 5, 1), end_date=date(2026, 8, 31))
     seed([*two_nearby(), third])
 
     def ids(query: str = "") -> list[str]:
@@ -253,7 +268,8 @@ def test_pair_link_is_the_closest_points(api_client):
     """`link` is the segment `miles` measures: point to point, or onto a routed line."""
     # A route passing through the Met-Ed point touches it: both ends of the link coincide.
     crossing = repo.NewProject(utility="PPL", name="Line", confidence=0.9, lat=39.80,
-                               lng=-76.90, route=[(39.80, -77.10), (39.80, -76.90)])
+                               lng=-76.90, route=[(39.80, -77.10), (39.80, -76.90)],
+                               start_date=date(2026, 5, 1), end_date=date(2026, 8, 31))
     seed([*two_nearby(), crossing])
     pairs = {p["id"]: p for p in api_client.get("/overlaps").json()["pairs"]}
     assert pairs["1-2"]["link"] == [[39.80, -76.98], [39.58, -77.00]]
