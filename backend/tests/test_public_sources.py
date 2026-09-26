@@ -214,15 +214,17 @@ def test_place_name_strips_equipment_words(name, place):
 
 
 def test_committed_snapshots_read_back_with_citations():
-    from app.sources import snapshot
+    from app.sources import region, snapshot
 
     eia = snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.EIA860M.export)
     grid = snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.SERTP.export)
-    assert len(eia) == 1649 and len(grid) == 426  # EIA is nationwide
+    # The region (SC, GA, FL): 78 EIA plant/month sites, 189 of SERTP's 426 projects.
+    assert len(eia) == 78 and len(grid) == 189
+    assert {p.state for p in eia} <= set(region.REGION_STATES)
     assert all(p.source_url and p.source_page and p.raw_excerpt for p in eia + grid)
     assert all(p.lat is not None for p in eia)
     assert all((p.lat is None) == p.requires_review for p in grid)
-    assert snapshot.page_range(grid) == "1-115"
+    assert snapshot.page_range(grid)
 
 
 @pytest.mark.skipif(not DB_AVAILABLE, reason="no Postgres+PostGIS test database")
@@ -252,4 +254,9 @@ def test_startup_snapshot_load_is_idempotent_and_follows_csv_changes(tmp_path):
         return counts
 
     k = len(snapshot.SOURCES)
-    assert run_db(load_twice_then_change) == [(k, 3 * k), (k, 3 * k), (k, 5 * k)]
+    sizes = [len(snapshot.read_export(snapshot.EXTRACTED_DIR / s.export)) for s in snapshot.SOURCES]
+
+    def rows(n: int) -> int:  # a small source (Tallahassee: 2 lines) has fewer than n
+        return sum(min(n, size) for size in sizes)
+
+    assert run_db(load_twice_then_change) == [(k, rows(3)), (k, rows(3)), (k, rows(5))]

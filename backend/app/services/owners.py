@@ -43,6 +43,7 @@ ALIASES = {
     # SERTP project-name prefixes (Southern balancing area).
     "SOCO": "Southern Company",  # Georgia/Alabama/Mississippi Power; SERTP doesn't say which
     "PS": "PowerSouth",
+    "PEC": "PowerSouth",  # FRCC Form 13: PowerSouth Energy Cooperative (Panhandle lines)
     "DU": "Dalton Utilities",
     "POWERSOUTH ENERGY COOPERATIVE": "PowerSouth",
     "SOUTHERN": "Southern Company",  # "Southern Company" minus the stripped suffix
