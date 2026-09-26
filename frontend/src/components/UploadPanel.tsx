@@ -13,6 +13,7 @@ export function UploadPanel({ onPlanComplete }: Props) {
   const [file, setFile] = useState<File | null>(null)
   const [utility, setUtility] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
+  const [pages, setPages] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -46,11 +47,12 @@ export function UploadPanel({ onPlanComplete }: Props) {
     }
     setSubmitting(true)
     try {
-      const ack = await api.ingest(file, utility, sourceUrl)
+      const ack = await api.ingest(file, utility, sourceUrl, pages)
       const plan = await api.plan(ack.plan_id)
       setPlans((prev) => [plan, ...prev])
       if (plan.status !== 'processing') onPlanComplete()
       setFile(null)
+      setPages('')
       if (fileInput.current) fileInput.current.value = ''
     } catch (err) {
       if (err instanceof ApiError) {
@@ -89,6 +91,14 @@ export function UploadPanel({ onPlanComplete }: Props) {
           onChange={(e) => setSourceUrl(e.target.value)}
           required
         />
+        <input
+          className="pages-input"
+          placeholder="Pages (all)"
+          aria-label="Pages to extract"
+          title="Optional. Only extract these pages, e.g. 18-45 or 3,7-9"
+          value={pages}
+          onChange={(e) => setPages(e.target.value)}
+        />
         <button type="submit" className="primary" disabled={submitting}>
           {submitting ? 'Uploading…' : 'Ingest plan'}
         </button>
@@ -102,7 +112,8 @@ export function UploadPanel({ onPlanComplete }: Props) {
         <ul className="plan-status">
           {plans.map((p) => (
             <li key={p.plan_id} className={`plan-${p.status}`}>
-              <strong>{p.utility}</strong> · {p.filename} ·{' '}
+              <strong>{p.utility}</strong> · {p.filename}
+              {p.page_range ? ` (pp. ${p.page_range})` : ''} ·{' '}
               {p.status === 'processing'
                 ? 'extracting…'
                 : p.status === 'complete'

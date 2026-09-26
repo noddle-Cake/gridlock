@@ -14,17 +14,19 @@ from app.core.errors import (
     ProjectNotFoundError,
     TooManyUtilitiesError,
 )
+from app.db import lines as lines_db
 from app.db import repository as repo
 from app.models.dto import (
     CoordinationBriefDTO,
     IngestResult,
+    LineOwnerDTO,
     OverlapsResponse,
     PlanDTO,
     ProjectDTO,
     ProjectPatch,
 )
 from app.services import export as export_service
-from app.services import matching
+from app.services import hifld, matching
 from app.services.ingestion import validate_upload
 from app.services.pipeline import process_plan
 
@@ -50,9 +52,11 @@ async def ingest(
     file: UploadFile | None = File(default=None),
     utility: str | None = Form(default=None),
     source_url: str | None = Form(default=None),
+    pages: str | None = Form(default=None),
 ) -> IngestResult:
     state = _state(request)
-    upload = await validate_upload(file, utility, source_url)  # raises; persists nothing
+    # raises; persists nothing
+    upload = await validate_upload(file, utility, source_url, pages)
 
     async with state.pool.acquire() as conn:
         existing = await repo.distinct_utilities(conn)
@@ -64,6 +68,7 @@ async def ingest(
         plan = await repo.insert_plan(
             conn, utility=upload.utility, source_url=upload.source_url,
             filename=upload.filename, detected_format=upload.format,
+            page_range=upload.page_range,
         )
 
     background.add_task(
@@ -199,6 +204,47 @@ async def create_brief(
             miles=pair.miles, overlap_days=pair.overlap_days, radius=radius_v, pad=pad_v,
         )
     return stored.to_dto()
+
+
+# ---------------------------------------------------------------- reference lines (HIFLD)
+
+
+@router.get("/lines")
+async def get_lines(
+    request: Request,
+    bbox: str | None = Query(default=None, description="minLng,minLat,maxLng,maxLat"),
+    min_kv: str | None = Query(default=None),
+    owner: list[str] | None = Query(default=None),
+) -> Response:
+    """Existing transmission lines (HIFLD) as GeoJSON; a backdrop, not planned projects."""
+    invalid: list[str] = []
+    reasons: list[str] = []
+    bbox_v = None
+    if bbox:
+        try:
+            bbox_v = hifld.parse_bbox(bbox)
+        except ValueError as exc:
+            invalid.append("bbox")
+            reasons.append(f"bbox: {exc}")
+    min_kv_v = None
+    if min_kv not in (None, ""):
+        try:
+            min_kv_v = float(min_kv)
+        except ValueError:
+            invalid.append("min_kv")
+            reasons.append(f"min_kv must be numeric (got {min_kv!r})")
+    if invalid:
+        raise InvalidParameterError("; ".join(reasons), field=invalid[0], fields=invalid)
+
+    async with _state(request).pool.acquire() as conn:
+        body = await lines_db.lines_geojson(conn, bbox=bbox_v, min_kv=min_kv_v, owners=owner)
+    return Response(body, media_type="application/geo+json")
+
+
+@router.get("/lines/owners", response_model=list[LineOwnerDTO])
+async def get_line_owners(request: Request) -> list[LineOwnerDTO]:
+    async with _state(request).pool.acquire() as conn:
+        return await lines_db.line_owners(conn)
 
 
 # ---------------------------------------------------------------- export (Req 14, Stretch)

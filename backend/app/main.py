@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes import router
 from app.core.config import get_settings
 from app.core.errors import install_error_handlers
+from app.db import lines as lines_db
 from app.db.pool import apply_schema, create_pool
 from app.services.briefs import BriefGenerator
 from app.services.extraction import ExtractionService
@@ -23,6 +24,7 @@ from app.services.geocoding import Geocoder, GeocodingService, default_geocoder
 from app.services.llm import LLMClient, default_llm
 
 logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 
 # Sample plans served for the local demo so source-page links resolve.
 SAMPLE_DIR = Path(__file__).resolve().parents[2] / "sample_data"
@@ -43,6 +45,11 @@ def create_app(
         app.state.pool = pool or await create_pool(settings.database_url)
         if owns_pool:
             await apply_schema(app.state.pool)
+            if settings.autoload_lines:
+                try:
+                    await lines_db.load_snapshot_if_empty(app.state.pool)
+                except Exception:  # the reference layer is optional; never block startup
+                    log.exception("could not load the HIFLD transmission-line snapshot")
         try:
             yield
         finally:

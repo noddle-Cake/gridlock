@@ -51,3 +51,7 @@ lerna-debug.log*
 # ---- OS
 .DS_Store
 Thumbs.db
+
+
+# ---- Downloaded public filings (re-download with source_docs/README.md)
+source_docs/*.pdf

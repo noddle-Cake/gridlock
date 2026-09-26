@@ -105,14 +105,15 @@ def _project_from_record(r: asyncpg.Record) -> ProjectDTO:
 
 async def insert_plan(
     conn: asyncpg.Connection, *, utility: str, source_url: str, filename: str | None,
-    detected_format: str,
+    detected_format: str, page_range: str | None = None,
 ) -> PlanDTO:
     r = await conn.fetchrow(
-        """INSERT INTO plans (id, utility, source_url, filename, detected_format)
-           VALUES ($1, $2, $3, $4, $5)
+        """INSERT INTO plans (id, utility, source_url, filename, detected_format, page_range)
+           VALUES ($1, $2, $3, $4, $5, $6)
            RETURNING id::text AS plan_id, utility, source_url, filename, detected_format,
-                     status, error, project_count, created_at""",
+                     status, error, project_count, created_at, page_range""",
         uuid.uuid4(), clean(utility), clean(source_url), clean(filename), detected_format,
+        page_range,
     )
     return PlanDTO(**dict(r))
 
@@ -134,7 +135,7 @@ async def get_plan(conn: asyncpg.Connection, plan_id: str) -> PlanDTO | None:
         return None
     r = await conn.fetchrow(
         """SELECT id::text AS plan_id, utility, source_url, filename, detected_format, status,
-                  error, project_count, created_at FROM plans WHERE id = $1::uuid""",
+                  error, project_count, created_at, page_range FROM plans WHERE id = $1::uuid""",
         plan_id,
     )
     return PlanDTO(**dict(r)) if r else None
@@ -143,7 +144,8 @@ async def get_plan(conn: asyncpg.Connection, plan_id: str) -> PlanDTO | None:
 async def list_plans(conn: asyncpg.Connection) -> list[PlanDTO]:
     rows = await conn.fetch(
         """SELECT id::text AS plan_id, utility, source_url, filename, detected_format, status,
-                  error, project_count, created_at FROM plans ORDER BY created_at DESC"""
+                  error, project_count, created_at, page_range
+           FROM plans ORDER BY created_at DESC"""
     )
     return [PlanDTO(**dict(r)) for r in rows]
 

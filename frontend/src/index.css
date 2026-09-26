@@ -818,3 +818,23 @@ details summary {
     margin-left: 0;
   }
 }
+
+.lines-legend {
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.lines-legend input {
+  margin: 0;
+}
+
+.swatch-line {
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, #868e96 0 3px, transparent 3px 6px);
+}
+
+.upload input.pages-input {
+  flex: 0 1 110px;
+}

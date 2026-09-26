@@ -2,6 +2,7 @@ import type {
   ApiErrorBody,
   CoordinationBrief,
   IngestResult,
+  LineCollection,
   OverlapsResponse,
   Plan,
   Project,
@@ -41,11 +42,12 @@ export function thresholdQuery(radius: number, pad: number): string {
 }
 
 export const api = {
-  ingest(file: File, utility: string, sourceUrl: string): Promise<IngestResult> {
+  ingest(file: File, utility: string, sourceUrl: string, pages = ''): Promise<IngestResult> {
     const form = new FormData()
     form.append('file', file)
     form.append('utility', utility)
     form.append('source_url', sourceUrl)
+    if (pages.trim()) form.append('pages', pages.trim())
     return request('/ingest', { method: 'POST', body: form })
   },
   plan: (planId: string): Promise<Plan> => request(`/plans/${encodeURIComponent(planId)}`),
@@ -64,6 +66,7 @@ export const api = {
     request(`/overlaps/${encodeURIComponent(pairId)}/brief?${thresholdQuery(radius, pad)}`, {
       method: 'POST',
     }),
+  lines: (): Promise<LineCollection> => request('/lines'),
   exportUrl: (format: 'csv' | 'pdf', radius: number, pad: number): string =>
     `${API_BASE}/export?format=${format}&${thresholdQuery(radius, pad)}`,
 }

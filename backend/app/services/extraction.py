@@ -8,15 +8,19 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
+from app.core.config import get_settings
 from app.core.errors import ExtractionFailedError
 from app.models.enums import ProjectType
 from app.models.partial_date import PartialDate
 from app.services.llm import LLMClient
+from app.services.owners import canonical_utility
 from app.services.parsing import ParsedDocument
 
 MAX_EXCERPT_CHARS = 2000
 MIN_KV, MAX_KV = 0.1, 2000.0
-CHUNK_CHARS = 60_000
+# ~15k chars is ~50 dense table rows: each row comes back with its verbatim excerpt, and a
+# bigger chunk from a project-list filing (SERTP: ~290 rows) overruns the output limit.
+CHUNK_CHARS = 15_000
 # Confidence = blend of model self-reported certainty and field completeness.
 CERTAINTY_WEIGHT = 0.6
 COMPLETENESS_FIELDS = ("name", "type", "voltage_kv", "location_ref", "start_date", "end_date")
@@ -49,6 +53,7 @@ RESPONSE_SCHEMA: dict[str, Any] = {
                 "type": "object",
                 "properties": {
                     "name": {"type": "string"},
+                    "owner": {"type": "string"},
                     "type": {
                         "type": "string",
                         "enum": ["substation", "transmission line", "generation", ""],
@@ -66,7 +71,7 @@ RESPONSE_SCHEMA: dict[str, Any] = {
                     "certainty": {"type": "number"},
                 },
                 "required": [
-                    "name", "type", "voltage_kv", "location_ref", "location_kind", "state",
+                    "name", "owner", "type", "voltage_kv", "location_ref", "location_kind", "state",
                     "start_date", "end_date", "source_page", "raw_excerpt", "certainty",
                 ],
             },
@@ -83,6 +88,10 @@ Return every distinct planned capital project (substations, transmission lines, 
 as one entry. Rules:
 - Use ONLY information stated in the text. If a field cannot be determined, use an empty \
 string ("" or null for voltage_kv). Never guess.
+- owner: the company that owns THIS project when the document covers several owners \
+(an owner column, or a prefix such as "GTC:" or "MEAG:"). Expand abbreviations with the \
+document's own legend when it has one (e.g. "DEF" -> "Duke Energy Florida"); otherwise \
+copy the abbreviation as written. Use "" when the project belongs to "{utility}" itself.
 - type: exactly "substation", "transmission line", or "generation"; "" if it fits none.
 - voltage_kv: a number in kilovolts (e.g. "138kV" -> 138, "345 kV" -> 345). null if absent.
 - location_ref: the most specific place named: a substation name, town, or county, plus the \
@@ -187,7 +196,8 @@ def normalize_record(
     kind = _text(raw.get("location_kind")).lower()
     state = _text(raw.get("state")).upper()
     record = ExtractedProject(
-        utility=utility,
+        # Multi-owner filings (SERTP, FRCC tables) name an owner per project.
+        utility=canonical_utility(_text(raw.get("owner"))) or utility,
         confidence=0.0,
         name=_text(raw.get("name")),
         state=state if len(state) == 2 and state.isalpha() else "",
@@ -228,20 +238,25 @@ def parse_model_output(text: str, *, utility: str, page_count: int) -> list[Extr
 
 
 class ExtractionService:
-    def __init__(self, llm: LLMClient) -> None:
+    def __init__(self, llm: LLMClient, *, concurrency: int | None = None) -> None:
         self._llm = llm
+        # Real filings run to hundreds of pages (dozens of chunks); firing them all at
+        # once trips the Gemini rate limit and, all-or-nothing, fails the whole plan.
+        self._concurrency = max(1, concurrency or get_settings().extraction_concurrency)
 
     async def extract(self, doc: ParsedDocument, *, utility: str) -> list[ExtractedProject]:
         """All-or-nothing: any failed chunk fails the whole document (Req 2.9)."""
         chunks = _chunks(doc)
         if not chunks:
             raise ExtractionFailedError("Extraction failed: the document has no text.")
+        limit = asyncio.Semaphore(self._concurrency)
 
         async def run(first: int, last: int, body: str) -> list[ExtractedProject]:
             prompt = PROMPT_TEMPLATE.format(
                 utility=utility, first=first, last=last, total=doc.page_count, body=body
             )
-            text = await self._llm.generate_json(prompt, RESPONSE_SCHEMA)
+            async with limit:
+                text = await self._llm.generate_json(prompt, RESPONSE_SCHEMA)
             return parse_model_output(text, utility=utility, page_count=doc.page_count)
 
         try:

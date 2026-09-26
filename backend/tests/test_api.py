@@ -288,3 +288,15 @@ def test_geocoder_used_for_town_refs(api_client):
     post_ingest(api_client)
     (p,) = api_client.get("/projects").json()
     assert (p["lat"], p["lng"]) == (39.8, -76.98) and p["approximate"] is False
+
+
+def test_ingest_page_range_is_validated_and_recorded(api_client):
+    bad = api_client.post("/ingest", data={"utility": "Met-Ed", "source_url": SRC, "pages": "2"},
+                          files={"file": ("plan.csv", CSV)})
+    assert bad.status_code == 422 and bad.json()["error"]["field"] == "pages"
+    assert api_client.get("/plans").json() == []  # nothing persisted
+
+    ok = api_client.post("/ingest", data={"utility": "Met-Ed", "source_url": SRC, "pages": "1"},
+                         files={"file": ("plan.csv", CSV)})
+    assert ok.status_code == 202
+    assert api_client.get(f"/plans/{ok.json()['plan_id']}").json()["page_range"] == "1"

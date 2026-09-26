@@ -30,6 +30,7 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
           pairs: radius >= 10 ? [pair()] : [],
         })
       }
+      if (url.startsWith('/api/lines')) return jsonResponse({ type: 'FeatureCollection', features: [] })
       return Promise.reject(new Error(`unexpected ${url}`))
     })
     vi.stubGlobal('fetch', fetchMock)

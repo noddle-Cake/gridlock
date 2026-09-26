@@ -26,6 +26,13 @@ class ParsedDocument:
     def page_count(self) -> int:
         return len(self.pages)
 
+    def only_pages(self, keep: set[int]) -> ParsedDocument:
+        """Blank every page not in `keep` (1-based). Page numbers stay those of the
+        original file, so source links still open the right page."""
+        return ParsedDocument(
+            self.format, [t if i in keep else "" for i, t in enumerate(self.pages, start=1)]
+        )
+
 
 def _extension(filename: str | None) -> str:
     if not filename or "." not in filename:

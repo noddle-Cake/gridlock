@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS plans (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Added after the first release; ADD COLUMN keeps existing databases working.
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS page_range text;  -- e.g. "18-45"; NULL = all pages
+
 CREATE TABLE IF NOT EXISTS projects (
   id serial PRIMARY KEY,
   plan_id uuid REFERENCES plans(id) ON DELETE CASCADE,
@@ -54,3 +57,25 @@ CREATE TABLE IF NOT EXISTS briefs (
   stale bool NOT NULL DEFAULT false,
   generated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Existing transmission lines from HIFLD: a reference layer (map backdrop, owner roster,
+-- real routes for Req 17), never matched as planned projects. Loaded from the committed
+-- snapshot by app startup or `python -m scripts.load_hifld`.
+CREATE TABLE IF NOT EXISTS transmission_lines (
+  id text PRIMARY KEY,              -- HIFLD ID
+  owner text,                       -- HIFLD OWNER as published; NULL when not available
+  owner_norm text,                  -- merged/renamed owner used for grouping (hifld.py)
+  voltage_kv real,                  -- NULL when HIFLD has no voltage
+  volt_class text,
+  status text,
+  line_type text,
+  inferred bool,
+  sub_1 text,                       -- endpoint substation names (often TAP*/UNKNOWN*)
+  sub_2 text,
+  source_date date,
+  val_date date,
+  geom geography(MultiLineString, 4326) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS transmission_lines_geom_gix ON transmission_lines USING GIST (geom);
+CREATE INDEX IF NOT EXISTS transmission_lines_owner_ix ON transmission_lines (owner_norm);

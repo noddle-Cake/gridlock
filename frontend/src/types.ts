@@ -99,6 +99,7 @@ export interface Plan {
   error: string | null
   project_count: number
   created_at: string
+  page_range?: string | null
 }
 
 export interface ApiErrorBody {
@@ -107,4 +108,27 @@ export interface ApiErrorBody {
   field?: string
   fields?: string[]
   detected_format?: string
+}
+
+// Existing transmission lines (HIFLD reference layer, GET /lines). Not planned projects.
+export interface LineProperties {
+  owner: string | null
+  owner_norm: string | null
+  voltage_kv: number | null
+  volt_class: string | null
+  status: string | null
+  sub_1: string | null
+  sub_2: string | null
+}
+
+export interface LineFeature {
+  type: 'Feature'
+  id: string
+  geometry: { type: 'MultiLineString'; coordinates: [number, number][][] }
+  properties: LineProperties
+}
+
+export interface LineCollection {
+  type: 'FeatureCollection'
+  features: LineFeature[]
 }

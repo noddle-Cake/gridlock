@@ -105,9 +105,12 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
+          # Optional repo variables; empty falls back to the compose defaults.
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GEMINI_RPM: ${{ vars.GEMINI_RPM }}
         run: |
-          printf 'APP_TAG=%s\nPOSTGRES_PASSWORD=%s\nGEMINI_API_KEY=%s\nSITE_ADDRESS=%s\n' \
-            "$TAG" "$POSTGRES_PASSWORD" "$GEMINI_API_KEY" "$SITE_ADDRESS" \
+          printf 'APP_TAG=%s\nPOSTGRES_PASSWORD=%s\nGEMINI_API_KEY=%s\nSITE_ADDRESS=%s\nGEMINI_MODEL=%s\nGEMINI_RPM=%s\n' \
+            "$TAG" "$POSTGRES_PASSWORD" "$GEMINI_API_KEY" "$SITE_ADDRESS" "$GEMINI_MODEL" "$GEMINI_RPM" \
             | ssh prod 'umask 077 && cat > ~/gridlock/.env.new'
           ssh prod '~/gridlock/remote-deploy.sh'
 
