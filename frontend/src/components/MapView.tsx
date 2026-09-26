@@ -1,8 +1,15 @@
 import 'leaflet/dist/leaflet.css'
 
 import type { GeoJsonObject } from 'geojson'
-import type { LatLngBoundsExpression, LatLngExpression, Layer, Map as LeafletMap } from 'leaflet'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import type {
+  CircleMarker as LeafletCircleMarker,
+  LatLngBoundsExpression,
+  LatLngExpression,
+  Layer,
+  Map as LeafletMap,
+  Polyline as LeafletPolyline,
+} from 'leaflet'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CircleMarker,
   GeoJSON,
@@ -12,12 +19,20 @@ import {
   ScaleControl,
   Tooltip,
   useMap,
+  useMapEvents,
 } from 'react-leaflet'
 
 import { milesToKm } from '../lib/distanceBands'
-import { timingLabel } from '../lib/format'
-import { lineBounds, lineOwners, lineStyle, lineTooltip, UNKNOWN_OWNER } from '../lib/lines'
-import { markerStyle } from '../lib/mapStyle'
+import { escapeHtml as esc, rangeLabel, timingLabel } from '../lib/format'
+import { lineBounds, lineStyle, lineTooltip } from '../lib/lines'
+import {
+  COLOR_BY_OPTIONS,
+  type ColorBy,
+  type LegendEntry,
+  PAIR_LINE_MIN_ZOOM,
+  markerScale,
+  markerStyle,
+} from '../lib/mapStyle'
 import type { ViewBounds } from '../lib/pairs'
 import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE } from '../lib/powerGrid'
 import { enableSmoothWheelZoom } from '../lib/smoothWheelZoom'
@@ -104,11 +119,133 @@ function ReportBounds({ onChange }: { onChange?: (b: ViewBounds) => void }) {
   return null
 }
 
+function ZoomWatcher({ onZoom }: { onZoom: (z: number) => void }) {
+  const map = useMapEvents({ zoomend: () => onZoom(map.getZoom()) })
+  useEffect(() => onZoom(map.getZoom()), [map, onZoom])
+  return null
+}
+
 function SmoothWheelZoom() {
   const map = useMap()
   useEffect(() => enableSmoothWheelZoom(map), [map])
   return null
 }
+
+function projectTooltip(p: Project): string {
+  const when = rangeLabel(p.start_date, p.end_date, p.start_precision, p.end_precision)
+  const parts = [
+    `<strong>${esc(p.name || 'Unnamed project')}</strong>`,
+    esc(
+      [p.utility, p.type ?? 'type unknown', p.voltage_kv ? `${p.voltage_kv} kV` : null]
+        .filter(Boolean)
+        .join(' · '),
+    ),
+  ]
+  if (when !== '—') parts.push(esc(when))
+  if (p.approximate) parts.push('<em>Approximate location (county center)</em>')
+  return parts.join('<br/>')
+}
+
+/**
+ * One project dot. Memoised so hovering a pair repaints the two markers it touches instead of
+ * re-rendering ~2,000. The tooltip is built on first open rather than mounted per marker.
+ */
+const ProjectMarker = memo(function ProjectMarker({
+  project: p,
+  color,
+  paired,
+  highlighted,
+  scale,
+  onSelect,
+  onHover,
+}: {
+  project: Project
+  color: string
+  paired: boolean
+  highlighted: boolean
+  scale: number
+  onSelect: (p: Project) => void
+  onHover?: (p: Project | null) => void
+}) {
+  const ref = useRef<LeafletCircleMarker>(null)
+  const style = markerStyle(p, color, { paired, selected: highlighted }, scale)
+  useEffect(() => {
+    const m = ref.current
+    if (!m) return
+    m.bindTooltip(() => projectTooltip(p))
+    return () => void m.unbindTooltip()
+  }, [p])
+  // Canvas paints in insertion order; lift the highlighted pair above its neighbours.
+  useEffect(() => {
+    if (highlighted) ref.current?.bringToFront()
+  }, [highlighted])
+  const handlers = useMemo(
+    () => ({
+      click: () => onSelect(p),
+      mouseover: () => onHover?.(p),
+      mouseout: () => onHover?.(null),
+    }),
+    [p, onSelect, onHover],
+  )
+  return (
+    <CircleMarker
+      ref={ref}
+      center={[p.lat!, p.lng!]}
+      radius={style.radius}
+      pathOptions={style}
+      eventHandlers={handlers}
+    />
+  )
+})
+
+const PAIR_INK = { light: { idle: '#3d4852', active: '#111' }, dark: { idle: '#c3ccd4', active: '#fff' } }
+
+/** The connector between a pair's two projects, neutral so it never reads as a project colour. */
+const PairLine = memo(function PairLine({
+  pair,
+  selected,
+  hovered,
+  scheme,
+  onSelect,
+}: {
+  pair: CoordinationPair
+  selected: boolean
+  hovered: boolean
+  scheme: 'light' | 'dark'
+  onSelect?: (pair: CoordinationPair) => void
+}) {
+  const ref = useRef<LeafletPolyline>(null)
+  const { project_a: a, project_b: b } = pair
+  const active = selected || hovered
+  useEffect(() => {
+    const l = ref.current
+    if (!l) return
+    l.bindTooltip(() => esc(`${milesToKm(pair.miles).toFixed(1)} km · ${timingLabel(pair)}`), {
+      sticky: true,
+    })
+    return () => void l.unbindTooltip()
+  }, [pair])
+  useEffect(() => {
+    if (active) ref.current?.bringToFront()
+  }, [active])
+  const handlers = useMemo(() => (onSelect ? { click: () => onSelect(pair) } : {}), [pair, onSelect])
+  return (
+    <Polyline
+      ref={ref}
+      positions={[
+        [a.lat!, a.lng!],
+        [b.lat!, b.lng!],
+      ]}
+      pathOptions={{
+        color: selected ? PAIR_INK[scheme].active : PAIR_INK[scheme].idle,
+        weight: active ? 3.5 : 1.2,
+        opacity: active ? 0.95 : 0.35,
+        dashArray: active ? undefined : '3 5',
+      }}
+      eventHandlers={handlers}
+    />
+  )
+})
 
 type MapLayer = 'grid' | 'highways' | 'counties' | 'labels'
 const MAP_LAYERS: [MapLayer, string][] = [
@@ -123,7 +260,12 @@ interface Props {
   pairs: CoordinationPair[]
   selectedPair: CoordinationPair | null
   hoveredPair?: CoordinationPair | null
-  colors: Record<string, string>
+  /** Marker colour under the current "colour by" choice. */
+  colorOf: (p: Project) => string
+  colorBy: ColorBy
+  onColorBy: (by: ColorBy) => void
+  legend: LegendEntry[]
+  scheme?: 'light' | 'dark'
   lines?: LineCollection | null
   linesFailed?: boolean
   onSelectProject: (p: Project) => void
@@ -137,7 +279,11 @@ export function MapView({
   pairs,
   selectedPair,
   hoveredPair = null,
-  colors,
+  colorOf,
+  colorBy,
+  onColorBy,
+  legend,
+  scheme = 'light',
   lines = null,
   linesFailed = false,
   onSelectProject,
@@ -153,6 +299,7 @@ export function MapView({
     labels: true,
   })
   const [map, setMap] = useState<LeafletMap | null>(null)
+  const [zoom, setZoom] = useState(9)
   const wrap = useRef<HTMLDivElement>(null)
 
   // Leaflet only watches the window; the split layout resizes the map on its own
@@ -164,21 +311,13 @@ export function MapView({
     return () => ro.disconnect()
   }, [map])
 
-  const owners = useMemo(() => (lines ? lineOwners(lines) : []), [lines])
-  const projectUtilities = useMemo(
-    () => [...new Set(projects.map((p) => p.utility))].sort((a, b) => a.localeCompare(b)),
-    [projects],
-  )
-  const placed = projects.filter((p) => p.lat != null && p.lng != null)
+  const placed = useMemo(() => projects.filter((p) => p.lat != null && p.lng != null), [projects])
   const pairedIds = useMemo(
     () => new Set(pairs.flatMap((p) => [p.project_a.id, p.project_b.id])),
     [pairs],
   )
-  const selectedIds = new Set(
-    selectedPair ? [selectedPair.project_a.id, selectedPair.project_b.id] : [],
-  )
-  const hoveredIds = new Set(
-    hoveredPair ? [hoveredPair.project_a.id, hoveredPair.project_b.id] : [],
+  const highlightedIds = new Set(
+    [selectedPair, hoveredPair].flatMap((p) => (p ? [p.project_a.id, p.project_b.id] : [])),
   )
 
   const allBounds = useMemo<LatLngBoundsExpression | null>(() => {
@@ -203,11 +342,15 @@ export function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [a?.lat, a?.lng, b?.lat, b?.lng, routeKey])
 
-  // Draw unselected, then paired, then selected so highlighted markers sit on top.
-  const ordered = [...placed].sort((a, b) => rank(a) - rank(b))
-  function rank(p: Project) {
-    return selectedIds.has(p.id) ? 3 : hoveredIds.has(p.id) ? 2 : pairedIds.has(p.id) ? 1 : 0
-  }
+  // Unpaired first so paired markers paint on top; the open/hovered pair lifts itself.
+  const ordered = useMemo(
+    () => [...placed].sort((x, y) => +pairedIds.has(x.id) - +pairedIds.has(y.id)),
+    [placed, pairedIds],
+  )
+  const placedPairs = useMemo(
+    () => pairs.filter((p) => p.project_a.lat != null && p.project_b.lat != null),
+    [pairs],
+  )
 
   return (
     <div className="map-wrap" ref={wrap}>
@@ -221,9 +364,12 @@ export function MapView({
         minZoom={3}
         zoomSnap={0}
         scrollWheelZoom={false}
+        // Thousands of markers and connectors: one canvas per pane instead of an SVG node each.
+        preferCanvas
         className="map"
       >
         <SmoothWheelZoom />
+        <ZoomWatcher onZoom={setZoom} />
         <ScaleControl position="bottomleft" imperial={false} metric />
         <BaseMap highways={layers.highways} counties={layers.counties} labels={layers.labels} />
         {layers.grid ? <PowerGridLayer /> : null}
@@ -235,9 +381,9 @@ export function MapView({
             <GeoJSON
               key={lines.features.length}
               data={lines as unknown as GeoJsonObject}
-              style={(f) => lineStyle(f as unknown as LineFeature, colors)}
+              style={(f) => lineStyle(f as unknown as LineFeature)}
               onEachFeature={(f, layer: Layer) =>
-                layer.bindTooltip(lineTooltip(f as unknown as LineFeature), { sticky: true })
+                layer.bindTooltip(() => lineTooltip(f as unknown as LineFeature), { sticky: true })
               }
             />
           ) : null}
@@ -246,15 +392,16 @@ export function MapView({
         {ordered
           .filter((p) => p.route && p.route.length >= 2)
           .map((p) => {
-            const highlighted = selectedIds.has(p.id) || hoveredIds.has(p.id)
+            const highlighted = highlightedIds.has(p.id)
+            const paired = pairedIds.has(p.id)
             return (
               <Polyline
                 key={`route-${p.id}`}
                 positions={p.route!}
                 pathOptions={{
-                  color: colors[p.utility] ?? '#555',
-                  weight: highlighted ? 6 : pairedIds.has(p.id) ? 4 : 2.5,
-                  opacity: highlighted ? 1 : pairedIds.has(p.id) ? 0.85 : 0.5,
+                  color: colorOf(p),
+                  weight: highlighted ? 6 : paired ? 4 : 2.5,
+                  opacity: highlighted ? 1 : paired ? 0.85 : 0.5,
                   lineCap: 'round',
                 }}
                 eventHandlers={{
@@ -271,64 +418,35 @@ export function MapView({
               </Polyline>
             )
           })}
-        {pairs.map((pair) => {
-          const { project_a: a, project_b: b } = pair
-          if (a.lat == null || b.lat == null) return null
-          const selected = selectedPair?.id === pair.id
-          const hovered = hoveredPair?.id === pair.id
-          return (
-            <Polyline
-              key={pair.id}
-              positions={[
-                [a.lat, a.lng!],
-                [b.lat, b.lng!],
-              ]}
-              pathOptions={{
-                color: selected ? '#111' : '#f08c00',
-                weight: selected || hovered ? 3.5 : 1.5,
-                opacity: selected || hovered ? 0.95 : 0.45,
-                dashArray: selected || hovered ? undefined : '3 5',
-              }}
-              eventHandlers={onSelectPair ? { click: () => onSelectPair(pair) } : undefined}
-            >
-              <Tooltip sticky>
-                {milesToKm(pair.miles).toFixed(1)} km · {timingLabel(pair)}
-              </Tooltip>
-            </Polyline>
+        {placedPairs
+          .filter(
+            (pair) =>
+              zoom >= PAIR_LINE_MIN_ZOOM ||
+              pair.id === selectedPair?.id ||
+              pair.id === hoveredPair?.id,
           )
-        })}
-        {ordered.map((p) => {
-          const style = markerStyle(p, colors[p.utility] ?? '#555', {
-            paired: pairedIds.has(p.id),
-            selected: selectedIds.has(p.id) || hoveredIds.has(p.id),
-          })
-          return (
-            <CircleMarker
-              key={p.id}
-              center={[p.lat!, p.lng!]}
-              radius={style.radius}
-              pathOptions={style}
-              eventHandlers={{
-                click: () => onSelectProject(p),
-                mouseover: () => onHoverProject?.(p),
-                mouseout: () => onHoverProject?.(null),
-              }}
-            >
-              <Tooltip>
-                <strong>{p.name || 'Unnamed project'}</strong>
-                <br />
-                {p.utility} · {p.type ?? 'type unknown'}
-                {p.voltage_kv ? ` · ${p.voltage_kv} kV` : ''}
-                {p.approximate ? (
-                  <>
-                    <br />
-                    <em>Approximate location (county center)</em>
-                  </>
-                ) : null}
-              </Tooltip>
-            </CircleMarker>
-          )
-        })}
+          .map((pair) => (
+          <PairLine
+            key={pair.id}
+            pair={pair}
+            selected={selectedPair?.id === pair.id}
+            hovered={hoveredPair?.id === pair.id}
+            scheme={scheme}
+            onSelect={onSelectPair}
+          />
+          ))}
+        {ordered.map((p) => (
+          <ProjectMarker
+            key={p.id}
+            project={p}
+            color={colorOf(p)}
+            paired={pairedIds.has(p.id)}
+            highlighted={highlightedIds.has(p.id)}
+            scale={markerScale(zoom)}
+            onSelect={onSelectProject}
+            onHover={onHoverProject}
+          />
+        ))}
       </MapContainer>
       <div className="map-notes">
         {linesFailed ? <p className="map-note">Existing transmission lines could not be loaded.</p> : null}
@@ -348,6 +466,35 @@ export function MapView({
             Fit all
           </button>
         ) : null}
+        <details className="legend-card color-card" open>
+          <summary>
+            Color by {COLOR_BY_OPTIONS.find(([k]) => k === colorBy)?.[1].toLowerCase()}
+          </summary>
+          <div className="color-by" role="group" aria-label="Color projects by">
+            {COLOR_BY_OPTIONS.map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={colorBy === key ? 'active' : ''}
+                aria-pressed={colorBy === key}
+                onClick={() => onColorBy(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <ul className="color-legend" aria-label="Project colors">
+            {legend.map((r) => (
+              <li key={r.label}>
+                <span className="swatch" style={{ background: r.color }} />
+                <span className="color-legend-label" title={r.label}>
+                  {r.label}
+                </span>
+                <span className="color-legend-count">{r.count.toLocaleString()}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
         <details className="legend-card">
           <summary>Layers &amp; legend</summary>
           <div className="map-legend layer-toggles" aria-label="Map layers">
@@ -361,14 +508,16 @@ export function MapView({
                 {label}
               </label>
             ))}
-          </div>
-          <div className="map-legend utility-legend" aria-label="Map legend">
-            {projectUtilities.map((u) => (
-              <span key={u} className="legend-item">
-                <span className="swatch" style={{ background: colors[u] ?? '#555' }} />
-                {u}
-              </span>
-            ))}
+            {lines ? (
+              <label className="legend-item">
+                <input
+                  type="checkbox"
+                  checked={showLines}
+                  onChange={(e) => setShowLines(e.target.checked)}
+                />
+                Existing lines (HIFLD)
+              </label>
+            ) : null}
           </div>
           <div className="map-legend" aria-label="Marker legend">
             <span className="legend-item">
@@ -378,13 +527,16 @@ export function MapView({
               <span className="swatch swatch-approx" /> approximate location
             </span>
             <span className="legend-item">
+              <span className="swatch swatch-line swatch-pair-line" /> pair connector
+            </span>
+            <span className="legend-item">
               <span className="swatch swatch-line" style={{ background: 'var(--ink-2)' }} />{' '}
               planned line (straight between endpoints)
             </span>
           </div>
-          {layers.grid ? (
+          {layers.grid || (lines && showLines) ? (
             <div className="map-legend grid-legend" aria-label="Power grid legend">
-              <span>Grid lines (kV):</span>
+              <span>Grid &amp; existing lines (kV):</span>
               {[...VOLTAGE_SCALE].reverse().map(([kv, c]) => (
                 <span key={kv} className="legend-item">
                   <span className="swatch swatch-line" style={{ background: c }} />
@@ -395,35 +547,16 @@ export function MapView({
                 <span className="swatch swatch-line" style={{ background: LOW_VOLTAGE_COLOR }} />
                 lower / unknown
               </span>
-              <span className="legend-item">
-                <span className="swatch swatch-substation" /> substation
-              </span>
-              <span className="legend-item">
-                <span className="swatch swatch-plant" /> power plant
-              </span>
-            </div>
-          ) : null}
-          {lines && owners.length ? (
-            <div className="map-legend lines-legend" aria-label="Existing transmission lines">
-              <label className="legend-item">
-                <input
-                  type="checkbox"
-                  checked={showLines}
-                  onChange={(e) => setShowLines(e.target.checked)}
-                />
-                Existing lines (HIFLD)
-              </label>
-              {showLines
-                ? owners.map(({ owner, count }) => (
-                    <span key={owner ?? UNKNOWN_OWNER} className="legend-item">
-                      <span
-                        className="swatch swatch-line"
-                        style={{ background: owner ? (colors[owner] ?? '#555') : undefined }}
-                      />
-                      {owner ?? UNKNOWN_OWNER} ({count})
-                    </span>
-                  ))
-                : null}
+              {layers.grid ? (
+                <>
+                  <span className="legend-item">
+                    <span className="swatch swatch-substation" /> substation
+                  </span>
+                  <span className="legend-item">
+                    <span className="swatch swatch-plant" /> power plant
+                  </span>
+                </>
+              ) : null}
             </div>
           ) : null}
         </details>

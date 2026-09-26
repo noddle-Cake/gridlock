@@ -1,7 +1,9 @@
+import { useState } from 'react'
+
 import { milesToKm, TIERS } from '../lib/distanceBands'
-import { pct, rangeLabel, timingLabel, usdRange } from '../lib/format'
+import { OTHER_COLOR, pct, rangeLabel, timingLabel, usdRange } from '../lib/format'
 import { SORT_LABELS, type SortKey, scoreBand } from '../lib/pairs'
-import type { CoordinationPair, Project } from '../types'
+import type { CoordinationPair, PairProject } from '../types'
 
 interface Props {
   pairs: CoordinationPair[]
@@ -10,7 +12,7 @@ interface Props {
   selectedId: string | null
   hoveredId?: string | null
   loading: boolean
-  colors?: Record<string, string>
+  colorOf?: (p: PairProject) => string
   sort?: SortKey
   onSort?: (key: SortKey) => void
   limitToView?: boolean
@@ -19,7 +21,13 @@ interface Props {
   onHover?: (pair: CoordinationPair | null) => void
 }
 
-function ProjectLine({ p, color }: { p: Project; color: string }) {
+/**
+ * Cards rendered per page. Thousands of pairs used to mount at once (~70k DOM nodes), so every
+ * hover or colour change re-rendered the whole list.
+ */
+export const PAGE_SIZE = 50
+
+function ProjectLine({ p, color }: { p: PairProject; color: string }) {
   const kind = [p.type, p.voltage_kv ? `${p.voltage_kv} kV` : null].filter(Boolean).join(' · ')
   return (
     <span className="card-project">
@@ -42,7 +50,7 @@ export function PairList({
   selectedId,
   hoveredId = null,
   loading,
-  colors = {},
+  colorOf = () => OTHER_COLOR,
   sort = 'score',
   onSort,
   limitToView = false,
@@ -51,6 +59,14 @@ export function PairList({
   onHover,
 }: Props) {
   const offscreen = totalCount - pairs.length
+  const [limit, setLimit] = useState(PAGE_SIZE)
+  // A new sort starts again from the top page.
+  const [sortedBy, setSortedBy] = useState(sort)
+  if (sortedBy !== sort) {
+    setSortedBy(sort)
+    setLimit(PAGE_SIZE)
+  }
+  const more = pairs.length - limit
   return (
     <section className="pair-list" aria-label="Potential coordination opportunities">
       <header className="list-head">
@@ -100,7 +116,7 @@ export function PairList({
         </p>
       ) : null}
       <ol className="cards">
-        {pairs.map((pair) => {
+        {pairs.slice(0, limit).map((pair) => {
           const { project_a: a, project_b: b } = pair
           const band = scoreBand(pair.scores.composite)
           const tier = pair.tier != null ? TIERS[pair.tier] : undefined
@@ -145,8 +161,8 @@ export function PairList({
                       : `≈ ${usdRange(pair.impact.if_aligned_low, pair.impact.if_aligned_high)} if schedules aligned`}
                   </span>
                 ) : null}
-                <ProjectLine p={a} color={colors[a.utility] ?? '#555'} />
-                <ProjectLine p={b} color={colors[b.utility] ?? '#555'} />
+                <ProjectLine p={a} color={colorOf(a)} />
+                <ProjectLine p={b} color={colorOf(b)} />
                 <span className="card-foot">
                   <span>
                     {pair.window_start
@@ -160,6 +176,11 @@ export function PairList({
           )
         })}
       </ol>
+      {more > 0 ? (
+        <button type="button" className="show-more" onClick={() => setLimit((n) => n + PAGE_SIZE)}>
+          Show {Math.min(more, PAGE_SIZE)} more of {more.toLocaleString()}
+        </button>
+      ) : null}
     </section>
   )
 }

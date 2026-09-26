@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import type { LineCollection, LineFeature } from '../types'
-import { lineBounds, lineOwners, lineStyle, lineTooltip, lineWeight } from './lines'
+import { lineBounds, lineStyle, lineTooltip, lineWeight } from './lines'
+import { voltageColor } from './powerGrid'
 
 function line(id: string, owner: string | null, kv: number | null = 115): LineFeature {
   return {
@@ -35,21 +36,11 @@ describe('reference line helpers', () => {
     expect([null, 69, 115, 230, 500].map(lineWeight)).toEqual([1, 1, 1.5, 2.2, 3])
   })
 
-  it('colors by owner and dashes unknown owners', () => {
-    expect(lineStyle(line('1', 'JEA'), { JEA: '#123456' }).color).toBe('#123456')
-    const unknown = lineStyle(line('2', null), {})
-    expect(unknown.dashArray).toBeDefined()
-  })
-
-  it('counts owners, biggest first, unknown last', () => {
-    const owners = lineOwners(
-      fc([line('1', null), line('2', 'JEA'), line('3', 'Georgia Power'), line('4', 'Georgia Power')]),
-    )
-    expect(owners).toEqual([
-      { owner: 'Georgia Power', count: 2 },
-      { owner: 'JEA', count: 1 },
-      { owner: null, count: 1 },
-    ])
+  it('colors by voltage like the grid layer and dashes unknown owners', () => {
+    expect(lineStyle(line('1', 'JEA', 500)).color).toBe(voltageColor(500))
+    expect(lineStyle(line('2', 'JEA', 115)).color).toBe(voltageColor(115))
+    expect(lineStyle(line('1', 'JEA')).dashArray).toBeUndefined()
+    expect(lineStyle(line('3', null)).dashArray).toBeDefined()
   })
 
   it('escapes tooltip text and hides placeholder substation ids', () => {

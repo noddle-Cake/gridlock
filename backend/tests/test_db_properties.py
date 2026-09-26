@@ -234,6 +234,31 @@ def test_edit_round_trip_and_rematch(projects, data, edit):
             assert pid not in briefs and pid in result.invalidated
 
 
+# Briefs flagged under different radii are each re-checked under their own radius, exactly
+# as a per-brief find_pair would.
+@settings(max_examples=50)
+@given(st.lists(new_projects(), min_size=2, max_size=10), st.data())
+def test_rematch_rechecks_each_brief_at_its_radius(projects, data):
+    async def body(conn):
+        ids = await repo.insert_projects(conn, projects)
+        target = ids[data.draw(st.integers(0, len(ids) - 1))]
+        for p in await matching.overlaps(conn, 25.0):
+            await repo.upsert_brief(
+                conn, pair_id=p.id, a_id=p.project_a.id, b_id=p.project_b.id,
+                text="brief", miles=p.miles, overlap_days=p.overlap_days,
+                radius=data.draw(st.floats(0.0, 25.0)),
+            )
+        expected = {}
+        for b in await repo.briefs_for_project(conn, target):
+            expected[b.pair_id] = await matching.find_pair(conn, b.a_id, b.b_id, b.radius)
+        result = await matching.rematch_project(conn, target)
+        return expected, result
+
+    expected, result = run_db(body)
+    assert set(result.invalidated) == {pid for pid, pair in expected.items() if pair is None}
+    assert not set(result.updated) & set(result.invalidated)
+
+
 # Stretch 15.2: with 3+ utilities every distinct utility combination is evaluated.
 @given(st.lists(st.sampled_from(["A", "B", "C", "D", "E"]), min_size=3, max_size=10))
 def test_cross_utility_coverage(utilities):
@@ -275,6 +300,28 @@ def test_line_route_measured_at_closest_point():
     assert 1.8 < pairs[(1, 2)] * matching.KM_PER_MILE < 2.3  # not the ~30 km to the midpoint
     assert pairs[(1, 3)] < 1e-6 and matching.distance_band(pairs[(1, 3)]) == "touching"
     assert (2, 3) not in pairs  # ~46 km apart
+
+
+def test_rematch_rechecks_briefs_on_routes_not_midpoints():
+    # Crossing lines whose midpoints are ~30 km apart: 0 km as matched, so an edit that
+    # doesn't move them must keep the brief as-is (not refresh it to the midpoint distance).
+    a = repo.NewProject(utility="A", confidence=1, lat=33.0, lng=-81.72,
+                        route=[(33.0, -82.0), (33.0, -81.44)])
+    b = repo.NewProject(utility="B", confidence=1, lat=33.13, lng=-81.5,
+                        route=[(32.9, -81.5), (33.36, -81.5)])
+
+    async def body(conn):
+        ids = await repo.insert_projects(conn, [a, b])
+        (row,) = await repo.candidate_pairs(conn, 25.0)
+        await repo.upsert_brief(conn, pair_id=matching.pair_id(*ids), a_id=ids[0],
+                                b_id=ids[1], text="brief", miles=row.miles, overlap_days=0,
+                                radius=25.0)
+        await repo.update_project(conn, ids[0], {"name": "renamed"})
+        return row, await matching.rematch_project(conn, ids[0])
+
+    row, result = run_db(body)
+    assert row.miles < 1e-6
+    assert result.invalidated == [] and result.updated == []
 
 
 def test_hand_placed_point_drops_route():

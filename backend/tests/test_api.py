@@ -156,6 +156,9 @@ def test_overlaps_defaults_and_scores(api_client):
     assert set(pair["scores"]) >= {"distance", "overlap", "type_similarity",
                                    "voltage_similarity", "composite", "indeterminate_factors"}
     assert pair["brief"] is None
+    # Embedded projects skip the source excerpt (Review reads it from /projects).
+    assert "raw_excerpt" not in pair["project_a"] and "raw_excerpt" not in pair["project_b"]
+    assert pair["project_a"]["utility"] and "lat" in pair["project_b"]
     assert api_client.get("/overlaps?radius=5").json()["pairs"] == []
 
 

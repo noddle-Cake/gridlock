@@ -85,10 +85,13 @@ export interface Impact {
   assumptions: string[]
 }
 
+/** Projects as embedded in a pair: GET /overlaps leaves out the source excerpt. */
+export type PairProject = Omit<Project, 'raw_excerpt'>
+
 export interface CoordinationPair {
   id: string
-  project_a: Project
-  project_b: Project
+  project_a: PairProject
+  project_b: PairProject
   miles: number
   /** Distance band id (see lib/distanceBands); null beyond 40 km. */
   band: string | null

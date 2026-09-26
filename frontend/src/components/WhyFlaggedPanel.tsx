@@ -12,16 +12,16 @@ import {
   usdRange,
 } from '../lib/format'
 import { scoreBand } from '../lib/pairs'
-import type { CoordinationBrief, CoordinationPair, Impact, Project } from '../types'
+import type { CoordinationBrief, CoordinationPair, Impact, PairProject } from '../types'
 import { SourceLink } from './SourceLink'
 
 interface Props {
   pair: CoordinationPair | null
-  colors: Record<string, string>
+  colorOf: (p: PairProject) => string
   onGenerateBrief: (pair: CoordinationPair) => Promise<CoordinationBrief>
 }
 
-function ProjectCard({ p, color }: { p: Project; color: string }) {
+function ProjectCard({ p, color }: { p: PairProject; color: string }) {
   return (
     <article className="project-card" style={{ borderTopColor: color }}>
       <p className="card-utility" style={{ color }}>
@@ -96,7 +96,7 @@ function ImpactSection({ impact }: { impact: Impact }) {
   )
 }
 
-export function WhyFlaggedPanel({ pair, colors, onGenerateBrief }: Props) {
+export function WhyFlaggedPanel({ pair, colorOf, onGenerateBrief }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -187,8 +187,8 @@ export function WhyFlaggedPanel({ pair, colors, onGenerateBrief }: Props) {
 
       <h3 className="section-title">Projects</h3>
       <div className="side-by-side">
-        <ProjectCard p={pair.project_a} color={colors[pair.project_a.utility] ?? '#555'} />
-        <ProjectCard p={pair.project_b} color={colors[pair.project_b.utility] ?? '#555'} />
+        <ProjectCard p={pair.project_a} color={colorOf(pair.project_a)} />
+        <ProjectCard p={pair.project_b} color={colorOf(pair.project_b)} />
       </div>
 
       <h3 className="section-title">Score breakdown</h3>

@@ -5,6 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GridMerge</title>
+    <!-- Start the data the first paint needs alongside the JS bundle, not after it runs.
+         `crossorigin` matches fetch()'s default credentials so the browser reuses these. -->
+    <link rel="preload" href="/api/projects" as="fetch" crossorigin />
+    <link rel="preload" href="/api/lines" as="fetch" crossorigin />
+    <link rel="preload" href="/basemap/land.json" as="fetch" crossorigin />
+    <link rel="preload" href="/basemap/labels.json" as="fetch" crossorigin />
   </head>
   <body>
     <div id="root"></div>
