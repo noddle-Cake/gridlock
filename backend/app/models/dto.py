@@ -87,6 +87,9 @@ class CoordinationPairDTO(BaseModel):
     project_a: ProjectDTO
     project_b: ProjectDTO
     miles: float
+    # Distance band id (matching.DISTANCE_BANDS_KM); the ranking tier comes from it.
+    band: str | None = None
+    tier: int | None = None  # 0 = touching ... 3 = crews & equipment (matching.TIERS)
     overlap_days: int  # days the padded build windows share (0 = none or unknown)
     time_gap_days: int | None = None  # days between the schedules; None when undated
     window_start: date | None = None

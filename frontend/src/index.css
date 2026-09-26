@@ -930,6 +930,26 @@ a {
   margin-left: auto;
 }
 
+/* Ranking tier: what two projects this close can share. Closer tiers read stronger. */
+.tier {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.tier-detail {
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.tier-0 {
+  color: var(--error);
+}
+
+.tier-3 {
+  color: var(--ink-2);
+}
+
 .score-chip {
   display: inline-block;
   padding: 2px 8px;

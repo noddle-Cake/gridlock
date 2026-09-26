@@ -1,4 +1,4 @@
-import { milesToKm } from '../lib/distanceBands'
+import { milesToKm, TIERS } from '../lib/distanceBands'
 import { pct, rangeLabel, timingLabel } from '../lib/format'
 import { SORT_LABELS, type SortKey, scoreBand } from '../lib/pairs'
 import type { CoordinationPair, Project } from '../types'
@@ -103,6 +103,7 @@ export function PairList({
         {pairs.map((pair) => {
           const { project_a: a, project_b: b } = pair
           const band = scoreBand(pair.scores.composite)
+          const tier = pair.tier != null ? TIERS[pair.tier] : undefined
           const approximate = a.approximate || b.approximate
           return (
             <li key={pair.id}>
@@ -132,6 +133,11 @@ export function PairList({
                     </span>
                   ) : null}
                 </span>
+                {tier ? (
+                  <span className={`tier tier-${pair.tier}`} title={tier.detail}>
+                    {tier.label} <span className="tier-detail">· {tier.detail}</span>
+                  </span>
+                ) : null}
                 <ProjectLine p={a} color={colors[a.utility] ?? '#555'} />
                 <ProjectLine p={b} color={colors[b.utility] ?? '#555'} />
                 <span className="card-foot">

@@ -3,7 +3,7 @@ import type { CoordinationPair, Project } from '../types'
 export type SortKey = 'score' | 'distance' | 'overlap' | 'start'
 
 export const SORT_LABELS: Record<SortKey, string> = {
-  score: 'Highest score',
+  score: 'Best opportunity',
   distance: 'Closest first',
   overlap: 'Closest in time',
   start: 'Soonest window',
@@ -60,6 +60,15 @@ export function pairsInView(pairs: CoordinationPair[], b: ViewBounds | null): Co
   })
 }
 
+/** Backend ranking: closest tier first, then composite score, then distance. */
+export function compareRank(a: CoordinationPair, b: CoordinationPair): number {
+  return (
+    (a.tier ?? 99) - (b.tier ?? 99) ||
+    b.scores.composite - a.scores.composite ||
+    a.miles - b.miles
+  )
+}
+
 export function sortPairs(pairs: CoordinationPair[], key: SortKey): CoordinationPair[] {
   const out = [...pairs]
   switch (key) {
@@ -78,16 +87,16 @@ export function sortPairs(pairs: CoordinationPair[], key: SortKey): Coordination
         (a.window_start ?? '\uffff').localeCompare(b.window_start ?? '\uffff'),
       )
     default:
-      return out.sort((a, b) => b.scores.composite - a.scores.composite)
+      return out.sort(compareRank)
   }
 }
 
-/** The highest-scoring pair a project belongs to, if any. */
+/** The best-ranked pair a project belongs to, if any. */
 export function bestPairFor(p: Project, pairs: CoordinationPair[]): CoordinationPair | null {
   let best: CoordinationPair | null = null
   for (const pair of pairs) {
     if (pair.project_a.id !== p.id && pair.project_b.id !== p.id) continue
-    if (!best || pair.scores.composite > best.scores.composite) best = pair
+    if (!best || compareRank(pair, best) < 0) best = pair
   }
   return best
 }

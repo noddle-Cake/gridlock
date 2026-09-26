@@ -14,6 +14,14 @@ const far = pair({
   scores: { ...near.scores, composite: 0.8 },
 })
 
+describe('compareRank', () => {
+  it('puts a closer tier ahead of a higher score', () => {
+    const closeLowScore = pair({ id: '5-6', tier: 1, scores: { ...near.scores, composite: 0.2 } })
+    const farHighScore = pair({ id: '7-8', tier: 3, scores: { ...near.scores, composite: 0.9 } })
+    expect(sortPairs([farHighScore, closeLowScore], 'score')).toEqual([closeLowScore, farHighScore])
+  })
+})
+
 describe('filterPairs', () => {
   it('matches search text against either project', () => {
     const none = new Set<string>()

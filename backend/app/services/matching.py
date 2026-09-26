@@ -80,6 +80,21 @@ def distance_band(miles: float) -> str | None:
     return None
 
 
+# Sperry's ranking tiers: closer overlaps are worth more. The 8-25 and 25-40 km filter bands
+# are one tier ("under 40 km -> can share crews and equipment").
+TIERS: dict[str, int] = {"touching": 0, "1.6": 1, "8": 2, "25": 3, "40": 3}
+OUTSIDE_TIER = len(set(TIERS.values()))
+
+
+def tier(band: str | None) -> int:
+    return TIERS.get(band, OUTSIDE_TIER) if band else OUTSIDE_TIER
+
+
+def rank_key(pair: CoordinationPairDTO) -> tuple[int, float, float]:
+    """Tier first, then the composite score (which carries timing), then distance."""
+    return (tier(pair.band), -pair.scores.composite, pair.miles)
+
+
 def parse_bands(raw: str | None) -> set[str] | None:
     """None when the param is absent (no band filter); an empty set when it is empty."""
     if raw is None:
@@ -105,9 +120,10 @@ def _build_pair(
         voltage_a=a.voltage_kv, voltage_b=b.voltage_kv,
         radius=radius, max_overlap=max_overlap,
     )
+    band = distance_band(row.miles)
     return CoordinationPairDTO(
         id=pair_id(a.id, b.id), project_a=a, project_b=b,
-        miles=round(row.miles, 3), overlap_days=row.overlap_days,
+        miles=round(row.miles, 3), band=band, tier=tier(band), overlap_days=row.overlap_days,
         time_gap_days=row.time_gap_days, window_start=row.window_start,
         window_end=row.window_end, scores=scores,
     )
@@ -127,7 +143,7 @@ async def overlaps(
     for p in pairs:
         if p.id in briefs:
             p.brief = briefs[p.id].to_dto()
-    pairs.sort(key=lambda p: p.scores.composite, reverse=True)
+    pairs.sort(key=rank_key)
     return pairs
 
 
