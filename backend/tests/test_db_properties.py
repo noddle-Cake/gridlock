@@ -56,14 +56,11 @@ def _haversine_miles(a, b) -> float:
     return 2 * r * math.asin(math.sqrt(h))
 
 
-def _qualifies(a, b, radius: float, pad: int, slack: float) -> bool:
-    sa, sb = _span(a), _span(b)
-    if a.lat is None or b.lat is None or sa is None or sb is None:
+def _qualifies(a, b, radius: float, slack: float) -> bool:
+    """Distance alone decides membership; timing only ranks (dates may be missing)."""
+    if a.lat is None or b.lat is None:
         return False
     if a.utility.strip().lower() == b.utility.strip().lower():
-        return False
-    p = timedelta(days=pad)
-    if not (sa[0] - p <= sb[1] + p and sb[0] - p <= sa[1] + p):
         return False
     return _haversine_miles(a, b) <= radius * slack
 
@@ -90,16 +87,24 @@ def test_valid_pair_membership(projects, radius, pad):
         assert a.lat is not None and b.lat is not None
         assert 0 <= r.miles <= radius + 1e-6
         sa, sb = _span(a), _span(b)
-        p = timedelta(days=pad)
-        lo, hi = max(sa[0], sb[0]) - p, min(sa[1], sb[1]) + p
-        assert lo <= hi
-        assert r.overlap_days == (hi - lo).days + 1 >= 1
-        assert (r.window_start, r.window_end) == (lo, hi)
+        if sa is None or sb is None:
+            # Undated: timing unknown, never a reason to drop the pair.
+            assert r.time_gap_days is None and r.overlap_days == 0
+            assert r.window_start is None and r.window_end is None
+        else:
+            assert r.time_gap_days == max((sa[0] - sb[1]).days, (sb[0] - sa[1]).days, 0)
+            p = timedelta(days=pad)
+            lo, hi = max(sa[0], sb[0]) - p, min(sa[1], sb[1]) + p
+            if lo <= hi:
+                assert r.overlap_days == (hi - lo).days + 1 >= 1
+                assert (r.window_start, r.window_end) == (lo, hi)
+            else:
+                assert r.overlap_days == 0 and r.window_start is None and r.window_end is None
         found.add((r.a_id, r.b_id))
 
     # Completeness (sanity): pairs clearly inside the radius are never missed.
     for (ia, a), (ib, b) in itertools.combinations(sorted(by_id.items()), 2):
-        if _qualifies(a, b, radius, pad, slack=0.99):
+        if _qualifies(a, b, radius, slack=0.99):
             assert (ia, ib) in found
 
 

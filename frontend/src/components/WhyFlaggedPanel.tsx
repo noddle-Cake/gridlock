@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { ApiError } from '../api'
 import { milesToKm } from '../lib/distanceBands'
-import { FACTOR_LABELS, dayLabel, pct, rangeLabel } from '../lib/format'
+import { FACTOR_LABELS, dayLabel, gapLabel, pct, rangeLabel } from '../lib/format'
 import { scoreBand } from '../lib/pairs'
 import type { CoordinationBrief, CoordinationPair, Project } from '../types'
 import { SourceLink } from './SourceLink'
@@ -103,16 +103,20 @@ export function WhyFlaggedPanel({ pair, colors, onGenerateBrief }: Props) {
           <span className="fact-label">km apart</span>
         </div>
         <div className="fact">
-          <span className="fact-value" data-testid="overlap-days">
-            {pair.overlap_days}
+          <span className="fact-value" data-testid="time-gap">
+            {pair.time_gap_days == null ? '—' : gapLabel(pair.time_gap_days)}
           </span>
-          <span className="fact-label">overlap days</span>
+          <span className="fact-label">between schedules</span>
         </div>
         <div className="fact fact-wide">
-          <span className="fact-value small">
-            {dayLabel(pair.window_start)} – {dayLabel(pair.window_end)}
+          <span className="fact-value small" data-testid="overlap-days">
+            {pair.window_start && pair.window_end
+              ? `${dayLabel(pair.window_start)} – ${dayLabel(pair.window_end)} (${pair.overlap_days} d)`
+              : pair.time_gap_days == null
+                ? 'Schedule unknown'
+                : 'None'}
           </span>
-          <span className="fact-label">shared window (incl. padding)</span>
+          <span className="fact-label">shared build window</span>
         </div>
       </div>
 

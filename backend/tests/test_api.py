@@ -143,15 +143,34 @@ def test_utility_count_boundaries(api_client):
 def test_overlaps_defaults_and_scores(api_client):
     seed(two_nearby())
     body = api_client.get("/overlaps").json()
-    assert body["radius"] == 25 and body["pad"] == 30
+    assert body["radius"] == 25 and body["pad"] == 365
     (pair,) = body["pairs"]
     assert pair["id"] == "1-2"
     assert 14 < pair["miles"] < 17
-    assert pair["overlap_days"] == (date(2026, 7, 30) - date(2026, 4, 1)).days + 1
+    assert pair["time_gap_days"] == 0
+    assert pair["overlap_days"] == (date(2027, 6, 30) - date(2025, 5, 1)).days + 1
     assert set(pair["scores"]) >= {"distance", "overlap", "type_similarity",
                                    "voltage_similarity", "composite", "indeterminate_factors"}
     assert pair["brief"] is None
     assert api_client.get("/overlaps?radius=5").json()["pairs"] == []
+
+
+def test_distant_schedules_still_flagged(api_client):
+    """Geography is primary: years between in-service dates rank a pair lower, never hide it
+    (the Sperry reference Hooks–Thurmond / Evans–Thurmond pair is 3,074 days apart)."""
+    near, far = two_nearby()
+    far.start_date, far.end_date = date(2034, 12, 31), date(2034, 12, 31)
+    undated = repo.NewProject(utility="PPL", name="Undated", lat=39.7, lng=-77.0,
+                              confidence=0.9)
+    seed([near, far, undated])
+    pairs = {p["id"]: p for p in api_client.get("/overlaps?pad=30").json()["pairs"]}
+    assert set(pairs) == {"1-2", "1-3", "2-3"}
+    gap = pairs["1-2"]
+    assert gap["time_gap_days"] == (date(2034, 12, 31) - date(2026, 6, 30)).days
+    assert gap["overlap_days"] == 0 and gap["window_start"] is None
+    assert gap["scores"]["overlap"] == 0
+    assert pairs["1-3"]["time_gap_days"] is None
+    assert "overlap" in pairs["1-3"]["scores"]["indeterminate_factors"]
 
 
 @pytest.mark.parametrize(
@@ -310,7 +329,7 @@ def test_export_csv_and_pdf(api_client):
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
     lines = r.text.strip().splitlines()
     assert lines[0].startswith("pair_id,utility_a,project_a")
-    assert "Met-Ed" in lines[1] and "BGE" in lines[1] and "2026-" in lines[1]
+    assert "Met-Ed" in lines[1] and "BGE" in lines[1] and "2025-05-01" in lines[1]
     r = api_client.get("/export?format=pdf")
     assert r.status_code == 200 and r.content.startswith(b"%PDF")
     assert api_client.get("/export?format=docx").status_code == 422

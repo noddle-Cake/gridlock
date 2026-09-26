@@ -18,14 +18,14 @@ will forward to a planner at a neighboring utility. Write 2 to 3 plain sentences
 characters total, no greeting, no sign-off, no bullet points, no markdown.
 
 The note MUST state: both project types, the distance of "{miles} miles", and the \
-overlapping window "{window}". It MUST propose one concrete coordination opportunity \
+timing "{window}". It MUST propose one concrete coordination opportunity \
 (for example sharing a crane or line crew, aligning outages, joint procurement, combined \
 permitting or right-of-way work) that fits these two projects.
 
 Project A ({utility_a}): {desc_a}
 Project B ({utility_b}): {desc_b}
 Distance apart: {miles} miles
-Overlapping window (with scheduling padding): {window} ({days} days)
+Timing: {window}
 """
 
 # Sentence boundary: terminal punctuation, whitespace, then an uppercase/quote/digit start.
@@ -50,7 +50,28 @@ def _day(d) -> str:
 
 
 def window_text(pair: CoordinationPairDTO) -> str:
-    return f"{_day(pair.window_start)} – {_day(pair.window_end)}"
+    """The shared build window, or how far apart the schedules are when there isn't one."""
+    if pair.window_start and pair.window_end:
+        return f"overlapping build window {_day(pair.window_start)} – {_day(pair.window_end)}"
+    if pair.time_gap_days is not None:
+        return f"in-service dates about {gap_text(pair.time_gap_days)} apart"
+    return "schedule not published for one of the projects"
+
+
+def gap_text(days: int) -> str:
+    if days < 60:
+        return f"{days} days"
+    if days < 730:
+        return f"{round(days / 30.4)} months"
+    return f"{days / 365.25:.1f} years"
+
+
+def _years(pair: CoordinationPairDTO) -> list[str]:
+    """Years a brief must mention to count as stating the timing."""
+    dates = [pair.window_start, pair.window_end]
+    if not any(dates):
+        dates = [p.end_date or p.start_date for p in (pair.project_a, pair.project_b)]
+    return [str(d.year) for d in dates if d]
 
 
 def miles_text(pair: CoordinationPairDTO) -> str:
@@ -59,7 +80,7 @@ def miles_text(pair: CoordinationPairDTO) -> str:
 
 def build_prompt(pair: CoordinationPairDTO) -> str:
     return PROMPT_TEMPLATE.format(
-        miles=miles_text(pair), window=window_text(pair), days=pair.overlap_days,
+        miles=miles_text(pair), window=window_text(pair),
         utility_a=pair.project_a.utility, desc_a=describe(pair.project_a),
         utility_b=pair.project_b.utility, desc_b=describe(pair.project_b),
     )
@@ -69,8 +90,7 @@ def facts_sentence(pair: CoordinationPairDTO) -> str:
     a, b = pair.project_a, pair.project_b
     return (
         f"{a.utility}'s {describe(a)} and {b.utility}'s {describe(b)} are "
-        f"{miles_text(pair)} miles apart with overlapping work windows "
-        f"({window_text(pair)})."
+        f"{miles_text(pair)} miles apart ({window_text(pair)})."
     )
 
 
@@ -100,9 +120,8 @@ def finalize_brief(raw: str, pair: CoordinationPairDTO) -> str:
     if not sentences:
         raise BriefGenerationError("The LLM returned an empty brief.")
 
-    has_facts = miles_text(pair) in text and (
-        str(pair.window_start.year) in text or str(pair.window_end.year) in text
-    )
+    years = _years(pair)
+    has_facts = miles_text(pair) in text and (not years or any(y in text for y in years))
     if not has_facts:
         # Keep the facts sentence plus as many opportunity sentences as fit.
         sentences = [facts_sentence(pair), *sentences[: MAX_SENTENCES - 1]]

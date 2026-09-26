@@ -99,7 +99,8 @@ def _build_pair(
 ) -> CoordinationPairDTO:
     a, b = projects[row.a_id], projects[row.b_id]
     scores = score_pair(
-        miles=row.miles, overlap_days=row.overlap_days,
+        # Undated projects: timing is unknown (factor flagged indeterminate), not "no overlap".
+        miles=row.miles, overlap_days=None if row.time_gap_days is None else row.overlap_days,
         type_a=a.type.value if a.type else None, type_b=b.type.value if b.type else None,
         voltage_a=a.voltage_kv, voltage_b=b.voltage_kv,
         radius=radius, max_overlap=max_overlap,
@@ -107,7 +108,8 @@ def _build_pair(
     return CoordinationPairDTO(
         id=pair_id(a.id, b.id), project_a=a, project_b=b,
         miles=round(row.miles, 3), overlap_days=row.overlap_days,
-        window_start=row.window_start, window_end=row.window_end, scores=scores,
+        time_gap_days=row.time_gap_days, window_start=row.window_start,
+        window_end=row.window_end, scores=scores,
     )
 
 

@@ -2,7 +2,7 @@ import { ALL_BANDS, bandSummary, DISTANCE_BANDS, type BandId } from '../lib/dist
 import { DEFAULT_CONFIDENCE_THRESHOLD } from '../lib/review'
 import { FilterMenu } from './FilterMenu'
 
-export const DEFAULT_PAD = 30
+export const DEFAULT_PAD = 365
 
 interface Props {
   bands: BandId[]
@@ -47,21 +47,23 @@ export function ThresholdControls(props: Props) {
           ))}
         </fieldset>
       </FilterMenu>
-      <FilterMenu label={<>±{props.pad} days</>} active={props.pad !== DEFAULT_PAD}>
+      <FilterMenu label={<>Build window ±{props.pad} d</>} active={props.pad !== DEFAULT_PAD}>
         <label className="slider">
           <span className="slider-label">
-            Date padding <output>±{props.pad} days</output>
+            Build window <output>±{props.pad} days</output>
           </span>
           <input
             type="range"
             min={0}
-            max={365}
-            step={5}
+            max={1095}
+            step={15}
             value={props.pad}
-            aria-label="Date padding (days)"
+            aria-label="Build window (days either side of in-service)"
             onChange={(e) => props.onPad(Number(e.target.value))}
           />
-          <span className="hint">Widen each schedule before checking for overlap.</span>
+          <span className="hint">
+            Pairs whose build windows overlap rank higher. Timing never hides a nearby pair.
+          </span>
         </label>
       </FilterMenu>
       <FilterMenu

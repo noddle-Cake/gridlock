@@ -58,9 +58,13 @@ class CandidateRow:
     a_id: int
     b_id: int
     miles: float
+    # Days the two padded build windows share; 0 when they don't meet or a date is unknown.
     overlap_days: int
-    window_start: date
-    window_end: date
+    # Days between the two unpadded schedules (0 when they overlap); None when either
+    # project has no date. For single in-service dates this is |date_a - date_b|.
+    time_gap_days: int | None
+    window_start: date | None  # shared padded window; None when there isn't one
+    window_end: date | None
 
 
 @dataclass
@@ -258,28 +262,33 @@ WITH p AS (
          COALESCE(end_date, start_date) AS e
   FROM projects
   WHERE geom IS NOT NULL                                   -- Req 6.8
-    AND COALESCE(start_date, end_date) IS NOT NULL
 )
 SELECT a.id AS a_id, b.id AS b_id,
        ST_Distance(a.geom, b.geom) / {mpm} AS miles,
+       CASE WHEN a.s IS NOT NULL AND b.s IS NOT NULL
+            THEN GREATEST(a.s - b.e, b.s - a.e, 0) END AS time_gap_days,
        GREATEST(a.s, b.s) - $2::int AS window_start,
        LEAST(a.e, b.e) + $2::int AS window_end
 FROM p a
 JOIN p b ON a.id < b.id AND a.u <> b.u                     -- Req 6.2: different utilities
 WHERE ST_DWithin(a.geom, b.geom, $1)                       -- Req 6.3
-  AND a.s - $2::int <= b.e + $2::int                       -- Req 6.4: padded ranges overlap
-  AND b.s - $2::int <= a.e + $2::int
   {extra}
 ORDER BY miles
 """.replace("{mpm}", str(METERS_PER_MILE))
+# Geography is the primary signal: timing never excludes a pair, it only ranks it. Undated
+# projects still match on distance (their timing is unknown, not zero).
 
 
 def _candidate_from_record(r: asyncpg.Record) -> CandidateRow:
     start, end = r["window_start"], r["window_end"]
+    # GREATEST/LEAST skip NULLs, so an undated side would borrow the other's window.
+    if r["time_gap_days"] is None or start is None or end is None or start > end:
+        start = end = None
     return CandidateRow(
         a_id=r["a_id"], b_id=r["b_id"], miles=float(r["miles"]),
         # Inclusive day count shared by the two padded ranges (Req 6.10).
-        overlap_days=(end - start).days + 1,
+        overlap_days=0 if start is None else (end - start).days + 1,
+        time_gap_days=r["time_gap_days"],
         window_start=start, window_end=end,
     )
 

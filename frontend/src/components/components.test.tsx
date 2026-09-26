@@ -92,7 +92,7 @@ describe('ThresholdControls (Req 10.1, 10.2)', () => {
         onConfidenceThreshold={vi.fn()}
       />,
     )
-    const pad = screen.getByLabelText('Date padding (days)') as HTMLInputElement
+    const pad = screen.getByLabelText('Build window (days either side of in-service)') as HTMLInputElement
     fireEvent.change(pad, { target: { value: '90' } })
     expect(onPad).toHaveBeenCalledWith(90)
   })

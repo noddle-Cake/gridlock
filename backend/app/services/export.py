@@ -11,7 +11,8 @@ from app.models.dto import CoordinationPairDTO
 
 CSV_COLUMNS = [
     "pair_id", "utility_a", "project_a", "type_a", "utility_b", "project_b", "type_b",
-    "distance_miles", "window_start", "window_end", "overlap_days", "composite_score", "brief",
+    "distance_miles", "time_gap_days", "window_start", "window_end", "overlap_days",
+    "composite_score", "brief",
 ]
 
 
@@ -25,6 +26,7 @@ class ExportRecord:
     project_b: str
     type_b: str
     distance_miles: float
+    time_gap_days: str
     window_start: str
     window_end: str
     overlap_days: int
@@ -54,7 +56,9 @@ def to_records(pairs: list[CoordinationPairDTO]) -> list[ExportRecord]:
             utility_b=p.project_b.utility, project_b=p.project_b.name or "",
             type_b=p.project_b.type.value if p.project_b.type else "",
             distance_miles=round(p.miles, 1),
-            window_start=p.window_start.isoformat(), window_end=p.window_end.isoformat(),
+            time_gap_days="" if p.time_gap_days is None else str(p.time_gap_days),
+            window_start=p.window_start.isoformat() if p.window_start else "",
+            window_end=p.window_end.isoformat() if p.window_end else "",
             overlap_days=p.overlap_days, composite_score=round(p.scores.composite, 3),
             brief=p.brief.text if p.brief else "",
         )
@@ -97,8 +101,10 @@ def render_pdf(records: list[ExportRecord]) -> bytes:
             styles["Heading3"],
         ))
         story.append(Paragraph(escape(
-            f"{r.distance_miles} miles apart · overlapping window {r.window_start} to "
-            f"{r.window_end} ({r.overlap_days} days) · score {r.composite_score}"
+            f"{r.distance_miles} miles apart · "
+            + (f"overlapping window {r.window_start} to {r.window_end} ({r.overlap_days} days)"
+               if r.window_start else f"schedules {r.time_gap_days or 'unknown'} days apart")
+            + f" · score {r.composite_score}"
         ), styles["Normal"]))
         story.append(Spacer(1, 4))
         story.append(Paragraph(
