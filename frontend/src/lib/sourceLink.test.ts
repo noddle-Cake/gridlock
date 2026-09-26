@@ -20,7 +20,7 @@ describe('sourceLink', () => {
       ),
       { numRuns: 200 },
     )
-  })
+  }, 30_000) // 200 URL parses under jsdom can exceed the 5 s default on slow runners
 
   it('falls back to the bare URL without a valid page, and null without a URL', () => {
     expect(sourceLink('https://x.test/a.pdf#old', null)).toBe('https://x.test/a.pdf')

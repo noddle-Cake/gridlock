@@ -72,6 +72,22 @@ cd frontend && npm test         # 22 tests
 All 18 design properties have a property-based test (Hypothesis / fast-check, ≥100 cases),
 tagged `Feature: gridlock, Property N`. P1, P2, P13, P14 run against real PostGIS.
 
+## CI/CD
+
+`.github/workflows/ci-cd.yml` runs on every PR and push to `master`:
+
+- **backend** — `ruff` + full `pytest` against a PostGIS service container (fails if any
+  DB-backed test is skipped)
+- **frontend** — `oxlint`, `vitest`, `vite build`
+- **deploy** — only on `master` and only if both pass: builds one image
+  ([`backend/Dockerfile`](backend/Dockerfile): FastAPI at `/api` + the React build at `/`,
+  entrypoint `app.serve:app`), pushes it to the AWS Lightsail container service `gridlock`
+  (us-east-1, created on first deploy), waits for the health check, then smoke-tests the URL.
+  A deploy that fails its health check leaves the previous version live.
+
+Required repo secrets: `AWS_ROLE_ARN` (IAM role GitHub Actions assumes via OIDC),
+`DATABASE_URL` (Tiger Data / any Postgres with PostGIS available), `GEMINI_API_KEY`.
+
 ## Design notes and deviations
 
 - **Review threshold boundary.** Requirements 3.3/13.1 say "equal to or below" the
@@ -97,5 +113,5 @@ tagged `Feature: gridlock, Property N`. P1, P2, P13, P14 run against real PostGI
 ## Not yet done
 
 - Golden-set extraction accuracy harness (task 10.3) — needs a hand-labeled corpus.
-- Transmission-line geometry (stretch 16) and DigitalOcean/GoDaddy deployment (stretch 17).
+- Transmission-line geometry (stretch 16) and the custom domain (stretch 17).
 - Export property tests (14.2); only example tests exist.
