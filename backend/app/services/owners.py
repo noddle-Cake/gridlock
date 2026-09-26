@@ -46,6 +46,17 @@ ALIASES = {
     "DU": "Dalton Utilities",
     "POWERSOUTH ENERGY COOPERATIVE": "PowerSouth",
     "SOUTHERN": "Southern Company",  # "Southern Company" minus the stripped suffix
+    # Other SERTP balancing areas, as named in SERTP headers and EIA-860M entity names.
+    "TVA": "TVA",
+    "TENNESSEE VALLEY AUTHORITY": "TVA",
+    "DUKE ENERGY CAROLINAS": "Duke Energy Carolinas",
+    "DUKE ENERGY PROGRESS": "Duke Energy Progress",
+    "DUKE ENERGY PROGRESS - (NC)": "Duke Energy Progress",
+    "DUKE ENERGY PROGRESS - (SC)": "Duke Energy Progress",
+    "LOUISVILLE GAS & ELECTRIC": "LG&E and KU",
+    "KENTUCKY UTILITIES": "LG&E and KU",
+    "LG&E AND KU": "LG&E and KU",
+    "ASSOCIATED ELECTRIC COOPERATIVE": "Associated Electric Cooperative",
 }
 _UNKNOWN = {"", "NOT AVAILABLE", "UNKNOWN", "N/A", "NA"}
 _SUFFIX = re.compile(r"\b(INC|LLC|L L C|CO|CORP|CORPORATION|COMPANY|THE)\b")

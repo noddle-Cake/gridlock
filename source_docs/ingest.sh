@@ -13,10 +13,8 @@ ingest() {  # file  utility  pages  source_url
   echo
 }
 
-# Georgia side: SERTP 2026 preliminary 10-year plan, Southern balancing area only
-# (pages 27-102); per-project owners come from the SOCO:/GTC:/MEAG: prefixes.
-ingest sertp_2026_preliminary_expansion_plan.pdf "SERTP Southern BAA" "27-102" \
-  "https://www.southeasternrtp.com/docs/general/2026/2026_SERTP_Preliminary_Expansion_Plan_Report_(Non-CEII).pdf"
+# SERTP and EIA-860M are not uploaded here: they are structured enough to load without
+# Gemini (`python -m scripts.load_public_sources all`, see README.md).
 # Florida side: FRCC Form 13 "Proposed Transmission Lines" (all Florida utilities).
 ingest frcc_2026_load_resource_plan.pdf "FRCC Load and Resource Plan" "62,85" "$PSC/FRCC_RLRP.pdf"
 # Ten-Year Site Plans: Schedule 10 (proposed transmission lines) + transmission sections.

@@ -128,6 +128,21 @@ columns), canonicalized in `app/services/owners.py` to the same names as HIFLD o
 The FL–GA filing set, page ranges, and a one-shot upload script are in
 [`source_docs/`](source_docs/README.md).
 
+Two structured sources load without Gemini (`cd backend && .venv/bin/python -m
+scripts.load_public_sources all`):
+
+- **EIA-860M planned generators** (August 2026 "Planned" sheet): 194 generation sites in
+  the SERTP states + FL, placed at EIA's published plant coordinates.
+- **SERTP 2026 preliminary 10-year expansion plan**: all 426 transmission projects (Duke
+  Carolinas, Duke Progress, LG&E/KU, Southern/GTC/MEAG/PowerSouth, TVA, AECI) parsed with
+  pdfplumber, substations placed from a cached OpenStreetMap lookup, county centre
+  (approximate) as fallback.
+
+The raw originals of every source are committed in `source_docs/`, and each run writes a
+per-project citation table (file, page/sheet, excerpt) to `source_docs/extracted/`.
+Matches are labelled *potential coordination opportunities*: SERTP's listed projects are
+not a commitment to build.
+
 Gemini free tier: 5 requests/minute and 20/day per model. The app paces all Gemini calls
 to `GEMINI_RPM` (default 5) and fails fast with a clear message once the daily quota is
 used up.
