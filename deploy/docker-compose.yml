@@ -1,0 +1,57 @@
+# Production stack on a single Lightsail instance. CI copies this directory to
+# ~/gridlock on the server and writes ~/gridlock/.env (APP_TAG, POSTGRES_PASSWORD,
+# GEMINI_API_KEY, SITE_ADDRESS) before each `docker compose up -d`.
+name: gridlock
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gridlock
+      # Only applied when the volume is first initialised; changing it later
+      # requires ALTER USER inside the database.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: gridlock
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gridlock"]
+      interval: 5s
+      retries: 30
+
+  app:
+    image: gridlock:${APP_TAG:?}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://gridlock:${POSTGRES_PASSWORD}@db:5432/gridlock
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEOCODER: nominatim
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
+      interval: 5s
+      retries: 30
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

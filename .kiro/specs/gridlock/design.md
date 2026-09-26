@@ -10,8 +10,8 @@ The design also targets several sponsor tracks, and the architecture is shaped t
 
 - **Microsoft "What's Missing" (human-in-the-loop, not a chatbot):** GridLock is not a chat interface. The LLM does bounded extraction and brief drafting; a planner reviews, edits, and approves. The Review_Screen and why-flagged panel are the product, not a chat box.
 - **Gemini API:** used twice, both in structured/bounded modes — structured JSON extraction (Requirement 2/3) and short constrained brief generation (Requirement 8).
-- **Tiger Data (managed Postgres + PostGIS):** the Data_Store is managed Postgres with PostGIS; all spatial/temporal matching is pushed into SQL.
-- **DigitalOcean App Platform + GoDaddy domain:** the Stretch deployment topology (Requirement 16).
+- **Postgres + PostGIS:** all spatial/temporal matching is pushed into SQL. (Originally Tiger Data managed Postgres; the MVP deployment self-hosts Postgres + PostGIS on the Lightsail instance to keep costs down.)
+- **AWS Lightsail + GoDaddy domain:** the Stretch deployment topology (Requirement 16).
 
 ### Requirements Traceability Summary
 
@@ -50,7 +50,7 @@ flowchart LR
         EXP[Export_Service Stretch]
     end
 
-    subgraph Data["Tiger Data: Postgres + PostGIS"]
+    subgraph Data["Postgres + PostGIS"]
         DB[(projects)]
     end
 
@@ -112,12 +112,12 @@ sequenceDiagram
 | --- | --- | --- |
 | Backend | Python 3.11 + FastAPI | Fast to build, native async, Pydantic DTOs, auto OpenAPI for the demo |
 | DB access | SQLAlchemy Core + GeoAlchemy2, or raw `asyncpg` with parameterized SQL | Parameterized queries for the PostGIS overlap query; avoid ORM overhead for the hot path |
-| Database | Tiger Data managed Postgres + PostGIS | Sponsor track; PostGIS gives `ST_DWithin`, `ST_Distance`, `daterange` overlap |
+| Database | Postgres + PostGIS (self-hosted on the deploy instance for the MVP) | PostGIS gives `ST_DWithin`, `ST_Distance`, `daterange` overlap |
 | Extraction + briefs | Gemini API (structured output mode) | Sponsor track; schema-constrained JSON for extraction, short constrained text for briefs |
 | PDF/XLSX/CSV parsing | `pypdf`/`pdfplumber`, `openpyxl`, `csv` | Extract text/pages to feed Gemini; detect corrupt files |
 | Geocoding | Pluggable `Geocoder` interface (hosted geocoder + local county-centroid gazetteer) | County-center fallback works offline and is deterministic for the demo |
 | Frontend | React + Vite, `react-leaflet`, `vis-timeline` | Leaflet for the map, vis-timeline for the Gantt-style timeline |
-| Deploy (Stretch) | DigitalOcean App Platform, GoDaddy domain | Sponsor track |
+| Deploy (Stretch) | Single AWS Lightsail instance (Docker Compose: app + Postgres/PostGIS + Caddy), GoDaddy domain | Cheapest MVP hosting (~$12/mo all-in); CI/CD via GitHub Actions |
 
 ## Components and Interfaces
 
@@ -601,20 +601,20 @@ MVP runs locally: FastAPI (`uvicorn`), the Vite dev server, and a Postgres+PostG
 ```mermaid
 flowchart LR
     U[Planner browser] -->|HTTPS gridlock.example.com| GD[GoDaddy DNS]
-    GD --> DO[DigitalOcean App Platform]
-    subgraph DO
-        FE[Static React site]
-        BE[FastAPI service]
+    GD --> LS[AWS Lightsail instance]
+    subgraph LS["AWS Lightsail instance (Docker Compose)"]
+        CAD[Caddy: TLS] --> BE["FastAPI container: API at /api + React build at /"]
+        BE --> TD[(Postgres + PostGIS, persistent volume)]
     end
-    FE -->|/api| BE
-    BE -->|TLS, connection string| TD[(Tiger Data: Postgres + PostGIS)]
+    GH[GitHub Actions] -->|tests pass on master: SSH, load image, compose up| LS
     BE -->|API key| GEM[[Gemini API]]
 ```
 
-- **DigitalOcean App Platform (16.1):** two components in one app — a static-site component for the built React bundle and a service component for the FastAPI backend. The frontend calls the backend under a `/api` route (or a separate subdomain) so both sit behind one app.
-- **Tiger Data (managed Postgres + PostGIS):** the backend connects over TLS using a connection string held in an App Platform environment variable/secret; PostGIS is enabled on the managed database. No database runs inside the app component.
-- **Gemini:** the API key is an App Platform secret, read by the backend only; it is never exposed to the browser.
-- **GoDaddy domain (16.2):** the registered domain's DNS points at the App Platform app (CNAME/A record per DigitalOcean's custom-domain setup), and App Platform provisions TLS so the Web_UI is reachable at the public domain over HTTPS.
+- **AWS Lightsail instance (16.1):** one VM runs the `deploy/docker-compose.yml` stack. The app image (`backend/Dockerfile`) is a multi-stage build that bundles the Vite build into the FastAPI image; `app.serve:app` mounts the API under `/api` and the static bundle at `/`, so the frontend's default `VITE_API_BASE=/api` works same-origin with no CORS configuration. Caddy terminates HTTPS with an automatic Let's Encrypt certificate.
+- **Database:** `postgis/postgis:16-3.4` in the same stack on a persistent Docker volume, reachable only on the Compose network (no public port). Backups via Lightsail automatic instance snapshots.
+- **CI/CD:** `.github/workflows/ci-cd.yml` runs lint and the full test suite (DB-backed properties against a PostGIS service container) on every PR and push; on `master`, only after both pass, it builds the image, loads it on the instance over SSH, runs `docker compose up -d`, waits for the app health check (rolling back to the previous image if it never turns healthy), and smoke-tests the public URL.
+- **Gemini:** the API key is an environment variable in the instance's `.env` (written by CI from a GitHub secret), read by the backend only; it is never exposed to the browser.
+- **GoDaddy domain (16.2):** the registered domain's DNS A record points at the instance's static IP and Caddy obtains the TLS certificate (set `SITE_ADDRESS` to the domain), so the Web_UI is reachable at the public domain over HTTPS.
 - **Config & secrets:** database URL and Gemini key are injected as environment secrets; nothing sensitive is baked into the frontend bundle. This keeps the "not a chatbot / human-in-the-loop" backend surface the only thing holding credentials.
 
-This topology is intentionally deferred behind the MVP loop: it earns the DigitalOcean and Tiger Data sponsor tracks and lets the team demo from a public URL, but none of it is required for the core upload → extract → review → match → brief demo to work locally.
+This topology is intentionally deferred behind the MVP loop: it lets the team demo from a public URL, but none of it is required for the core upload → extract → review → match → brief demo to work locally.
