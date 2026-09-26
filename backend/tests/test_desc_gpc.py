@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import re
 from datetime import date
 from pathlib import Path
@@ -59,6 +60,39 @@ def test_desc_endpoints(title, endpoints):
                        status="", in_service_text="10/1/2025 (phase 1) and 10/1/2026")
     assert e.endpoints == endpoints
     assert e.in_service == (date(2025, 10, 1), date(2026, 10, 1))
+
+
+@pytest.mark.parametrize(("description", "endpoints"), [
+    ("Construct Okatie – Riverport 230 kV to feed new Distribution substation.",
+     ["Okatie", "Riverport"]),
+    ("Fold in the existing Canadys – Church Creek and Canadys – Faber Place 230kV lines at the "
+     "Dawson 230kV substation (phase 1). Rebuild Canadys – Dawson 230kV #1 and #2 with B1272 "
+     "ACSR (phase 2).", ["Canadys", "Faber Place", "Dawson"]),
+    ("Rebuilding the Williams Goose Creek 230 and 115 kV lines and the Williams - Faber Place "
+     "230 kV line across the Goose Creek Reservoir.", ["Williams", "Faber Place"]),
+    ("Replace wooden H-Frame structures with Self Supporting Steel Structures.", []),
+])
+def test_desc_description_endpoints(description, endpoints):
+    """Guide Part 2: when the title names only a new site, the described line places it."""
+    e = desc.DescEntry(page=1, title="X", project_id="", description=description, need="",
+                       status="", in_service_text="")
+    assert e.description_endpoints == endpoints
+
+
+def _gpc_rows() -> list[dict]:
+    with (ROOT / "source_docs" / "extracted" / snapshot.GPC_ITS.export).open() as f:
+        return list(csv.DictReader(f))
+
+
+def test_metro_atlanta_substations_are_not_placed_by_the_sc_border():
+    """Same-named features elsewhere were the false matches that paired Georgia Power's
+    metro-Atlanta work with DESC projects (Buzzard Roost Dam SC, an Adamsville near Augusta,
+    Hammond SC, Grady and Atkinson counties). Curated overrides keep them in west Georgia."""
+    names = ("adamsville", "buzzard roost", "grady", "atkinson", "hammond", "jack mcdonough")
+    hits = [r for r in _gpc_rows() if r["lat"] and any(n in r["name"].lower() for n in names)]
+    assert len(hits) >= 10
+    for r in hits:
+        assert float(r["lng"]) < -84.0, (r["name"], r["lat"], r["lng"])
 
 
 def test_gpc_rows_wrap_across_lines_and_pages():
