@@ -9,8 +9,8 @@ from app.models.dto import ScoreFactorsDTO
 # Convex-combination weights: non-negative and summing to 1 (Req 7.5). Distance is the
 # primary signal and timing a strong secondary one (challenge spec).
 WEIGHTS: dict[str, float] = {
-    "distance": 0.6,
-    "overlap": 0.25,
+    "distance": 0.55,
+    "overlap": 0.3,
     "type_similarity": 0.075,
     "voltage_similarity": 0.075,
 }
