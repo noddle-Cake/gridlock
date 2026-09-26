@@ -333,6 +333,99 @@ a {
   padding: 0;
 }
 
+/* Distance-band dropdown (components/ThresholdControls.tsx). */
+.band-picker {
+  position: relative;
+}
+
+.band-picker summary {
+  list-style: none;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 4px 26px 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+}
+
+.band-picker summary::-webkit-details-marker {
+  display: none;
+}
+
+.band-picker summary::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--ink-2);
+  border-bottom: 1.5px solid var(--ink-2);
+  transform: translateY(-70%) rotate(45deg);
+}
+
+.band-picker[open] summary::after {
+  transform: translateY(-30%) rotate(-135deg);
+}
+
+.band-picker summary:hover,
+.band-picker[open] summary {
+  border-color: var(--accent);
+}
+
+.band-picker fieldset {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  z-index: 1100; /* above Leaflet's panes and controls */
+  margin: 0;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.band-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.band-option:hover {
+  background: var(--bg);
+}
+
+.band-option input {
+  accent-color: var(--accent);
+  margin: 0;
+  padding: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ---------------------------------------------------------------- radar layout */
 
 .layout {
@@ -356,8 +449,8 @@ a {
 }
 
 .map {
-  height: 52vh;
-  min-height: 340px;
+  height: 72vh;
+  min-height: 420px;
   width: 100%;
 }
 

@@ -125,7 +125,7 @@ export function MapView({
         className="map"
       >
         <SmoothWheelZoom />
-        <ScaleControl position="bottomleft" imperial metric={false} />
+        <ScaleControl position="bottomleft" imperial={false} metric />
         <BaseMap highways={layers.highways} counties={layers.counties} labels={layers.labels} />
         {layers.grid ? <PowerGridLayer /> : null}
         <FitBounds bounds={pairBounds ?? allBounds} />

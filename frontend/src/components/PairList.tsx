@@ -1,3 +1,4 @@
+import { milesToKm } from '../lib/distanceBands'
 import { pct } from '../lib/format'
 import type { CoordinationPair } from '../types'
 
@@ -21,7 +22,7 @@ export function PairList({ pairs, selectedId, loading, onSelect }: Props) {
         Built on public filings. Planned projects are not commitments to build.
       </p>
       {pairs.length === 0 && !loading ? (
-        <p className="empty">No project pairs at these thresholds. Try widening the sliders.</p>
+        <p className="empty">No project pairs at these thresholds. Try ticking more distance bands or widening the date padding.</p>
       ) : null}
       <ol>
         {pairs.map((pair) => (
@@ -43,7 +44,7 @@ export function PairList({ pairs, selectedId, loading, onSelect }: Props) {
                 <span>{pair.project_b.name || 'Unnamed'}</span>
               </span>
               <span className="pair-meta">
-                {pair.miles.toFixed(1)} mi
+                {milesToKm(pair.miles).toFixed(1)} km
                 <br />
                 {pair.overlap_days} d{pair.brief ? ' · ✉' : ''}
               </span>

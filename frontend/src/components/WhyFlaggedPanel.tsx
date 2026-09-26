@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { ApiError } from '../api'
+import { milesToKm } from '../lib/distanceBands'
 import { FACTOR_LABELS, dayLabel, pct, rangeLabel } from '../lib/format'
 import type { CoordinationBrief, CoordinationPair, Project } from '../types'
 import { SourceLink } from './SourceLink'
@@ -50,7 +51,7 @@ export function WhyFlaggedPanel({ pair, colors, onGenerateBrief }: Props) {
     return (
       <section className="why-panel empty-state" aria-label="Why flagged">
         <h2>Why flagged?</h2>
-        <p>Select a pair from the list, map, or timeline to compare the two projects.</p>
+        <p>Select a pair from the list or map to compare the two projects.</p>
       </section>
     )
   }
@@ -86,10 +87,10 @@ export function WhyFlaggedPanel({ pair, colors, onGenerateBrief }: Props) {
 
       <div className="facts">
         <div className="fact">
-          <span className="fact-value" data-testid="miles">
-            {pair.miles.toFixed(1)}
+          <span className="fact-value" data-testid="km">
+            {milesToKm(pair.miles).toFixed(1)}
           </span>
-          <span className="fact-label">miles apart</span>
+          <span className="fact-label">km apart</span>
         </div>
         <div className="fact">
           <span className="fact-value" data-testid="overlap-days">

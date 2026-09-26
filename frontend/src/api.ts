@@ -1,3 +1,4 @@
+import type { BandId } from './lib/distanceBands'
 import type {
   ApiErrorBody,
   CoordinationBrief,
@@ -37,8 +38,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T
 }
 
-export function thresholdQuery(radius: number, pad: number): string {
-  return new URLSearchParams({ radius: String(radius), pad: String(pad) }).toString()
+export function thresholdQuery(radius: number, pad: number, bands?: BandId[]): string {
+  const params = new URLSearchParams({ radius: String(radius), pad: String(pad) })
+  if (bands) params.set('bands', bands.join(','))
+  return params.toString()
 }
 
 export const api = {
@@ -60,13 +63,13 @@ export const api = {
       body: JSON.stringify(patch),
     })
   },
-  overlaps: (radius: number, pad: number): Promise<OverlapsResponse> =>
-    request(`/overlaps?${thresholdQuery(radius, pad)}`),
+  overlaps: (radius: number, pad: number, bands?: BandId[]): Promise<OverlapsResponse> =>
+    request(`/overlaps?${thresholdQuery(radius, pad, bands)}`),
   brief: (pairId: string, radius: number, pad: number): Promise<CoordinationBrief> =>
     request(`/overlaps/${encodeURIComponent(pairId)}/brief?${thresholdQuery(radius, pad)}`, {
       method: 'POST',
     }),
   lines: (): Promise<LineCollection> => request('/lines'),
-  exportUrl: (format: 'csv' | 'pdf', radius: number, pad: number): string =>
-    `${API_BASE}/export?format=${format}&${thresholdQuery(radius, pad)}`,
+  exportUrl: (format: 'csv' | 'pdf', radius: number, pad: number, bands?: BandId[]): string =>
+    `${API_BASE}/export?format=${format}&${thresholdQuery(radius, pad, bands)}`,
 }

@@ -12,6 +12,7 @@ from hypothesis import strategies as st
 from app.core.config import get_settings
 from app.db import repository as repo
 from app.models.enums import ProjectType
+from app.services import matching
 from app.services.geocoding import Candidate
 from tests.test_ingestion import CSV, PNG
 
@@ -161,6 +162,36 @@ def test_overlaps_invalid_params(api_client, query, fields):
     r = api_client.get(f"/overlaps?{query}")
     assert r.status_code == 422
     assert r.json()["error"]["fields"] == fields
+
+
+@pytest.mark.parametrize(
+    ("km", "band"),
+    [(0, "touching"), (0.0005, "touching"), (0.5, "1.6"), (1.6, "8"), (7.99, "8"),
+     (8, "25"), (24.9, "25"), (25, "40"), (39.9, "40"), (40, None), (60, None)],
+)
+def test_distance_band_edges_do_not_overlap(km, band):
+    assert matching.distance_band(km / matching.KM_PER_MILE) == band
+
+
+def test_overlaps_bands_filter(api_client):
+    seed(two_nearby())  # ~25.1 km apart: the 25-40 km band
+    radius = 40 / matching.KM_PER_MILE
+
+    def get(query: str) -> list[dict]:
+        return api_client.get(f"/overlaps?radius={radius}&{query}").json()["pairs"]
+
+    assert [p["id"] for p in get("bands=40")] == ["1-2"]
+    assert [p["id"] for p in get("bands=touching,1.6,8,40")] == ["1-2"]
+    assert get("bands=touching,1.6,8,25") == []
+    assert get("bands=") == []
+    csv = api_client.get(f"/export?format=csv&radius={radius}&bands=25").text
+    assert len(csv.strip().splitlines()) == 1  # header only
+
+
+def test_overlaps_unknown_band(api_client):
+    r = api_client.get("/overlaps?bands=8,100")
+    assert r.status_code == 422
+    assert r.json()["error"]["fields"] == ["bands"]
 
 
 # ---------------------------------------------------------------- PATCH /projects/{id}

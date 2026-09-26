@@ -5,14 +5,13 @@ import { MapView } from './components/MapView'
 import { PairList } from './components/PairList'
 import { ReviewTable } from './components/ReviewTable'
 import { ThresholdControls } from './components/ThresholdControls'
-import { TimelineView } from './components/TimelineView'
 import { UploadPanel } from './components/UploadPanel'
 import { WhyFlaggedPanel } from './components/WhyFlaggedPanel'
+import { ALL_BANDS, MAX_RADIUS_MILES, type BandId } from './lib/distanceBands'
 import { utilityColors } from './lib/format'
 import { DEFAULT_CONFIDENCE_THRESHOLD, needsReview } from './lib/review'
 import type { CoordinationPair, LineCollection, Project, ProjectPatch } from './types'
 
-const DEFAULT_RADIUS = 25
 const DEFAULT_PAD = 30
 const REQUERY_DEBOUNCE_MS = 150
 
@@ -21,7 +20,7 @@ type Tab = 'radar' | 'review'
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([])
   const [pairs, setPairs] = useState<CoordinationPair[]>([])
-  const [radius, setRadius] = useState(DEFAULT_RADIUS)
+  const [bands, setBands] = useState<BandId[]>(ALL_BANDS)
   const [pad, setPad] = useState(DEFAULT_PAD)
   const [confidenceThreshold, setConfidenceThreshold] = useState(DEFAULT_CONFIDENCE_THRESHOLD)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -51,15 +50,15 @@ export default function App() {
       .catch(() => setLinesFailed(true))
   }, [])
 
-  // Re-query matching whenever a threshold slider moves (Req 10.3, 10.4).
+  // Re-query matching whenever a threshold control changes (Req 10.3, 10.4).
   useEffect(() => {
     const seq = ++requestSeq.current
     const timer = setTimeout(() => {
       setLoadingPairs(true)
       api
-        .overlaps(radius, pad)
+        .overlaps(MAX_RADIUS_MILES, pad, bands)
         .then((res) => {
-          if (seq !== requestSeq.current) return // a newer slider value won
+          if (seq !== requestSeq.current) return // a newer control value won
           setPairs(res.pairs)
           setError(null)
         })
@@ -67,7 +66,7 @@ export default function App() {
         .finally(() => seq === requestSeq.current && setLoadingPairs(false))
     }, REQUERY_DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [radius, pad, version])
+  }, [bands, pad, version])
 
   // One color per company across planned projects and existing-line owners, so a
   // utility reads the same on both layers.
@@ -93,7 +92,7 @@ export default function App() {
   )
 
   async function generateBrief(pair: CoordinationPair) {
-    const brief = await api.brief(pair.id, radius, pad)
+    const brief = await api.brief(pair.id, MAX_RADIUS_MILES, pad)
     setPairs((prev) => prev.map((p) => (p.id === pair.id ? { ...p, brief } : p)))
     return brief
   }
@@ -134,10 +133,10 @@ export default function App() {
           </button>
         </nav>
         <div className="exports">
-          <a href={api.exportUrl('csv', radius, pad)} download>
+          <a href={api.exportUrl('csv', MAX_RADIUS_MILES, pad, bands)} download>
             Export CSV
           </a>
-          <a href={api.exportUrl('pdf', radius, pad)} download>
+          <a href={api.exportUrl('pdf', MAX_RADIUS_MILES, pad, bands)} download>
             Export PDF
           </a>
         </div>
@@ -146,10 +145,10 @@ export default function App() {
       <div className="toolbar">
         <UploadPanel onPlanComplete={refresh} />
         <ThresholdControls
-          radius={radius}
+          bands={bands}
           pad={pad}
           confidenceThreshold={confidenceThreshold}
-          onRadius={setRadius}
+          onBands={setBands}
           onPad={setPad}
           onConfidenceThreshold={setConfidenceThreshold}
         />
@@ -171,13 +170,6 @@ export default function App() {
             colors={colors}
             lines={lines}
             linesFailed={linesFailed}
-            onSelectProject={selectProject}
-          />
-          <TimelineView
-            projects={projects}
-            pairs={pairs}
-            selectedPair={selectedPair}
-            colors={colors}
             onSelectProject={selectProject}
           />
         </div>

@@ -61,6 +61,39 @@ def parse_thresholds(radius: str | None, pad: str | None) -> tuple[float, int]:
     return radius_v, int(round(pad_v))
 
 
+# Distance bands the UI filters on, keyed by upper bound in km. They never overlap: each pair
+# falls in exactly one band. Projects are points, so "touching" means the same location.
+KM_PER_MILE = repo.METERS_PER_MILE / 1000
+TOUCHING_KM = 0.001  # within a metre counts as the same spot
+DISTANCE_BANDS_KM: dict[str, float] = {"touching": TOUCHING_KM, "1.6": 1.6, "8": 8.0,
+                                       "25": 25.0, "40": 40.0}
+
+
+def distance_band(miles: float) -> str | None:
+    """The one band a pair's distance falls in, or None when it is 40 km or more."""
+    km = miles * KM_PER_MILE
+    if km <= TOUCHING_KM:
+        return "touching"
+    for band, upper in DISTANCE_BANDS_KM.items():
+        if band != "touching" and km < upper:
+            return band
+    return None
+
+
+def parse_bands(raw: str | None) -> set[str] | None:
+    """None when the param is absent (no band filter); an empty set when it is empty."""
+    if raw is None:
+        return None
+    bands = {b.strip() for b in raw.split(",") if b.strip()}
+    unknown = sorted(bands - DISTANCE_BANDS_KM.keys())
+    if unknown:
+        raise InvalidParameterError(
+            f"bands must be drawn from {', '.join(DISTANCE_BANDS_KM)} (got {', '.join(unknown)})",
+            field="bands", fields=["bands"],
+        )
+    return bands
+
+
 def _build_pair(
     row: repo.CandidateRow, projects: dict[int, ProjectDTO], radius: float, max_overlap: int
 ) -> CoordinationPairDTO:
@@ -79,10 +112,13 @@ def _build_pair(
 
 
 async def overlaps(
-    conn: asyncpg.Connection, radius: float, pad: int, *, max_overlap: int | None = None
+    conn: asyncpg.Connection, radius: float, pad: int, *, max_overlap: int | None = None,
+    bands: set[str] | None = None,
 ) -> list[CoordinationPairDTO]:
     max_overlap = max_overlap or get_settings().max_overlap_days
     rows = await repo.candidate_pairs(conn, radius, pad)
+    if bands is not None:
+        rows = [r for r in rows if distance_band(r.miles) in bands]
     projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
     pairs = [_build_pair(r, projects, radius, max_overlap) for r in rows]
     briefs = await repo.briefs_for_pairs(conn, [p.id for p in pairs])
