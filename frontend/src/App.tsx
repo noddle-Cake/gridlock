@@ -11,6 +11,7 @@ import { UtilityFilter } from './components/UtilityFilter'
 import { WhyFlaggedPanel } from './components/WhyFlaggedPanel'
 import { ALL_BANDS, MAX_RADIUS_MILES, type BandId } from './lib/distanceBands'
 import { utilityColors } from './lib/format'
+import { type ColorBy, colorLegend, projectColor } from './lib/mapStyle'
 import {
   type SortKey,
   type ViewBounds,
@@ -20,7 +21,8 @@ import {
   sortPairs,
 } from './lib/pairs'
 import { DEFAULT_CONFIDENCE_THRESHOLD, needsReview } from './lib/review'
-import type { CoordinationPair, LineCollection, Project, ProjectPatch } from './types'
+import { useColorScheme } from './lib/useColorScheme'
+import type { CoordinationPair, LineCollection, PairProject, Project, ProjectPatch } from './types'
 
 const REQUERY_DEBOUNCE_MS = 150
 
@@ -44,6 +46,8 @@ export default function App() {
   const [lines, setLines] = useState<LineCollection | null>(null)
   const [linesFailed, setLinesFailed] = useState(false)
   const [version, setVersion] = useState(0)
+  const [colorBy, setColorBy] = useState<ColorBy>('type')
+  const scheme = useColorScheme()
   const requestSeq = useRef(0)
 
   const refresh = useCallback(() => setVersion((v) => v + 1), [])
@@ -64,7 +68,8 @@ export default function App() {
       .catch(() => setLinesFailed(true))
   }, [])
 
-  // Re-query matching whenever a threshold control changes (Req 10.3, 10.4).
+  // Re-query matching whenever a threshold control changes (Req 10.3, 10.4). The first load
+  // goes out at once; only later control changes are debounced.
   useEffect(() => {
     const seq = ++requestSeq.current
     const timer = setTimeout(() => {
@@ -78,24 +83,26 @@ export default function App() {
         })
         .catch((e) => seq === requestSeq.current && setError(describe(e)))
         .finally(() => seq === requestSeq.current && setLoadingPairs(false))
-    }, REQUERY_DEBOUNCE_MS)
+    }, seq === 1 ? 0 : REQUERY_DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [bands, version])
 
-  // One color per company across planned projects and existing-line owners, so a
-  // utility reads the same on both layers.
-  const colors = useMemo(
-    () =>
-      utilityColors([
-        ...projects.map((p) => p.utility),
-        ...(lines?.features.flatMap((f) => f.properties.owner_norm ?? []) ?? []),
-      ]),
-    [projects, lines],
+  // Only the busiest companies get their own colour; the rest share a neutral "other".
+  const colors = useMemo(() => utilityColors(projects.map((p) => p.utility)), [projects])
+  // Map markers and panel swatches share one encoding, so a card always matches its dot.
+  const colorOf = useCallback(
+    (p: PairProject) => projectColor(p, colorBy, colors, scheme),
+    [colorBy, colors, scheme],
   )
   const utilities = useMemo(
     () => [...new Set(projects.map((p) => p.utility))].sort((a, b) => a.localeCompare(b)),
     [projects],
   )
+  const utilityCounts = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const p of projects) m.set(p.utility, (m.get(p.utility) ?? 0) + 1)
+    return m
+  }, [projects])
   const shownProjects = useMemo(
     () => projects.filter((p) => !hiddenUtilities.has(p.utility)),
     [projects, hiddenUtilities],
@@ -109,6 +116,16 @@ export default function App() {
   const listPairs = useMemo(
     () => (limitToView ? pairsInView(shownPairs, viewBounds) : shownPairs),
     [shownPairs, limitToView, viewBounds],
+  )
+  const legend = useMemo(
+    () =>
+      colorLegend(
+        shownProjects.filter((p) => p.lat != null && p.lng != null),
+        colorBy,
+        colors,
+        scheme,
+      ),
+    [shownProjects, colorBy, colors, scheme],
   )
   const selectedPair = pairs.find((p) => p.id === selectedId) ?? null
   const hoveredPair = pairs.find((p) => p.id === hoveredId) ?? null
@@ -135,6 +152,8 @@ export default function App() {
     (p: Project | null) => setHoveredId(p ? (bestPairFor(p, shownPairs)?.id ?? null) : null),
     [shownPairs],
   )
+
+  const selectPair = useCallback((p: CoordinationPair) => setSelectedId(p.id), [])
 
   const index = selectedPair ? listPairs.findIndex((p) => p.id === selectedPair.id) : -1
   function step(d: number) {
@@ -235,6 +254,7 @@ export default function App() {
           />
           <UtilityFilter
             utilities={utilities}
+            counts={utilityCounts}
             hidden={hiddenUtilities}
             colors={colors}
             onChange={setHiddenUtilities}
@@ -259,11 +279,15 @@ export default function App() {
               pairs={shownPairs}
               selectedPair={selectedPair}
               hoveredPair={hoveredPair}
-              colors={colors}
+              colorOf={colorOf}
+              colorBy={colorBy}
+              onColorBy={setColorBy}
+              legend={legend}
+              scheme={scheme}
               lines={lines}
               linesFailed={linesFailed}
               onSelectProject={selectProject}
-              onSelectPair={(p) => setSelectedId(p.id)}
+              onSelectPair={selectPair}
               onHoverProject={hoverProject}
               onBoundsChange={onBoundsChange}
             />
@@ -302,7 +326,7 @@ export default function App() {
                 <WhyFlaggedPanel
                   key={selectedPair.id}
                   pair={selectedPair}
-                  colors={colors}
+                  colorOf={colorOf}
                   onGenerateBrief={generateBrief}
                 />
               </div>
@@ -313,7 +337,7 @@ export default function App() {
                 selectedId={selectedId}
                 hoveredId={hoveredId}
                 loading={loadingPairs}
-                colors={colors}
+                colorOf={colorOf}
                 sort={sort}
                 onSort={setSort}
                 limitToView={limitToView}

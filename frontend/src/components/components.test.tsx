@@ -3,16 +3,31 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { pair, project } from '../test/fixtures'
+import { PAGE_SIZE, PairList } from './PairList'
 import { ReviewTable } from './ReviewTable'
 import { SourceLink } from './SourceLink'
 import { ThresholdControls } from './ThresholdControls'
 import { WhyFlaggedPanel } from './WhyFlaggedPanel'
 
 const colors = { 'Keystone Electric': '#2f6fdf', 'Chesapeake Power': '#d9480f' }
+const colorOf = (p: { utility: string }) => colors[p.utility as keyof typeof colors] ?? '#555'
+
+describe('PairList', () => {
+  it('renders a page of cards at a time', async () => {
+    const pairs = Array.from({ length: PAGE_SIZE + 7 }, (_, i) => pair({ id: `p${i}` }))
+    const { container } = render(
+      <PairList pairs={pairs} selectedId={null} loading={false} onSelect={vi.fn()} />,
+    )
+    expect(container.querySelectorAll('.cards > li')).toHaveLength(PAGE_SIZE)
+    await userEvent.click(screen.getByRole('button', { name: 'Show 7 more of 7' }))
+    expect(container.querySelectorAll('.cards > li')).toHaveLength(PAGE_SIZE + 7)
+    expect(screen.queryByRole('button', { name: /more of/ })).toBeNull()
+  })
+})
 
 describe('WhyFlaggedPanel (Req 11)', () => {
   it('shows both projects side by side with distance, overlap days, and every factor', () => {
-    render(<WhyFlaggedPanel pair={pair()} colors={colors} onGenerateBrief={vi.fn()} />)
+    render(<WhyFlaggedPanel pair={pair()} colorOf={colorOf} onGenerateBrief={vi.fn()} />)
     expect(screen.getByText('Hanover breakers')).toBeInTheDocument()
     expect(screen.getByText('Westminster breakers')).toBeInTheDocument()
     expect(screen.getByTestId('km')).toHaveTextContent('25.1') // 15.62 mi
@@ -30,7 +45,7 @@ describe('WhyFlaggedPanel (Req 11)', () => {
     const apart = pair({
       overlap_days: 0, overlap_ratio: 0, time_gap_days: 400, window_start: null, window_end: null,
     })
-    render(<WhyFlaggedPanel pair={apart} colors={colors} onGenerateBrief={vi.fn()} />)
+    render(<WhyFlaggedPanel pair={apart} colorOf={colorOf} onGenerateBrief={vi.fn()} />)
     expect(screen.getByTestId('overlap-pct')).toHaveTextContent('0%')
     expect(screen.getByTestId('time-gap')).toHaveTextContent('13 months')
     expect(screen.getByTestId('overlap-days')).toHaveTextContent('None')
@@ -38,18 +53,18 @@ describe('WhyFlaggedPanel (Req 11)', () => {
 
   it('says explicitly when no brief exists, and shows one when it does', () => {
     const { rerender } = render(
-      <WhyFlaggedPanel pair={pair()} colors={colors} onGenerateBrief={vi.fn()} />,
+      <WhyFlaggedPanel pair={pair()} colorOf={colorOf} onGenerateBrief={vi.fn()} />,
     )
     expect(screen.getByTestId('no-brief')).toHaveTextContent('No coordination brief')
     const brief = { pair_id: '1-2', text: 'Share a crane crew.', generated_at: '', stale: false }
-    rerender(<WhyFlaggedPanel pair={pair({ brief })} colors={colors} onGenerateBrief={vi.fn()} />)
+    rerender(<WhyFlaggedPanel pair={pair({ brief })} colorOf={colorOf} onGenerateBrief={vi.fn()} />)
     expect(screen.getByTestId('brief-text')).toHaveTextContent('Share a crane crew.')
     expect(screen.queryByTestId('no-brief')).toBeNull()
   })
 
   it('requests a brief for the selected pair', async () => {
     const onGenerate = vi.fn().mockResolvedValue({})
-    render(<WhyFlaggedPanel pair={pair()} colors={colors} onGenerateBrief={onGenerate} />)
+    render(<WhyFlaggedPanel pair={pair()} colorOf={colorOf} onGenerateBrief={onGenerate} />)
     await userEvent.click(screen.getByRole('button', { name: 'Generate brief' }))
     expect(onGenerate).toHaveBeenCalledWith(expect.objectContaining({ id: '1-2' }))
   })

@@ -72,22 +72,38 @@ export const FACTOR_LABELS: Record<string, string> = {
   voltage_similarity: 'Voltage similarity',
 }
 
-// Distinct hues (no two oranges): project utilities and HIFLD line owners share this map.
-const PALETTE = [
-  '#2f6fdf',
-  '#d9480f',
-  '#2b8a3e',
-  '#9c36b5',
-  '#c2255c',
-  '#0b7285',
-  '#8c5a2b',
-  '#5c940d',
-  '#b8860b',
-  '#e64980',
+// Fixed categorical order, validated for colour-vision deficiency. Never cycled: with hundreds
+// of developers in the EIA data a repeating palette gave ~100 companies each colour, so only
+// the busiest companies get a hue and everyone else shares OTHER_COLOR.
+export const PALETTE = [
+  '#2a78d6',
+  '#eb6834',
+  '#1baf7a',
+  '#eda100',
+  '#e87ba4',
+  '#008300',
+  '#4a3aa7',
+  '#e34948',
 ]
+export const OTHER_COLOR = '#8a8f96'
 
-/** Stable categorical color per utility (sorted order, so colors don't shuffle). */
-export function utilityColors(utilities: string[]): Record<string, string> {
-  const sorted = [...new Set(utilities)].sort((a, b) => a.localeCompare(b))
-  return Object.fromEntries(sorted.map((u, i) => [u, PALETTE[i % PALETTE.length]]))
+/** The `n` most frequent names (one entry per project), ties alphabetical. */
+export function topUtilities(names: string[], n = PALETTE.length): string[] {
+  const counts = new Map<string, number>()
+  for (const u of names) counts.set(u, (counts.get(u) ?? 0) + 1)
+  return [...counts]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, n)
+    .map(([u]) => u)
 }
+
+/**
+ * Colours for the busiest utilities (pass one name per project). Assigned in alphabetical
+ * order so they don't shuffle as counts shift; look up with `?? OTHER_COLOR`.
+ */
+export function utilityColors(names: string[]): Record<string, string> {
+  const top = topUtilities(names).sort((a, b) => a.localeCompare(b))
+  return Object.fromEntries(top.map((u, i) => [u, PALETTE[i]]))
+}
+
+export const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)

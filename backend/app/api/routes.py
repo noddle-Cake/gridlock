@@ -166,7 +166,12 @@ async def patch_project(project_id: str, request: Request) -> ProjectDTO:
 # ---------------------------------------------------------------- matching (Req 6, 7, 10)
 
 
-@router.get("/overlaps", response_model=OverlapsResponse)
+# Each pair embeds both projects in full; the source excerpt is only shown in Review (from
+# /projects), and repeating it ~2,000 times was a quarter of the payload.
+_PAIR_EXCLUDE = {"pairs": {"__all__": {"project_a": {"raw_excerpt"}, "project_b": {"raw_excerpt"}}}}
+
+
+@router.get("/overlaps", response_model=OverlapsResponse, response_model_exclude=_PAIR_EXCLUDE)
 async def get_overlaps(
     request: Request,
     radius: str | None = Query(default=None),
