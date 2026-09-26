@@ -4,7 +4,7 @@
 
 This plan builds GridLock incrementally toward a demoable MVP loop first —
 **upload → extract → review → map/timeline → tune thresholds → why-flagged → brief** —
-then layers on stretch items (CSV/PDF export, 3+ utility scaling, DigitalOcean + GoDaddy
+then layers on stretch items (CSV/PDF export, 3+ utility scaling, AWS Lightsail + GoDaddy
 deployment, transmission-line geometry).
 
 The stack is fixed by the design: **Python 3.11 + FastAPI** backend, **React + Vite (TypeScript)**
@@ -298,13 +298,13 @@ Tasks and sub-tasks tagged **[Stretch]** are explicitly out of the MVP path.
     - Line-involving distance uses the line geometry rather than a single point
     - _Requirements: 17.1, 17.2_
 
-- [ ] 17. [Stretch] Public deployment (DigitalOcean + Tiger Data + GoDaddy)
-  - [ ] 17.1 Configure the DigitalOcean App Platform deployment
-    - Define the App Platform app with a static-site component for the built React bundle and a service component for the FastAPI backend (frontend calls backend under `/api`); inject `DATABASE_URL` (Tiger Data, TLS) and `GEMINI_API_KEY` as secrets so nothing sensitive is baked into the frontend bundle
+- [ ] 17. [Stretch] Public deployment (AWS Lightsail + Tiger Data + GoDaddy)
+  - [ ] 17.1 Configure the AWS Lightsail deployment
+    - Build one container image serving the FastAPI backend under `/api` and the built React bundle at `/`; deploy it to a Lightsail container service from GitHub Actions (OIDC role, only after tests pass on `master`); inject `DATABASE_URL` (Tiger Data, TLS) and `GEMINI_API_KEY` as container environment variables so nothing sensitive is baked into the frontend bundle
     - _Requirements: 16.1_
 
   - [ ] 17.2 Configure the GoDaddy custom domain and TLS
-    - Point the registered domain's DNS (CNAME/A per DigitalOcean) at the App Platform app and provision TLS so the Web_UI is reachable at the public domain over HTTPS
+    - Point the registered domain's DNS (CNAME per Lightsail's custom-domain setup) at the Lightsail container service and provision a Lightsail TLS certificate so the Web_UI is reachable at the public domain over HTTPS
     - _Requirements: 16.2_
 
   - [ ]* 17.3 Write a deployment smoke test

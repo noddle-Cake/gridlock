@@ -11,7 +11,7 @@ The design also targets several sponsor tracks, and the architecture is shaped t
 - **Microsoft "What's Missing" (human-in-the-loop, not a chatbot):** GridLock is not a chat interface. The LLM does bounded extraction and brief drafting; a planner reviews, edits, and approves. The Review_Screen and why-flagged panel are the product, not a chat box.
 - **Gemini API:** used twice, both in structured/bounded modes — structured JSON extraction (Requirement 2/3) and short constrained brief generation (Requirement 8).
 - **Tiger Data (managed Postgres + PostGIS):** the Data_Store is managed Postgres with PostGIS; all spatial/temporal matching is pushed into SQL.
-- **DigitalOcean App Platform + GoDaddy domain:** the Stretch deployment topology (Requirement 16).
+- **AWS Lightsail + GoDaddy domain:** the Stretch deployment topology (Requirement 16).
 
 ### Requirements Traceability Summary
 
@@ -117,7 +117,7 @@ sequenceDiagram
 | PDF/XLSX/CSV parsing | `pypdf`/`pdfplumber`, `openpyxl`, `csv` | Extract text/pages to feed Gemini; detect corrupt files |
 | Geocoding | Pluggable `Geocoder` interface (hosted geocoder + local county-centroid gazetteer) | County-center fallback works offline and is deterministic for the demo |
 | Frontend | React + Vite, `react-leaflet`, `vis-timeline` | Leaflet for the map, vis-timeline for the Gantt-style timeline |
-| Deploy (Stretch) | DigitalOcean App Platform, GoDaddy domain | Sponsor track |
+| Deploy (Stretch) | AWS Lightsail container service, GoDaddy domain | Single container, simple MVP hosting; CI/CD via GitHub Actions |
 
 ## Components and Interfaces
 
@@ -601,20 +601,20 @@ MVP runs locally: FastAPI (`uvicorn`), the Vite dev server, and a Postgres+PostG
 ```mermaid
 flowchart LR
     U[Planner browser] -->|HTTPS gridlock.example.com| GD[GoDaddy DNS]
-    GD --> DO[DigitalOcean App Platform]
-    subgraph DO
-        FE[Static React site]
-        BE[FastAPI service]
+    GD --> LS[AWS Lightsail container service]
+    subgraph LS
+        BE["FastAPI container: API at /api + React build at /"]
     end
-    FE -->|/api| BE
+    GH[GitHub Actions] -->|tests pass on master: push image + deploy| LS
     BE -->|TLS, connection string| TD[(Tiger Data: Postgres + PostGIS)]
     BE -->|API key| GEM[[Gemini API]]
 ```
 
-- **DigitalOcean App Platform (16.1):** two components in one app — a static-site component for the built React bundle and a service component for the FastAPI backend. The frontend calls the backend under a `/api` route (or a separate subdomain) so both sit behind one app.
-- **Tiger Data (managed Postgres + PostGIS):** the backend connects over TLS using a connection string held in an App Platform environment variable/secret; PostGIS is enabled on the managed database. No database runs inside the app component.
-- **Gemini:** the API key is an App Platform secret, read by the backend only; it is never exposed to the browser.
-- **GoDaddy domain (16.2):** the registered domain's DNS points at the App Platform app (CNAME/A record per DigitalOcean's custom-domain setup), and App Platform provisions TLS so the Web_UI is reachable at the public domain over HTTPS.
+- **AWS Lightsail container service (16.1):** one container image (`backend/Dockerfile`) — a multi-stage build that bundles the Vite build into the FastAPI image. `app.serve:app` mounts the API under `/api` and the static bundle at `/`, so the frontend's default `VITE_API_BASE=/api` works same-origin with no CORS configuration. Lightsail provides the HTTPS endpoint and health-checks `/api/health`; a deployment that fails the check leaves the previous version live.
+- **CI/CD:** `.github/workflows/ci-cd.yml` runs lint and the full test suite (DB-backed properties against a PostGIS service container) on every PR and push; on `master`, only after both pass, it assumes an IAM role via GitHub OIDC (no long-lived AWS keys), pushes the image, deploys, and smoke-tests the public URL.
+- **Tiger Data (managed Postgres + PostGIS):** the backend connects over TLS using a connection string held in a container environment variable; PostGIS is enabled on the managed database. No database runs inside the app container.
+- **Gemini:** the API key is a container environment variable, read by the backend only; it is never exposed to the browser.
+- **GoDaddy domain (16.2):** the registered domain's DNS points at the Lightsail container service (CNAME per Lightsail's custom-domain setup, with a Lightsail-managed TLS certificate) so the Web_UI is reachable at the public domain over HTTPS.
 - **Config & secrets:** database URL and Gemini key are injected as environment secrets; nothing sensitive is baked into the frontend bundle. This keeps the "not a chatbot / human-in-the-loop" backend surface the only thing holding credentials.
 
-This topology is intentionally deferred behind the MVP loop: it earns the DigitalOcean and Tiger Data sponsor tracks and lets the team demo from a public URL, but none of it is required for the core upload → extract → review → match → brief demo to work locally.
+This topology is intentionally deferred behind the MVP loop: it earns the Tiger Data sponsor track and lets the team demo from a public URL, but none of it is required for the core upload → extract → review → match → brief demo to work locally.
