@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: gridlock
+      POSTGRES_PASSWORD: gridlock
+      POSTGRES_DB: gridlock
+    ports:
+      - "5432:5432"
+    volumes:
+      - gridlock-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gridlock"]
+      interval: 2s
+      retries: 30
+
+  # Disposable test database for DB-backed property tests (no volume).
+  testdb:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: gridlock
+      POSTGRES_PASSWORD: gridlock
+      POSTGRES_DB: gridlock_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+
+volumes:
+  gridlock-db:

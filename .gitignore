@@ -1,0 +1,53 @@
+# GridLock — single ignore file for the whole repo (backend + frontend).
+
+# ---- Secrets / local config (keep the .example templates)
+.env
+.env.*
+!.env.example
+*.local
+
+# ---- Python (backend)
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+.hypothesis/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# ---- Node (frontend)
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.tsbuildinfo
+coverage/
+
+# ---- Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---- Editors / IDEs (machine-specific; .iml files hold local interpreter paths)
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ---- OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,122 @@
+from datetime import date, datetime
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.models.enums import DatePrecision, PlanStatus, ProjectType
+
+
+class ProjectDTO(BaseModel):
+    id: int
+    plan_id: str | None = None
+    utility: str
+    state: str | None = None
+    name: str | None = None
+    type: ProjectType | None = None
+    voltage_kv: int | None = None
+    location_ref: str | None = None
+    lat: float | None = None
+    lng: float | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    start_precision: DatePrecision | None = None
+    end_precision: DatePrecision | None = None
+    confidence: float
+    source_url: str | None = None
+    source_page: int | None = None
+    raw_excerpt: str | None = None
+    reviewed: bool = False
+    approximate: bool = False
+    requires_review: bool = False
+
+
+class ProjectPatch(BaseModel):
+    """Body of PATCH /projects/{id}. Every field is optional; unknown fields are rejected."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    utility: str | None = Field(default=None, min_length=1)
+    state: str | None = None
+    name: str | None = None
+    type: ProjectType | None = None
+    voltage_kv: float | None = Field(default=None, ge=0.1, le=2000)
+    location_ref: str | None = None
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    lng: float | None = Field(default=None, ge=-180, le=180)
+    start_date: date | None = None
+    end_date: date | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    source_url: str | None = None
+    source_page: int | None = Field(default=None, ge=1)
+    raw_excerpt: str | None = Field(default=None, max_length=2000)
+    reviewed: bool | None = None
+    approximate: bool | None = None
+
+    @model_validator(mode="after")
+    def _lat_lng_together(self) -> "ProjectPatch":
+        sent = self.model_fields_set
+        if ("lat" in sent) != ("lng" in sent):
+            raise ValueError("lat and lng must be edited together")
+        if "lat" in sent and (self.lat is None) != (self.lng is None):
+            raise ValueError("lat and lng must both be set or both be null")
+        if "utility" in sent and self.utility is None:
+            raise ValueError("utility cannot be empty")
+        if "reviewed" in sent and self.reviewed is None:
+            raise ValueError("reviewed must be true or false")
+        return self
+
+
+class ScoreFactorsDTO(BaseModel):
+    distance: float
+    overlap: float
+    type_similarity: float
+    voltage_similarity: float
+    composite: float
+    indeterminate_factors: list[str] = []
+
+
+class CoordinationBriefDTO(BaseModel):
+    pair_id: str
+    text: str
+    generated_at: datetime
+    stale: bool = False
+
+
+class CoordinationPairDTO(BaseModel):
+    id: str
+    project_a: ProjectDTO
+    project_b: ProjectDTO
+    miles: float
+    overlap_days: int
+    window_start: date
+    window_end: date
+    scores: ScoreFactorsDTO
+    brief: CoordinationBriefDTO | None = None
+
+
+class OverlapsResponse(BaseModel):
+    radius: float
+    pad: int
+    max_overlap_days: int
+    pairs: list[CoordinationPairDTO]
+
+
+class IngestResult(BaseModel):
+    plan_id: str
+    utility: str
+    source_url: str
+    utility_stored: bool = True
+    source_url_stored: bool = True
+    status: Literal["processing"] = "processing"
+
+
+class PlanDTO(BaseModel):
+    plan_id: str
+    utility: str
+    source_url: str
+    filename: str | None
+    detected_format: str
+    status: PlanStatus
+    error: str | None = None
+    project_count: int = 0
+    created_at: datetime
