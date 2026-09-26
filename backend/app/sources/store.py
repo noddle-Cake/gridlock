@@ -13,10 +13,12 @@ LOADER_SUFFIX = " [loader]"  # marks plans written by a loader, not by an upload
 async def replace_source(
     conn: asyncpg.Connection, *, label: str, source_url: str, filename: str,
     detected_format: str, projects: list[repo.NewProject], page_range: str | None = None,
+    snapshot_sha: str | None = None,
 ) -> str:
     """Delete this loader's previous run of `source_url` (projects and briefs cascade),
     then insert the plan and its projects in one transaction. Plans uploaded through
-    /ingest for the same URL are left alone."""
+    /ingest for the same URL are left alone. `snapshot_sha` records which committed
+    snapshot the rows match."""
     tagged = filename + LOADER_SUFFIX
     async with conn.transaction():
         await conn.execute(
@@ -31,5 +33,8 @@ async def replace_source(
         await repo.insert_projects(conn, projects)
         await repo.set_plan_status(
             conn, plan.plan_id, PlanStatus.COMPLETE, project_count=len(projects)
+        )
+        await conn.execute(
+            "UPDATE plans SET snapshot_sha = $2 WHERE id = $1::uuid", plan.plan_id, snapshot_sha
         )
     return plan.plan_id

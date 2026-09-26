@@ -1,7 +1,7 @@
 """Load structured public sources straight into the projects table (no LLM needed).
 
-    python -m scripts.load_public_sources eia860m                 # SERTP states + FL
-    python -m scripts.load_public_sources eia860m --states ALL
+    python -m scripts.load_public_sources eia860m                 # nationwide
+    python -m scripts.load_public_sources eia860m --states GA AL TN
     python -m scripts.load_public_sources sertp                   # all 7 SERTP areas
     python -m scripts.load_public_sources sertp --areas SOUTHERN TVA
     python -m scripts.load_public_sources all --dry-run          # parse + CSV only
@@ -128,12 +128,13 @@ def sertp_projects(path: Path, areas: set[str] | None, *, offline: bool) -> list
 # ---------------------------------------------------------------- main
 
 
-async def load(source: snapshot.Source, projects: list[repo.NewProject]) -> None:
+async def load(source: snapshot.Source, projects: list[repo.NewProject], csv_path: Path) -> None:
     pool = await create_pool(get_settings().database_url)
     try:
         await apply_schema(pool)
         async with pool.acquire() as conn:
-            plan_id = await snapshot.save(conn, source, projects)
+            # Record the CSV's hash so app startup sees this load as current.
+            plan_id = await snapshot.save(conn, source, projects, snapshot.file_sha(csv_path))
         print(f"loaded {len(projects)} projects as plan {plan_id} ({source.label})")
     finally:
         await pool.close()
@@ -144,8 +145,8 @@ def main() -> None:
     ap.add_argument("source", choices=["eia860m", "sertp", "all"])
     ap.add_argument("--eia-file", type=Path, default=DOCS / snapshot.EIA860M.filename)
     ap.add_argument("--sertp-file", type=Path, default=DOCS / snapshot.SERTP.filename)
-    ap.add_argument("--states", nargs="+", default=eia860m.DEFAULT_STATES,
-                    help="EIA-860M plant states (ALL = nationwide)")
+    ap.add_argument("--states", nargs="+", default=["ALL"],
+                    help="EIA-860M plant states (default ALL = nationwide)")
     ap.add_argument("--areas", nargs="+", help=f"SERTP areas, default all: {list(sertp.AREAS)}")
     ap.add_argument("--offline", action="store_true", help="no Nominatim calls for SERTP")
     ap.add_argument("--dry-run", action="store_true", help="parse + write CSV, skip the DB")
@@ -154,16 +155,18 @@ def main() -> None:
     if args.source in ("eia860m", "all"):
         states = None if [s.upper() for s in args.states] == ["ALL"] else args.states
         projects = eia_projects(args.eia_file, states)
-        write_export(EXTRACTED / snapshot.EIA860M.export, projects, args.eia_file.name)
+        out = EXTRACTED / snapshot.EIA860M.export
+        write_export(out, projects, args.eia_file.name)
         if not args.dry_run:
-            asyncio.run(load(snapshot.EIA860M, projects))
+            asyncio.run(load(snapshot.EIA860M, projects, out))
 
     if args.source in ("sertp", "all"):
         areas = {a.upper() for a in args.areas} if args.areas else None
         projects = sertp_projects(args.sertp_file, areas, offline=args.offline)
-        write_export(EXTRACTED / snapshot.SERTP.export, projects, args.sertp_file.name)
+        out = EXTRACTED / snapshot.SERTP.export
+        write_export(out, projects, args.sertp_file.name)
         if not args.dry_run:
-            asyncio.run(load(snapshot.SERTP, projects))
+            asyncio.run(load(snapshot.SERTP, projects, out))
 
 
 if __name__ == "__main__":

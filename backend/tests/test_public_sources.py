@@ -182,7 +182,7 @@ def test_committed_snapshots_read_back_with_citations():
 
     eia = snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.EIA860M.export)
     grid = snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.SERTP.export)
-    assert len(eia) == 194 and len(grid) == 426
+    assert len(eia) == 1649 and len(grid) == 426  # EIA is nationwide
     assert all(p.source_url and p.source_page and p.raw_excerpt for p in eia + grid)
     assert all(p.lat is not None for p in eia)
     assert all((p.lat is None) == p.requires_review for p in grid)
@@ -190,26 +190,29 @@ def test_committed_snapshots_read_back_with_citations():
 
 
 @pytest.mark.skipif(not DB_AVAILABLE, reason="no Postgres+PostGIS test database")
-def test_startup_snapshot_load_is_idempotent(tmp_path):
+def test_startup_snapshot_load_is_idempotent_and_follows_csv_changes(tmp_path):
     import asyncpg
 
     from app.sources import snapshot
 
-    # Two small snapshots so the test stays fast.
-    for source in snapshot.SOURCES:
-        with (snapshot.EXTRACTED_DIR / source.export).open(newline="") as f:
-            rows = list(csv.reader(f))[:4]  # header + 3 projects (excerpts span lines)
-        with (tmp_path / source.export).open("w", newline="") as f:
-            csv.writer(f, lineterminator="\n").writerows(rows)
+    def write(n: int) -> None:  # header + n projects per source (excerpts span lines)
+        for source in snapshot.SOURCES:
+            with (snapshot.EXTRACTED_DIR / source.export).open(newline="") as f:
+                rows = list(csv.reader(f))[: n + 1]
+            with (tmp_path / source.export).open("w", newline="") as f:
+                csv.writer(f, lineterminator="\n").writerows(rows)
 
-    async def body(conn):
+    async def load_twice_then_change(conn):
         pool = await asyncpg.create_pool(TEST_DATABASE_URL, min_size=1, max_size=2)
+        counts = []
         try:
-            await snapshot.load_snapshots_if_missing(pool, tmp_path)
-            await snapshot.load_snapshots_if_missing(pool, tmp_path)  # no duplicates
+            for n in (3, 3, 5):  # same CSV twice (no duplicates), then a changed CSV
+                write(n)
+                await snapshot.load_snapshots(pool, tmp_path)
+                counts.append((await conn.fetchval("SELECT count(*) FROM plans"),
+                               await conn.fetchval("SELECT count(*) FROM projects")))
         finally:
             await pool.close()
-        return (await conn.fetchval("SELECT count(*) FROM plans"),
-                await conn.fetchval("SELECT count(*) FROM projects"))
+        return counts
 
-    assert run_db(body) == (2, 6)
+    assert run_db(load_twice_then_change) == [(2, 6), (2, 6), (2, 10)]

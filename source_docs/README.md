@@ -21,7 +21,7 @@ general terms. GridMerge labels matches as *potential coordination opportunities
 
 | File | Source (retrieved 2026-09-26) | How it's loaded | Content |
 | --- | --- | --- | --- |
-| `eia860m_august_generator2026.xlsx` | [EIA-860M, August 2026](https://www.eia.gov/electricity/data/eia860m/xls/august_generator2026.xlsx) (newest edition that downloads; the Sep-Dec links on the EIA page return 503) | `load_public_sources eia860m` (no LLM) | "Planned" sheet: 2,312 generators planned but not yet operating, with plant lat/long and planned operation month. Default load: AL, GA, MS, FL, TN, KY, NC, SC = 263 generators at 194 plant / in-service-month sites. |
+| `eia860m_august_generator2026.xlsx` | [EIA-860M, August 2026](https://www.eia.gov/electricity/data/eia860m/xls/august_generator2026.xlsx) (newest edition that downloads; the Sep-Dec links on the EIA page return 503) | `load_public_sources eia860m` (no LLM) | "Planned" sheet: 2,312 generators planned but not yet operating, with plant lat/long and planned operation month. Default load is nationwide: 2,311 generators (one row has no state or coordinates) at 1,649 plant / in-service-month sites (`--states` narrows it; the first load was AL, GA, MS, FL, TN, KY, NC, SC = 194 sites). Puerto Rico (`Planned_PR` sheet) is not loaded. |
 | `sertp_2026_preliminary_expansion_plan.pdf` | [SERTP 2026 Preliminary Expansion Plan Report (Non-CEII)](https://www.southeasternrtp.com/docs/general/2026/2026_SERTP_Preliminary_Expansion_Plan_Report_(Non-CEII).pdf), dated 06/12/2026 | `load_public_sources sertp` (pdfplumber, no LLM) | 426 projects, in-service 2027-2036, by balancing area: AECI p1 (3), Duke Carolinas p2-16 (56), Duke Progress East p17-22 (17), Duke Progress West p23 (1), LG&E/KU p24-26 (10), Southern p27-102 (288: SOCO 204, GTC 67, MEAG 12, PowerSouth 4, Dalton 1), TVA p103-115 (51). |
 | `frcc_2026_load_resource_plan.pdf` | [FRCC 2026 Load & Resource Plan](https://www.floridapsc.com/pscfiles/website-files/PDF/Utilities/Electricgas/TenYearSitePlans/2026/FRCC_RLRP.pdf) | `ingest.sh` (Gemini), pages 62, 85 | Form 13 "Proposed Transmission Lines", every Florida utility. |
 | `duke_energy_florida_2026_tysp.pdf` | [Duke Energy Florida 2026 TYSP](https://www.floridapsc.com/pscfiles/website-files/PDF/Utilities/Electricgas/TenYearSitePlans/2026/Duke%20Energy%20Florida.pdf) | `ingest.sh` (Gemini), pages 107-117 | Schedule 10 (201-211 repeats it; skipped). |
@@ -45,11 +45,12 @@ cd backend
 # Structured sources, straight into DATABASE_URL (re-runnable: replaces its own last load)
 .venv/bin/python -m scripts.load_public_sources all
 .venv/bin/python -m scripts.load_public_sources sertp --areas SOUTHERN TVA   # a subset
-.venv/bin/python -m scripts.load_public_sources eia860m --states ALL         # nationwide
+.venv/bin/python -m scripts.load_public_sources eia860m --states GA AL TN   # one region
 .venv/bin/python -m scripts.load_public_sources all --dry-run                # CSVs only
 
 # Deployed (AWS Lightsail): nothing to run. extracted/*.csv ship in the image and the
-# app inserts them at startup when their plans are missing (AUTOLOAD_PUBLIC_SOURCES).
+# app (re)inserts a source at startup when its plan is missing or its CSV changed
+# (AUTOLOAD_PUBLIC_SOURCES).
 
 # Florida PDFs through the Gemini upload path (needs GEMINI_API_KEY and a running app)
 bash ../source_docs/ingest.sh

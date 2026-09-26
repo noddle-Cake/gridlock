@@ -131,8 +131,9 @@ The FL–GA filing set, page ranges, and a one-shot upload script are in
 Two structured sources load without Gemini (`cd backend && .venv/bin/python -m
 scripts.load_public_sources all`):
 
-- **EIA-860M planned generators** (August 2026 "Planned" sheet): 194 generation sites in
-  the SERTP states + FL, placed at EIA's published plant coordinates.
+- **EIA-860M planned generators** (August 2026 "Planned" sheet), nationwide: 2,311
+  generators at 1,649 plant sites in all 50 states + DC (288 GW), placed at EIA's
+  published plant coordinates. `--states GA AL ...` limits it to a region.
 - **SERTP 2026 preliminary 10-year expansion plan**: all 426 transmission projects (Duke
   Carolinas, Duke Progress, LG&E/KU, Southern/GTC/MEAG/PowerSouth, TVA, AECI) parsed with
   pdfplumber, substations placed from a cached OpenStreetMap lookup, county centre
@@ -141,10 +142,11 @@ scripts.load_public_sources all`):
 The raw originals of every source are committed in `source_docs/`, and each run writes a
 per-project citation table (file, page/sheet, excerpt) to `source_docs/extracted/`.
 Those two CSVs ship in the Docker image, and on startup the app inserts any source whose
-plan is missing, so the AWS Lightsail deploy gets all 620 projects with no manual step
+plan is missing or was loaded from a different version of its CSV (SHA-256 kept on the
+plan), so the AWS Lightsail deploy gets all 2,075 projects with no manual step
 (`AUTOLOAD_PUBLIC_SOURCES=false` turns it off). To refresh: re-run the loader, commit
-the CSVs, deploy, then re-run the loader against the instance's database (or delete the
-two plans) so the new snapshot replaces the old one.
+the CSVs, deploy; the new snapshot replaces the old rows on startup (briefs on replaced
+projects are dropped with them).
 Matches are labelled *potential coordination opportunities*: SERTP's listed projects are
 not a commitment to build.
 
