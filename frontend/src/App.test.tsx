@@ -84,4 +84,20 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     await userEvent.type(screen.getByLabelText('Search pairs'), 'westminster')
     expect(screen.getByRole('button', { name: /Hanover breakers/ })).toBeInTheDocument()
   })
+
+  it('opens on DESC ↔ Georgia Power when both are loaded', async () => {
+    const desc = project({ id: 7, utility: 'Dominion Energy South Carolina', name: 'Jasper – Okatie' })
+    const gpc = project({ id: 8, utility: 'Georgia Power', name: 'McIntosh reactors' })
+    fetchMock.mockImplementation((url: string) =>
+      url.startsWith('/api/projects')
+        ? jsonResponse([project(), desc, gpc])
+        : url.startsWith('/api/overlaps')
+          ? jsonResponse({ radius: 25, pad: 365, max_overlap_days: 365, pairs: [pair()] })
+          : jsonResponse({ type: 'FeatureCollection', features: [] }),
+    )
+    render(<App />)
+    expect(await screen.findByText('DESC ↔ Georgia Power')).toBeInTheDocument()
+    // The Keystone/Chesapeake fixture pair is hidden by the focus.
+    expect(screen.queryByRole('button', { name: /Hanover breakers/ })).toBeNull()
+  })
 })

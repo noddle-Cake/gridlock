@@ -67,6 +67,9 @@ class Located:
     approximate: bool = False
     requires_review: bool = False
     how: str = ""  # human-readable trail, appended to the excerpt
+    # Both endpoints matched exact OSM substations: the straight segment between them,
+    # as (lat, lng) points. Callers use it as the route of a planned line.
+    ends: list[tuple[float, float]] | None = None
 
 
 class PlaceCache:
@@ -211,6 +214,9 @@ def locate(
         used = [first]
     approximate = not all(u[3] for u in used) or len(used) < len(endpoints)
     how = "Located: " + "; ".join(u[2] for u in used)
+    ends = None
     if len(used) == 2:
         how += " (midpoint)"
-    return Located(round(lat, 3), round(lng, 3), approximate=approximate, how=how)
+        if all(u[3] for u in used):
+            ends = [(round(u[0], 5), round(u[1], 5)) for u in used]
+    return Located(round(lat, 3), round(lng, 3), approximate=approximate, how=how, ends=ends)

@@ -41,6 +41,24 @@ describe('WhyFlaggedPanel (Req 11)', () => {
     expect(within(factors).getByText('n/a')).toBeInTheDocument() // indeterminate voltage
   })
 
+  it('shows the rough coordination value, counting timing items only if aligned', () => {
+    const impact = {
+      items: [
+        { label: 'Share crews & equipment (one mobilization)', low: 150_000, high: 400_000,
+          basis: 'flat range', acres: null, needs_timing: true },
+        { label: 'Share access roads and permitting', low: 50_000, high: 200_000,
+          basis: 'one permit package', acres: null, needs_timing: false },
+      ],
+      total_low: 50_000, total_high: 200_000, if_aligned_low: 200_000, if_aligned_high: 600_000,
+      windows_overlap: false, acres: null, assumptions: ['Ranges are planning assumptions.'],
+    }
+    render(<WhyFlaggedPanel pair={pair({ impact })} colorOf={colorOf} onGenerateBrief={vi.fn()} />)
+    const section = screen.getByRole('region', { name: 'Rough coordination value' })
+    expect(within(section).getByTestId('impact-total')).toHaveTextContent('$50k–$200k')
+    expect(section).toHaveTextContent('up to $200k–$600k if aligned')
+    expect(within(section).getByText('Ranges are planning assumptions.')).toBeInTheDocument()
+  })
+
   it('shows 0% and the in-service gap when build windows never meet', () => {
     const apart = pair({
       overlap_days: 0, overlap_ratio: 0, time_gap_days: 400, window_start: null, window_end: null,

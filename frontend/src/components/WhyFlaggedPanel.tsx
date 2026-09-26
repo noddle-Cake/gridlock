@@ -2,9 +2,17 @@ import { useState } from 'react'
 
 import { ApiError } from '../api'
 import { milesToKm } from '../lib/distanceBands'
-import { FACTOR_LABELS, dayLabel, gapLabel, overlapPct, pct, rangeLabel } from '../lib/format'
+import {
+  FACTOR_LABELS,
+  dayLabel,
+  gapLabel,
+  overlapPct,
+  pct,
+  rangeLabel,
+  usdRange,
+} from '../lib/format'
 import { scoreBand } from '../lib/pairs'
-import type { CoordinationBrief, CoordinationPair, PairProject } from '../types'
+import type { CoordinationBrief, CoordinationPair, Impact, PairProject } from '../types'
 import { SourceLink } from './SourceLink'
 
 interface Props {
@@ -40,6 +48,51 @@ function ProjectCard({ p, color }: { p: PairProject; color: string }) {
       </dl>
       <SourceLink url={p.source_url} page={p.source_page} />
     </article>
+  )
+}
+
+function ImpactSection({ impact }: { impact: Impact }) {
+  const now = impact.total_high > 0
+  return (
+    <section className="impact" aria-label="Rough coordination value">
+      <h3 className="section-title">Rough coordination value</h3>
+      <p className="impact-total">
+        <strong data-testid="impact-total">
+          {usdRange(
+            now ? impact.total_low : impact.if_aligned_low,
+            now ? impact.total_high : impact.if_aligned_high,
+          )}
+        </strong>{' '}
+        {now
+          ? 'on the current schedules'
+          : 'if the two schedules were aligned (their build windows don\u2019t overlap today)'}
+        {now && impact.if_aligned_high > impact.total_high
+          ? `; up to ${usdRange(impact.if_aligned_low, impact.if_aligned_high)} if aligned`
+          : ''}
+        {impact.acres ? ` · ${impact.acres} acres of right-of-way could be shared` : ''}
+      </p>
+      <table className="impact-items">
+        <tbody>
+          {impact.items.map((i) => (
+            <tr key={i.label} className={!impact.windows_overlap && i.needs_timing ? 'muted' : ''}>
+              <th scope="row">
+                {i.label}
+                <span className="impact-basis">{i.basis}</span>
+              </th>
+              <td className="num">{usdRange(i.low, i.high)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <details className="impact-assumptions">
+        <summary>Assumptions</summary>
+        <ul>
+          {impact.assumptions.map((a) => (
+            <li key={a}>{a}</li>
+          ))}
+        </ul>
+      </details>
+    </section>
   )
 }
 
@@ -129,6 +182,8 @@ export function WhyFlaggedPanel({ pair, colorOf, onGenerateBrief }: Props) {
         Build time shared = days both projects are building ÷ days either one is. Where a plan
         gives only an in-service date, construction is assumed to take the 12 months before it.
       </p>
+
+      {pair.impact ? <ImpactSection impact={pair.impact} /> : null}
 
       <h3 className="section-title">Projects</h3>
       <div className="side-by-side">

@@ -17,6 +17,7 @@ import {
   Pane,
   Polyline,
   ScaleControl,
+  Tooltip,
   useMap,
   useMapEvents,
 } from 'react-leaflet'
@@ -329,14 +330,17 @@ export function MapView({
   // Keyed on coordinates, not the pair object, so a data refresh doesn't re-trigger the fly.
   const a = selectedPair?.project_a
   const b = selectedPair?.project_b
+  const routeKey = JSON.stringify([a?.route ?? null, b?.route ?? null])
   const pairBounds = useMemo<LatLngBoundsExpression | null>(() => {
     if (a?.lat == null || a.lng == null || b?.lat == null || b.lng == null) return null
     return [
       [a.lat, a.lng],
       [b.lat, b.lng],
+      ...(a.route ?? []),
+      ...(b.route ?? []),
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [a?.lat, a?.lng, b?.lat, b?.lng])
+  }, [a?.lat, a?.lng, b?.lat, b?.lng, routeKey])
 
   // Unpaired first so paired markers paint on top; the open/hovered pair lifts itself.
   const ordered = useMemo(
@@ -384,6 +388,36 @@ export function MapView({
             />
           ) : null}
         </Pane>
+        {/* Planned lines: a straight segment between the endpoint substations. */}
+        {ordered
+          .filter((p) => p.route && p.route.length >= 2)
+          .map((p) => {
+            const highlighted = highlightedIds.has(p.id)
+            const paired = pairedIds.has(p.id)
+            return (
+              <Polyline
+                key={`route-${p.id}`}
+                positions={p.route!}
+                pathOptions={{
+                  color: colorOf(p),
+                  weight: highlighted ? 6 : paired ? 4 : 2.5,
+                  opacity: highlighted ? 1 : paired ? 0.85 : 0.5,
+                  lineCap: 'round',
+                }}
+                eventHandlers={{
+                  click: () => onSelectProject(p),
+                  mouseover: () => onHoverProject?.(p),
+                  mouseout: () => onHoverProject?.(null),
+                }}
+              >
+                <Tooltip sticky>
+                  <strong>{p.name || 'Unnamed project'}</strong>
+                  <br />
+                  {p.utility} · planned line (straight between endpoints)
+                </Tooltip>
+              </Polyline>
+            )
+          })}
         {placedPairs
           .filter(
             (pair) =>
@@ -494,6 +528,10 @@ export function MapView({
             </span>
             <span className="legend-item">
               <span className="swatch swatch-line swatch-pair-line" /> pair connector
+            </span>
+            <span className="legend-item">
+              <span className="swatch swatch-line" style={{ background: 'var(--ink-2)' }} />{' '}
+              planned line (straight between endpoints)
             </span>
           </div>
           {layers.grid || (lines && showLines) ? (

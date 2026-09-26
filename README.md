@@ -202,6 +202,28 @@ automatic HTTPS; without it the site is plain HTTP on the IP. The database lives
 `gridlock_pgdata` Docker volume on the instance — enable Lightsail automatic snapshots for
 backups.
 
+## Coordination value estimate (Sperry bonus)
+
+Every flagged pair carries a rough, assumption-based `impact` (`app/services/impact.py`),
+shown under "Rough coordination value" in the pair panel and exported as `value_*_usd`
+columns. Each distance tier unlocks one more kind of sharing, and nearer tiers keep the
+farther tiers' benefits:
+
+| Tier | Adds | Assumed value |
+| --- | --- | --- |
+| under 40 km | one crew/equipment mobilization instead of two | 1–3% of the smaller published project cost (DESC publishes costs), else $150k–$400k |
+| under 8 km | one laydown yard, shared deliveries | $100k–$300k |
+| under 1.6 km | access roads and permits; right-of-way land where both are routed lines | $50k–$200k; shared corridor km × half the narrower ROW width (23–61 m by kV) × $5k–$20k/acre |
+| touching | one coordinated outage and crossing design | $50k–$250k |
+
+Crew, yard and outage sharing only count when the two build windows overlap; otherwise the
+panel shows what the pair would be worth *if the schedules were aligned*. These figures are
+placeholders to start a conversation, not benchmarks: edit the constants in `impact.py`.
+
+Example: DESC's Jasper–Okatie 230 kV #2 ($23.8M) and Georgia Power's McIntosh–Purrysburg
+reactors are 4.9 km apart, with in-service dates 5 months apart. Their build windows overlap,
+so the estimate is about $340k–$1.0M from one shared mobilization and one laydown yard.
+
 ## Design notes and deviations
 
 - **Review threshold boundary.** Requirements 3.3/13.1 say "equal to or below" the
@@ -239,7 +261,9 @@ backups.
 ## Not yet done
 
 - Golden-set extraction accuracy harness (task 10.3) — needs a hand-labeled corpus.
-- Matching on transmission-line geometry (stretch 16): the HIFLD layer supplies real routes
-  with `sub_1`/`sub_2` endpoints, but planned line projects are still stored as points.
+- Real routes for planned lines (stretch 16): a planned line whose two endpoints match
+  exact OSM substations is stored as a straight `route` between them, and matching measures
+  closest points between routes and points (a line crossing another is 0 km, "touching").
+  Snapping those segments to the HIFLD corridor they rebuild is not done yet.
 - Custom domain (stretch 17).
 - Export property tests (14.2); only example tests exist.

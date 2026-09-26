@@ -17,6 +17,9 @@ class ProjectDTO(BaseModel):
     location_ref: str | None = None
     lat: float | None = None
     lng: float | None = None
+    # Straight route between the endpoint substations as [lat, lng] points; None = a point.
+    route: list[tuple[float, float]] | None = None
+    cost_usd: int | None = None  # estimated total cost (USD) when the filing publishes it
     start_date: date | None = None
     end_date: date | None = None
     start_precision: DatePrecision | None = None
@@ -82,18 +85,45 @@ class CoordinationBriefDTO(BaseModel):
     stale: bool = False
 
 
+class ImpactItemDTO(BaseModel):
+    label: str
+    low: int  # USD
+    high: int
+    basis: str
+    acres: float | None = None
+    needs_timing: bool = False  # only realised if the build windows overlap
+
+
+class ImpactDTO(BaseModel):
+    """Rough coordination value (services/impact.py). Assumption-based ranges in USD."""
+
+    items: list[ImpactItemDTO]
+    total_low: int  # items realisable on the current schedules
+    total_high: int
+    if_aligned_low: int  # every item, if the schedules were aligned
+    if_aligned_high: int
+    windows_overlap: bool
+    acres: float | None = None  # right-of-way land that could be shared
+    assumptions: list[str] = []
+
+
 class CoordinationPairDTO(BaseModel):
     id: str
     project_a: ProjectDTO
     project_b: ProjectDTO
     miles: float
+    # Distance band id (matching.DISTANCE_BANDS_KM); the ranking tier comes from it.
+    band: str | None = None
+    tier: int | None = None  # 0 = touching ... 3 = crews & equipment (matching.TIERS)
     overlap_days: int  # days both build windows share (0 = none or unknown)
     # Shared days / days either project is building (0-1); None when either is undated.
     overlap_ratio: float | None = None
     time_gap_days: int | None = None  # days between in-service dates; None when undated
     window_start: date | None = None  # the shared build window, when there is one
     window_end: date | None = None
+    shared_km: float | None = None  # km of shared corridor when both are routed lines
     scores: ScoreFactorsDTO
+    impact: ImpactDTO | None = None
     brief: CoordinationBriefDTO | None = None
 
 

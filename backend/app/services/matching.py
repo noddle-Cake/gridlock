@@ -12,6 +12,8 @@ from app.core.errors import InvalidParameterError
 from app.db import repository as repo
 from app.models.dto import CoordinationPairDTO, ProjectDTO
 from app.services import timing
+from app.services.impact import estimate
+from app.services.owners import planning_entity
 from app.services.scoring import score_pair
 
 
@@ -67,6 +69,21 @@ def distance_band(miles: float) -> str | None:
     return None
 
 
+# Sperry's ranking tiers: closer overlaps are worth more. The 8-25 and 25-40 km filter bands
+# are one tier ("under 40 km -> can share crews and equipment").
+TIERS: dict[str, int] = {"touching": 0, "1.6": 1, "8": 2, "25": 3, "40": 3}
+OUTSIDE_TIER = len(set(TIERS.values()))
+
+
+def tier(band: str | None) -> int:
+    return TIERS.get(band, OUTSIDE_TIER) if band else OUTSIDE_TIER
+
+
+def rank_key(pair: CoordinationPairDTO) -> tuple[int, float, float]:
+    """Tier first, then the composite score (which carries timing), then distance."""
+    return (tier(pair.band), -pair.scores.composite, pair.miles)
+
+
 def parse_bands(raw: str | None) -> set[str] | None:
     """None when the param is absent (no band filter); an empty set when it is empty."""
     if raw is None:
@@ -79,6 +96,14 @@ def parse_bands(raw: str | None) -> set[str] | None:
             field="bands", fields=["bands"],
         )
     return bands
+
+
+def _cross_entity(
+    rows: list[repo.CandidateRow], projects: dict[int, ProjectDTO]
+) -> list[repo.CandidateRow]:
+    """Drop pairs whose utilities plan together (owners.PLANNING_ENTITY)."""
+    return [r for r in rows if planning_entity(projects[r.a_id].utility)
+            != planning_entity(projects[r.b_id].utility)]
 
 
 def _window(p: ProjectDTO) -> timing.Window | None:
@@ -98,14 +123,20 @@ def _build_pair(
         voltage_a=a.voltage_kv, voltage_b=b.voltage_kv, radius=radius,
     )
     shared = t.shared if t else None
+    band = distance_band(row.miles)
+    pair_tier = tier(band)
+    shared_km = None if row.shared_km is None else round(row.shared_km, 2)
     return CoordinationPairDTO(
         id=pair_id(a.id, b.id), project_a=a, project_b=b, miles=round(row.miles, 3),
+        band=band, tier=pair_tier,
         overlap_days=t.overlap_days if t else 0,
         overlap_ratio=round(t.ratio, 4) if t else None,
         time_gap_days=t.in_service_gap_days if t else None,
         window_start=shared.start if shared else None,
         window_end=shared.end if shared else None,
-        scores=scores,
+        shared_km=shared_km, scores=scores,
+        impact=estimate(tier=pair_tier, a=a, b=b, shared_km=shared_km,
+                        windows_overlap=shared is not None),
     )
 
 
@@ -116,12 +147,13 @@ async def overlaps(
     if bands is not None:
         rows = [r for r in rows if distance_band(r.miles) in bands]
     projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
+    rows = _cross_entity(rows, projects)
     pairs = [_build_pair(r, projects, radius) for r in rows]
     briefs = await repo.briefs_for_pairs(conn, [p.id for p in pairs])
     for p in pairs:
         if p.id in briefs:
             p.brief = briefs[p.id].to_dto()
-    pairs.sort(key=lambda p: p.scores.composite, reverse=True)
+    pairs.sort(key=rank_key)
     return pairs
 
 
@@ -132,6 +164,8 @@ async def find_pair(
     if not rows:
         return None
     projects = await repo.get_projects(conn, [a_id, b_id])
+    if not _cross_entity(rows, projects):
+        return None
     return _build_pair(rows[0], projects, radius)
 
 
@@ -156,6 +190,8 @@ async def rematch_project(conn: asyncpg.Connection, project_id: int) -> RematchR
     qualifying = await repo.qualifying_brief_pairs(conn, project_id) if briefs else {}
     ids = {i for r in [*rows, *qualifying.values()] for i in (r.a_id, r.b_id)}
     projects = await repo.get_projects(conn, sorted(ids))
+    rows = _cross_entity(rows, projects)
+    qualifying = {k: r for k, r in qualifying.items() if _cross_entity([r], projects)}
     pairs = [_build_pair(r, projects, radius) for r in rows]
 
     invalidated: list[str] = []

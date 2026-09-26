@@ -21,7 +21,7 @@ import asyncpg
 
 from app.db import repository as repo
 from app.models.enums import DatePrecision, ProjectType
-from app.sources import eia860m, sertp
+from app.sources import desc, eia860m, gpc_its, sertp
 from app.sources.store import LOADER_SUFFIX, replace_source
 
 log = logging.getLogger(__name__)
@@ -47,7 +47,15 @@ SERTP = Source(
     "SERTP 2026 preliminary expansion plan", sertp.SOURCE_URL,
     "sertp_2026_preliminary_expansion_plan.pdf", "pdf", "sertp_2026_preliminary_projects.csv",
 )
-SOURCES = [EIA860M, SERTP]
+DESC = Source(
+    "Dominion Energy SC planned transmission projects 2024-2028 ($2M+)", desc.SOURCE_URL,
+    "desc_2024-2028_projects_2m_and_above.pdf", "pdf", "desc_2024_2028_projects.csv",
+)
+GPC_ITS = Source(
+    "Georgia Power 2025 IRP: Georgia ITS 10-year plan project list", gpc_its.SOURCE_URL,
+    "georgia_power_2025_irp_vol3_public.pdf", "pdf", "georgia_power_its_10yr_projects.csv",
+)
+SOURCES = [EIA860M, SERTP, DESC, GPC_ITS]
 
 
 def _bool(value: str) -> bool:
@@ -58,20 +66,41 @@ def _float(value: str) -> float | None:
     return float(value) if value.strip() else None
 
 
+def _int(value: str | None) -> int | None:
+    return int(value) if value and value.strip() else None
+
+
+def parse_route(value: str | None) -> list[tuple[float, float]] | None:
+    """'33.56 -82.05;33.66 -82.19' -> [(33.56, -82.05), (33.66, -82.19)]."""
+    if not value or not value.strip():
+        return None
+    points = [tuple(float(x) for x in part.split()) for part in value.split(";")]
+    return [(lat, lng) for lat, lng in points] if len(points) >= 2 else None
+
+
+def format_route(route: list[tuple[float, float]] | None) -> str:
+    return ";".join(f"{lat} {lng}" for lat, lng in route) if route else ""
+
+
 def read_export(path: Path) -> list[repo.NewProject]:
     """A citation CSV written by `load_public_sources.write_export` -> project rows."""
     projects = []
     with path.open(encoding="utf-8", newline="") as f:
         for row in csv.DictReader(f):
-            year, _, month = row["in_service"].partition("-")
-            precision = DatePrecision.MONTH if month else DatePrecision.YEAR
-            when = date(int(year), int(month or 1), 1)
+            year, month, day = (row["in_service"].split("-") + ["", ""])[:3]
+            precision = (DatePrecision.DAY if day else DatePrecision.MONTH if month
+                         else DatePrecision.YEAR)
+            when = date(int(year), int(month or 1), int(day or 1))
+            last = row.get("in_service_end") or ""
+            until = date.fromisoformat(last) if last else when
             projects.append(repo.NewProject(
                 utility=row["utility"], state=row["state"] or None, name=row["name"],
                 type=ProjectType(row["type"]) if row["type"] else None,
                 voltage_kv=_float(row["voltage_kv"]), location_ref=row["location_ref"],
                 lat=_float(row["lat"]), lng=_float(row["lng"]),
-                start_date=when, end_date=when, start_precision=precision,
+                route=parse_route(row.get("route")),
+                cost_usd=_int(row.get("cost_usd")),
+                start_date=when, end_date=until, start_precision=precision,
                 end_precision=precision, confidence=float(row["confidence"]),
                 source_url=row["source_url"], source_page=int(row["source_page"]),
                 raw_excerpt=row["raw_excerpt"], approximate=_bool(row["approximate"]),

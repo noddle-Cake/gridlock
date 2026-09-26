@@ -215,4 +215,5 @@ def test_startup_snapshot_load_is_idempotent_and_follows_csv_changes(tmp_path):
             await pool.close()
         return counts
 
-    assert run_db(load_twice_then_change) == [(2, 6), (2, 6), (2, 10)]
+    k = len(snapshot.SOURCES)
+    assert run_db(load_twice_then_change) == [(k, 3 * k), (k, 3 * k), (k, 5 * k)]

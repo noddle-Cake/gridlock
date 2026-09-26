@@ -58,6 +58,17 @@ ALIASES = {
     "LG&E AND KU": "LG&E and KU",
     "ASSOCIATED ELECTRIC COOPERATIVE": "Associated Electric Cooperative",
 }
+# Operating companies that plan as one entity. SERTP lists Southern's Georgia, Alabama and
+# Mississippi projects as "Southern Company" while Georgia Power's own IRP lists the same
+# projects as "Georgia Power"; without this, one project would pair with its own copy as a
+# 0 km "cross-utility" overlap.
+PLANNING_ENTITY = {
+    "Southern Company": "Southern Company",
+    "Georgia Power": "Southern Company",
+    "Alabama Power": "Southern Company",
+    "Mississippi Power": "Southern Company",
+}
+
 _UNKNOWN = {"", "NOT AVAILABLE", "UNKNOWN", "N/A", "NA"}
 _SUFFIX = re.compile(r"\b(INC|LLC|L L C|CO|CORP|CORPORATION|COMPANY|THE)\b")
 _SMALL_WORDS = {"of", "and", "the", "de"}
@@ -78,6 +89,12 @@ def _title(key: str) -> str:
         w.lower() if i and w.lower() in _SMALL_WORDS else w.capitalize()
         for i, w in enumerate(words)
     )
+
+
+def planning_entity(utility: str) -> str:
+    """The entity a utility plans with; pairs within one entity aren't cross-utility."""
+    name = utility.strip()
+    return PLANNING_ENTITY.get(name, name).lower()
 
 
 def canonical_utility(raw: str | None) -> str | None:

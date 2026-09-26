@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 
+import { CHALLENGE_UTILITIES, focusHidden } from '../lib/focus'
 import { OTHER_COLOR } from '../lib/format'
 import { FilterMenu } from './FilterMenu'
 
@@ -18,10 +19,15 @@ interface Props {
 export function UtilityFilter({ utilities, counts, hidden, colors, onChange }: Props) {
   const [query, setQuery] = useState('')
   const shown = utilities.filter((u) => !hidden.has(u)).length
+  const challenge = focusHidden(utilities)
+  const onlyChallenge =
+    challenge != null && shown === 2 && CHALLENGE_UTILITIES.every((u) => !hidden.has(u))
   const label =
     hidden.size === 0 || utilities.length === 0
       ? 'All utilities'
-      : `${shown} of ${utilities.length} utilities`
+      : onlyChallenge
+        ? 'DESC ↔ Georgia Power'
+        : `${shown} of ${utilities.length} utilities`
 
   const sorted = useMemo(
     () =>
@@ -56,6 +62,11 @@ export function UtilityFilter({ utilities, counts, hidden, colors, onChange }: P
           />
         ) : null}
         <div className="check-list-actions">
+          {challenge && !onlyChallenge ? (
+            <button type="button" className="link-button" onClick={() => onChange(challenge)}>
+              Only DESC ↔ Georgia Power
+            </button>
+          ) : null}
           {hidden.size ? (
             <button type="button" className="link-button" onClick={() => onChange(new Set())}>
               Show all

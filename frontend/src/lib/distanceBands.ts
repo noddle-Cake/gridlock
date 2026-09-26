@@ -18,6 +18,14 @@ export const DISTANCE_BANDS: DistanceBand[] = [
 
 export const ALL_BANDS: BandId[] = DISTANCE_BANDS.map((b) => b.id)
 
+/** Sperry's ranking tiers (backend matching.TIERS): what two projects this close can share. */
+export const TIERS = [
+  { label: 'Must coordinate', detail: 'Outage timing and crossing structures' },
+  { label: 'Share the land', detail: 'Right-of-way, access roads and permits' },
+  { label: 'Share site logistics', detail: 'Laydown yards and deliveries' },
+  { label: 'Share crews & equipment', detail: 'Crews, cranes and contractors' },
+] as const
+
 export const KM_PER_MILE = 1.609344
 
 // Fixed matching radius (the outer edge of the widest band), so distance scores stay the same

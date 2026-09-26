@@ -43,6 +43,17 @@ CREATE TABLE IF NOT EXISTS projects (
 );
 
 CREATE INDEX IF NOT EXISTS projects_geom_gix ON projects USING GIST (geom);
+
+-- A planned line's route: a straight segment between its two endpoint substations (the
+-- filings don't publish routes). geom stays the midpoint marker. Matching measures between
+-- the closest points of route-or-point shapes, so a 60 km line passing 5 km from the other
+-- utility's substation counts at 5 km, and crossing lines are 0 km apart.
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS route geography(LineString, 4326);
+-- Estimated total project cost in USD when the filing publishes it (DESC does; Georgia
+-- Power's public IRP redacts it). Feeds the rough coordination-savings estimate.
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS cost_usd bigint;
+CREATE INDEX IF NOT EXISTS projects_shape_gix
+  ON projects USING GIST ((COALESCE(route::geography, geom::geography)));
 CREATE INDEX IF NOT EXISTS projects_dates_ix ON projects (start_date, end_date);
 -- Deleting a plan cascades to its projects; without this each delete scans the table.
 CREATE INDEX IF NOT EXISTS projects_plan_ix ON projects (plan_id);

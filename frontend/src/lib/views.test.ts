@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest'
 
 import { project } from '../test/fixtures'
 import { diffDraft, toDraft } from './draft'
-import { OTHER_COLOR, PALETTE, dateLabel, rangeLabel, utilityColors } from './format'
+import {
+  OTHER_COLOR,
+  PALETTE,
+  dateLabel,
+  gapLabel,
+  rangeLabel,
+  timingLabel,
+  usdRange,
+  utilityColors,
+} from './format'
 import { colorLegend, markerStyle, projectColor } from './mapStyle'
 import { timelineItems } from './timelineItems'
 
@@ -50,6 +59,14 @@ describe('timelineItems (Req 9.2)', () => {
 })
 
 describe('format helpers', () => {
+  it('formats money ranges, schedule gaps and timing', () => {
+    expect(usdRange(337_874, 1_013_623)).toBe('$338k–$1.0M')
+    expect(usdRange(50_000, 50_000)).toBe('$50k')
+    expect(gapLabel(3074)).toBe('8.4 years')
+    expect(timingLabel({ overlap_ratio: 0, time_gap_days: 152 })).toBe('in service 5 months apart')
+    expect(timingLabel({ overlap_ratio: null, time_gap_days: null })).toBe('schedule unknown')
+  })
+
   it('labels dates at their source precision', () => {
     expect(dateLabel('2026-04-01', 'quarter')).toBe('Q2 2026')
     expect(dateLabel('2027-01-01', 'year')).toBe('2027')
