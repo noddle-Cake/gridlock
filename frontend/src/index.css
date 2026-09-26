@@ -338,6 +338,11 @@ a {
   width: 100%;
 }
 
+/* No street base map: grid infrastructure is drawn over a plain field. */
+.map.leaflet-container {
+  background: var(--surface-2);
+}
+
 .map-legend {
   display: flex;
   flex-wrap: wrap;
@@ -375,6 +380,31 @@ a {
 .swatch-approx {
   border: 1.5px dashed var(--ink-2);
   background: transparent;
+}
+
+.grid-legend {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.swatch-line {
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.swatch-substation {
+  border-radius: 1px;
+  background: #7a7a85;
+  border: 1px solid #333;
+}
+
+.swatch-plant {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  background: #3f3f4a;
+  transform: rotate(45deg);
 }
 
 .map-note {
