@@ -1,20 +1,16 @@
 import 'leaflet/dist/leaflet.css'
 
-import type { GeoJsonObject } from 'geojson'
 import type {
   CircleMarker as LeafletCircleMarker,
   LatLngBoundsExpression,
   LatLngExpression,
-  Layer,
   Map as LeafletMap,
   Polyline as LeafletPolyline,
 } from 'leaflet'
 import { memo, type Ref, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CircleMarker,
-  GeoJSON,
   MapContainer,
-  Pane,
   Polyline,
   ScaleControl,
   Tooltip,
@@ -24,7 +20,6 @@ import {
 
 import { milesToKm } from '../lib/distanceBands'
 import { bothBuildingLabel, durationLabel, escapeHtml as esc, rangeLabel } from '../lib/format'
-import { lineBounds, lineStyle, lineTooltip } from '../lib/lines'
 import {
   COLOR_BY_OPTIONS,
   type ColorBy,
@@ -36,7 +31,7 @@ import {
 import { type ViewBounds, pairEnds } from '../lib/pairs'
 import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE } from '../lib/powerGrid'
 import { enableSmoothWheelZoom } from '../lib/smoothWheelZoom'
-import type { CoordinationPair, LineCollection, LineFeature, Project } from '../types'
+import type { CoordinationPair, Project } from '../types'
 import { BaseMap } from './BaseMap'
 import { PowerGridLayer } from './PowerGridLayer'
 
@@ -301,10 +296,9 @@ const PairLine = memo(function PairLine({
   )
 })
 
-type MapLayer = 'grid' | 'highways' | 'counties' | 'labels'
+type MapLayer = 'grid' | 'counties' | 'labels'
 const MAP_LAYERS: [MapLayer, string][] = [
   ['grid', 'Power grid'],
-  ['highways', 'Highways'],
   ['counties', 'County lines'],
   ['labels', 'Place names'],
 ]
@@ -320,8 +314,6 @@ interface Props {
   onColorBy: (by: ColorBy) => void
   legend: LegendEntry[]
   scheme?: 'light' | 'dark'
-  lines?: LineCollection | null
-  linesFailed?: boolean
   onSelectProject: (p: Project) => void
   onSelectPair?: (pair: CoordinationPair) => void
   onHoverProject?: (p: Project | null) => void
@@ -340,18 +332,14 @@ export function MapView({
   onColorBy,
   legend,
   scheme = 'light',
-  lines = null,
-  linesFailed = false,
   onSelectProject,
   onSelectPair,
   onHoverProject,
   onBoundsChange,
   focus = null,
 }: Props) {
-  const [showLines, setShowLines] = useState(true)
   const [layers, setLayers] = useState<Record<MapLayer, boolean>>({
     grid: true,
-    highways: true,
     counties: true,
     labels: true,
   })
@@ -379,10 +367,9 @@ export function MapView({
 
   const allBounds = useMemo<LatLngBoundsExpression | null>(() => {
     const pts = placed.map((p) => [p.lat!, p.lng!] as [number, number])
-    // With no placed projects yet, frame the reference lines instead.
-    return pts.length ? pts : lines ? lineBounds(lines) : null
+    return pts.length ? pts : null
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placed.length, lines])
+  }, [placed.length])
 
   // Keyed on coordinates, not the pair object, so a data refresh doesn't re-trigger the fly.
   const a = selectedPair?.project_a
@@ -428,24 +415,11 @@ export function MapView({
         <SmoothWheelZoom />
         <ZoomWatcher onZoom={setZoom} />
         <ScaleControl position="bottomleft" imperial={false} metric />
-        <BaseMap highways={layers.highways} counties={layers.counties} labels={layers.labels} />
+        <BaseMap counties={layers.counties} labels={layers.labels} />
         {layers.grid ? <PowerGridLayer /> : null}
         <ViewController allBounds={allBounds} pairBounds={pairBounds} />
         <FocusController focus={focus} />
         <ReportBounds onChange={onBoundsChange} />
-        {/* Existing lines sit in their own pane under the project markers. */}
-        <Pane name="reference-lines" style={{ zIndex: 350 }}>
-          {lines && showLines ? (
-            <GeoJSON
-              key={lines.features.length}
-              data={lines as unknown as GeoJsonObject}
-              style={(f) => lineStyle(f as unknown as LineFeature)}
-              onEachFeature={(f, layer: Layer) =>
-                layer.bindTooltip(() => lineTooltip(f as unknown as LineFeature), { sticky: true })
-              }
-            />
-          ) : null}
-        </Pane>
         {/* Planned lines: a straight segment between the endpoint substations. */}
         {ordered
           .filter((p) => p.route && p.route.length >= 2)
@@ -507,7 +481,6 @@ export function MapView({
         ))}
       </MapContainer>
       <div className="map-notes">
-        {linesFailed ? <p className="map-note">Existing transmission lines could not be loaded.</p> : null}
         {projects.length > placed.length ? (
           <p className="map-note">
             {projects.length - placed.length} project(s) have no location yet — see Review.
@@ -566,16 +539,6 @@ export function MapView({
                 {label}
               </label>
             ))}
-            {lines ? (
-              <label className="legend-item">
-                <input
-                  type="checkbox"
-                  checked={showLines}
-                  onChange={(e) => setShowLines(e.target.checked)}
-                />
-                Existing lines (HIFLD)
-              </label>
-            ) : null}
           </div>
           <div className="map-legend" aria-label="Marker legend">
             <span className="legend-item">
@@ -593,9 +556,9 @@ export function MapView({
               planned line (straight between endpoints)
             </span>
           </div>
-          {layers.grid || (lines && showLines) ? (
+          {layers.grid ? (
             <div className="map-legend grid-legend" aria-label="Power grid legend">
-              <span>Grid &amp; existing lines (kV):</span>
+              <span>Power grid (kV):</span>
               {[...VOLTAGE_SCALE].reverse().map(([kv, c]) => (
                 <span key={kv} className="legend-item">
                   <span className="swatch swatch-line" style={{ background: c }} />
