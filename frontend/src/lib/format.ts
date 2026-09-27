@@ -152,18 +152,28 @@ export function topUtilities(names: string[], n = PALETTE.length): string[] {
  * Colours for the busiest utilities (pass one name per project). Assigned in alphabetical
  * order so they don't shuffle as counts shift; look up with `?? OTHER_COLOR`.
  *
- * `first` (e.g. the utilities on screen) take the leading slots, which are the most distinct:
- * two compared utilities get blue and orange instead of whichever slots the alphabet gives them.
+ * `first` (e.g. the utilities on screen, or the signed-in company's pair partners, most
+ * important first) take the leading slots, which are the most distinct: two compared
+ * utilities get blue and orange instead of whichever slots the alphabet gives them.
+ * `own`, the signed-in user's company, always gets the first slot.
  */
-export function utilityColors(names: string[], first: readonly string[] = []): Record<string, string> {
+export function utilityColors(
+  names: string[],
+  first: readonly string[] = [],
+  own: string | null = null,
+): Record<string, string> {
   const byName = (a: string, b: string) => a.localeCompare(b)
-  const lead = [...new Set(first)].sort(byName).slice(0, PALETTE.length)
-  const taken = new Set(lead)
+  const pinned = own ? [own] : []
+  const lead = [...new Set(first)]
+    .filter((u) => u !== own)
+    .slice(0, PALETTE.length - pinned.length)
+    .sort(byName)
+  const taken = new Set([...pinned, ...lead])
   const rest = topUtilities(
     names.filter((u) => !taken.has(u)),
-    PALETTE.length - lead.length,
+    PALETTE.length - taken.size,
   ).sort(byName)
-  return Object.fromEntries([...lead, ...rest].map((u, i) => [u, PALETTE[i]]))
+  return Object.fromEntries([...pinned, ...lead, ...rest].map((u, i) => [u, PALETTE[i]]))
 }
 
 export const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)

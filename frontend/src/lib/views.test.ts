@@ -201,6 +201,21 @@ describe('format helpers', () => {
     expect(colors.AEP).toBeDefined()
     expect(new Set(Object.values(colors)).size).toBe(Object.keys(colors).length)
   })
+
+  it("always colours the signed-in user's company first, then its partners by rank", () => {
+    // "Small" has one project among 20 busier companies: it would be grey without `own`.
+    const busy = Array.from({ length: 20 }, (_, i) => Array(3).fill(`Co ${i}`)).flat()
+    const partners = ['Partner B', 'Partner A', ...Array.from({ length: 10 }, (_, i) => `P ${i}`)]
+    const colors = utilityColors([...busy, 'Small'], partners, 'Small')
+    expect(colors.Small).toBe(PALETTE[0])
+    // The top-ranked partners fill the remaining slots, ahead of busier strangers.
+    expect(colors['Partner B']).toBeDefined()
+    expect(colors['Partner A']).toBeDefined()
+    expect(colors['P 9']).toBeUndefined()
+    expect(colors['Co 0']).toBeUndefined()
+    expect(Object.keys(colors)).toHaveLength(PALETTE.length)
+    expect(new Set(Object.values(colors)).size).toBe(PALETTE.length)
+  })
 })
 
 describe('project color encodings', () => {
@@ -231,6 +246,16 @@ describe('project color encodings', () => {
     ])
     const byYear = colorLegend([gen, line, bare], 'year', colors).map((r) => r.label)
     expect(byYear).toEqual(['2026 or earlier', '2030+', 'Undated'])
+  })
+
+  it("lists the user's own company first and marks it, even when it is not the busiest", () => {
+    const busier = project({ id: 4, utility: 'A' })
+    const both = { A: '#123456', C: '#654321' }
+    const byCompany = colorLegend([gen, busier, bare], 'utility', both, 'light', 'C')
+    expect(byCompany.map((r) => [r.label, r.count])).toEqual([
+      ['C (your company)', 1],
+      ['A', 2],
+    ])
   })
 })
 
