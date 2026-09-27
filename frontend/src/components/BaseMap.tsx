@@ -15,6 +15,7 @@ import {
   type LabelData,
   type NamedPoint,
   STATE_LABEL_MAX_ZOOM,
+  chunkLines,
   countyLines,
   layoutLabels,
   minPlacePopulation,
@@ -23,6 +24,7 @@ import {
   stateBorders,
   textWidth,
 } from '../lib/basemap'
+import { ScaledRedrawCanvas } from '../lib/liveCanvas'
 import { useColorScheme } from '../lib/useColorScheme'
 
 // Outlines sit under the power-grid tiles (tilePane is 200); names sit above the grid
@@ -74,7 +76,8 @@ function palette() {
 const shapes = (
   data: GeoJsonObject,
   renderer: L.Renderer,
-  style: L.StyleFunction | L.PathOptions,
+  // minZoom: see ScaledRedrawCanvas.
+  style: L.StyleFunction | (L.PathOptions & { minZoom?: number }),
 ) => L.geoJSON(data, { renderer, interactive: false, style } as L.GeoJSONOptions)
 
 const topoFeatures = (topo: Topology, name: string) =>
@@ -112,7 +115,8 @@ export function BaseMap({ counties, labels }: Props) {
         pane.style.pointerEvents = 'none'
       }
     }
-    return L.canvas({ pane: SHAPES_PANE, padding: 0.3 })
+    // Redrawn every frame of a zoom so borders keep their width instead of stretching.
+    return new ScaledRedrawCanvas({ pane: SHAPES_PANE, padding: 0.3 })
   }, [map])
 
   useEffect(() => {
@@ -133,8 +137,10 @@ export function BaseMap({ counties, labels }: Props) {
       shapes(topoFeatures(land, 'countries'), renderer, fill(c.foreign)),
       shapes(topoFeatures(land, 'states'), renderer, fill(c.land)),
       shapes(topoFeatures(land, 'lakes'), renderer, fill(c.water)),
-      ...nationalOutlines(land).map((m) => shapes(m, renderer, { color: c.outline, weight: 1 })),
-      shapes(stateBorders(land), renderer, {
+      ...nationalOutlines(land).map((m) =>
+        shapes(chunkLines(m), renderer, { color: c.outline, weight: 1 }),
+      ),
+      shapes(chunkLines(stateBorders(land)), renderer, {
         color: c.border,
         weight: 1.4,
         dashArray: '6 3 1.5 3',
@@ -145,7 +151,9 @@ export function BaseMap({ counties, labels }: Props) {
 
   useEffect(() => {
     if (!countyTopo || !showCounties) return
-    const layer = shapes(countyLines(countyTopo), renderer, {
+    const layer = shapes(chunkLines(countyLines(countyTopo)), renderer, {
+      // Dropped mid-zoom below the zoom they show at (lib/liveCanvas.ts), not just at zoomend.
+      minZoom: COUNTY_MIN_ZOOM,
       color: palette().county,
       weight: 0.8,
       dashArray: '2 3',

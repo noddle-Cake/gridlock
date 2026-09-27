@@ -9,21 +9,22 @@ export interface MarkerState {
 }
 
 /**
- * Marker styling: paired projects are highlighted, approximate ones hollow + dashed. Unpaired
- * projects stay small and faint: with ~2,000 on screen they are context, not the story.
+ * Marker styling at `zoom`: paired projects are highlighted, approximate ones hollow + dashed.
+ * Unpaired projects stay small and faint: with ~2,000 on screen they are context, not the
+ * story. Radius and weight follow the zoom; the map's canvas re-evaluates them every frame.
  */
 export function markerStyle(
   p: Project,
   color: string,
   s: MarkerState,
-  scale = 1,
   zoom = Infinity,
-): PathOptions & { radius: number } {
+): PathOptions & { radius: number; weight: number } {
   const hl = highlightSize(zoom)
+  const scale = markerScale(zoom)
   return {
     radius: s.selected ? hl.radius : Math.max(2, (s.paired ? 7 : 4) * scale),
     color: s.selected ? '#111' : color,
-    weight: s.selected ? hl.weight : s.paired ? (scale < 1 ? 1.25 : 2) : 0.75,
+    weight: s.selected ? hl.weight : s.paired ? Math.max(1.25, 2 * scale) : 0.75,
     opacity: s.paired || s.selected ? 1 : 0.6,
     fillColor: color,
     fillOpacity: p.approximate ? 0.08 : s.paired || s.selected ? 0.85 : 0.3,
@@ -32,17 +33,16 @@ export function markerStyle(
 }
 
 /**
- * Marker size by zoom, in coarse steps so markers only restyle when a step changes: at
- * national scale full-size dots merge into blobs.
+ * Marker size by zoom, half size at national scale (full-size dots merge into blobs there)
+ * growing smoothly to full size by zoom 7.
  */
 export function markerScale(zoom: number): number {
-  return zoom < 5 ? 0.5 : zoom < 7 ? 0.75 : 1
+  return Math.min(1, Math.max(0.5, 0.5 + (zoom - 4.5) * 0.2))
 }
 
 /**
- * Size of an opened or hovered pair's markers. Continuous in zoom, unlike markerScale: only
- * these few restyle every frame of a fly, so they can shrink with the view (never dwarfing
- * their neighbours when zoomed out) and grow smoothly as the map closes in.
+ * Size of an opened or hovered pair's markers: shrinks with the view so it never dwarfs its
+ * neighbours when zoomed out, and stays larger than any other paired marker.
  */
 export function highlightSize(zoom: number): { radius: number; weight: number } {
   const radius = Math.min(11, Math.max(6, 6 + (zoom - 4) * 1.5))
