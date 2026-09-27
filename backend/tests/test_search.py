@@ -200,6 +200,8 @@ def test_33034_finds_nearby_projects_and_frames_the_zip(api_client, query):
     lat, lng = zip_centroid("33034")
     south, west, north, east = body["bounds"]
     assert south <= lat <= north and west <= lng <= east
+    assert (south + north) / 2 == pytest.approx(lat)
+    assert (west + east) / 2 == pytest.approx(lng)
     assert south <= 25.70 <= north and west <= -80.40 <= east
 
 
@@ -211,6 +213,21 @@ def test_zip_with_no_projects_still_has_a_map_destination(api_client):
     assert body["interpretation"]["radius_miles"] == 100
     lat, lng = zip_centroid("33034")
     assert body["bounds"] == [lat, lng, lat, lng]
+
+
+def test_33034_stays_centered_in_south_florida_when_matches_are_farther_north(api_client):
+    ids = seed([
+        _project("Florida Power & Light", "Northern project", ProjectType.SUBSTATION,
+                 26.7, -80.9, "FL"),
+    ])
+    body = search(api_client, "33034")
+    assert body["project_ids"] == ids
+    assert body["interpretation"]["radius_miles"] == 100
+    south, west, north, east = body["bounds"]
+    lat, lng = zip_centroid("33034")
+    assert (south + north) / 2 == pytest.approx(lat)
+    assert (west + east) / 2 == pytest.approx(lng)
+    assert south <= 26.7 <= north and west <= -80.9 <= east
 
 
 def test_search_company_and_zip(api_client):
