@@ -5,28 +5,37 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, File, Form, Query, Request, Response, UploadFile
 from pydantic import ValidationError
 
+from app.core.auth import COOKIE_NAME, client_id
 from app.core.config import get_settings
 from app.core.errors import (
+    InvalidCredentialsError,
     InvalidFieldError,
     InvalidParameterError,
     PairNotFoundError,
     PlanNotFoundError,
     ProjectNotFoundError,
+    TooManyAttemptsError,
     TooManyUtilitiesError,
 )
 from app.db import lines as lines_db
 from app.db import repository as repo
 from app.models.dto import (
+    AskRequest,
+    AskResponse,
     CoordinationBriefDTO,
     IngestResult,
     LineOwnerDTO,
+    LoginRequest,
     OverlapsResponse,
     PlanDTO,
     ProjectDTO,
     ProjectPatch,
+    SearchResponse,
+    SessionDTO,
 )
 from app.services import export as export_service
 from app.services import hifld, matching
+from app.services import search as search_service
 from app.services.ingestion import validate_upload
 from app.services.pipeline import process_plan
 
@@ -40,6 +49,53 @@ def _state(request: Request) -> Any:
 @router.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------- sign-in (core/auth.py)
+
+
+def _set_session(request: Request, response: Response, token: str | None) -> None:
+    auth = _state(request).auth
+    if token is None:
+        response.delete_cookie(COOKIE_NAME, path="/")
+        return
+    response.set_cookie(
+        COOKIE_NAME, token, max_age=auth.max_age, path="/", httponly=True, samesite="lax",
+        # Behind Caddy, --proxy-headers makes the scheme https in production.
+        secure=request.url.scheme == "https",
+    )
+
+
+@router.get("/auth/session", response_model=SessionDTO)
+async def session(request: Request) -> SessionDTO:
+    auth = _state(request).auth
+    if not auth.enabled:
+        return SessionDTO(required=False, authenticated=True)
+    user = auth.verify(request.cookies.get(COOKIE_NAME))
+    return SessionDTO(required=True, authenticated=user is not None, username=user)
+
+
+@router.post("/auth/login", response_model=SessionDTO)
+async def login(body: LoginRequest, request: Request, response: Response) -> SessionDTO:
+    auth = _state(request).auth
+    if not auth.enabled:
+        return SessionDTO(required=False, authenticated=True)
+    client = client_id(request)
+    if auth.locked_out(client):
+        raise TooManyAttemptsError("Too many failed sign-ins. Try again in 15 minutes.")
+    if not auth.check(body.username, body.password):
+        auth.record_failure(client)
+        raise InvalidCredentialsError("Wrong username or password.", fields=["password"])
+    auth.clear_failures(client)
+    _set_session(request, response, auth.issue())
+    return SessionDTO(required=True, authenticated=True, username=auth.username)
+
+
+@router.post("/auth/logout", response_model=SessionDTO)
+async def logout(request: Request, response: Response) -> SessionDTO:
+    auth = _state(request).auth
+    _set_session(request, response, None)
+    return SessionDTO(required=auth.enabled, authenticated=not auth.enabled)
 
 
 # ---------------------------------------------------------------- ingestion (Req 1)
@@ -264,6 +320,27 @@ async def get_lines(
 async def get_line_owners(request: Request) -> list[LineOwnerDTO]:
     async with _state(request).pool.acquire() as conn:
         return await lines_db.line_owners(conn)
+
+
+# ---------------------------------------------------------------- search and ask
+
+
+@router.get("/search", response_model=SearchResponse)
+async def search(
+    request: Request,
+    q: str = Query(default=""),
+    limit: int = Query(default=8, ge=1, le=50),
+) -> SearchResponse:
+    """Search bar: ZIP code, state, company, or project text. Deterministic; no LLM."""
+    async with _state(request).pool.acquire() as conn:
+        return await search_service.run_search(conn, q, limit=limit)
+
+
+@router.post("/ask", response_model=AskResponse)
+async def ask(body: AskRequest, request: Request) -> AskResponse:
+    """Ask GridMerge: a Gemini agent answering from GridMerge data via tool calls."""
+    state = _state(request)
+    return await state.ask.ask(state.pool, body.question.strip())
 
 
 # ---------------------------------------------------------------- export (Req 14, Stretch)

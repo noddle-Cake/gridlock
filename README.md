@@ -44,7 +44,8 @@ Without `GEMINI_API_KEY` everything works except PDF extraction: uploads fail wi
 "Extraction failed: GEMINI_API_KEY is not configured" (the plan is marked failed, no
 projects are created). Coordination briefs fall back to a template built from the pair's
 facts (distance, timing, what the tier lets them share, rough value), stored and labelled
-`template`. The seed script and the committed public-source snapshots load without it, so
+`template`. Ask GridMerge returns a 503 (the search bar itself never needs the key). The
+seed script and the committed public-source snapshots load without it, so
 the rest of the demo loop works offline.
 
 ### Demo walkthrough (Sperry Gridlock challenge)
@@ -92,7 +93,7 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | `postgresql://gridmerge:gridmerge@localhost:5432/gridmerge` | Set by `deploy/docker-compose.yml` in prod |
-| `GEMINI_API_KEY` | — | Extraction + briefs |
+| `GEMINI_API_KEY` | — | Extraction, briefs, Ask GridMerge |
 | `GEMINI_MODEL` | `gemini-3.8-flash` | `gemini-2.5-flash` is closed to new keys |
 | `GEMINI_RPM` | `5` | requests/minute across the app (free tier: 5); `0` = unpaced |
 | `GEOCODER` | `nominatim` | `none` = offline county gazetteer only |
@@ -103,11 +104,28 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | `PLANNING_FROM` | today | matches need both projects in service on or after this date; earlier work is finished and left out (`/projects?include_past=true` still lists it) |
 | `MIN_OVERLAP_DAYS` | `30` | matches need both projects building at the same time for at least this many days |
 | `COMPRESS_RESPONSES` | `true` | gzip API responses; the deploy stack sets `false` because Caddy compresses (zstd) |
+| `SEARCH_ZIP_RADIUS_MILES` | `25` | a ZIP search matches projects this close to the ZIP (widens to 50, then 100, when empty) |
+| `AUTH_USERNAME`, `AUTH_PASSWORD` | — | the one sign-in account; both set = sign-in required, either empty = open app |
+| `AUTH_SECRET` | random per process | signs session cookies; set it so restarts and redeploys keep people signed in |
+| `AUTH_SESSION_HOURS` | `12` | how long a sign-in lasts |
+
+### Sign-in
+
+With `AUTH_USERNAME` and `AUTH_PASSWORD` set, the app opens on a sign-in screen and every
+API route (and `/samples`) returns `401 unauthenticated` without a session; `/health` and
+`/auth/*` stay public. Signing in sets an HttpOnly, SameSite=Lax cookie (Secure over
+HTTPS) holding an HMAC-signed expiry. Five failed sign-ins from one address lock it out for
+15 minutes. In production the CI deploy writes the `AUTH_USERNAME`, `AUTH_PASSWORD`, and
+`AUTH_SECRET` repository secrets into the server's `.env`; with them unset the site stays
+open.
 
 ## API
 
 | Method | Path | Purpose |
 | --- | --- | --- |
+| POST | `/auth/login` | `{"username", "password"}` → session cookie; `401 invalid_credentials`, `429 too_many_attempts` |
+| POST | `/auth/logout` | clears the session cookie |
+| GET | `/auth/session` | `{"required", "authenticated", "username"}` |
 | POST | `/ingest` | multipart `file` + `utility` + `source_url` (+ optional `pages`, e.g. `27-102`) → `202 {plan_id}`; processing runs in the background |
 | GET | `/plans`, `/plans/{id}` | ingestion status (`processing` / `complete` / `failed`) |
 | GET | `/projects` | all stored projects |
@@ -117,6 +135,8 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | GET | `/export?format=csv\|pdf&radius=&bands=&utility=` | briefs export (stretch) |
 | GET | `/lines?bbox=&min_kv=&owner=` | existing transmission lines (HIFLD) as GeoJSON; `owner` may repeat |
 | GET | `/lines/owners` | owner roster: line count, km, voltage range, raw HIFLD spellings |
+| GET | `/search?q=&limit=` | search bar: ZIP code, state, company (name, acronym like `FPL`, or prefix), project type, and text, combined (`FPL 33101`, `Georgia transmission`). Deterministic Postgres + pg_trgm, no LLM |
+| POST | `/ask` | `{"question"}` → Gemini answer grounded in GridMerge data: the model calls `search_gridmerge`, `get_project_details`, and `find_coordination_overlaps`, which run here against Postgres; cited projects come back as `[#id]` (90 s budget) |
 
 Errors always look like `{"error": {"code", "message", "field?", "fields?", "detected_format?"}}`.
 

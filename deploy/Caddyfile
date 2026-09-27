@@ -1,25 +1,12 @@
-# SITE_ADDRESS set to a hostname (e.g. 3-90-12-34.sslip.io or gridmerge.example.com)
+# SITE_ADDRESS set to a hostname (e.g. 3-90-12-34.sslip.io or gridlock.example.com)
 # gets an automatic Let's Encrypt certificate; unset, Compose passes :80 (plain HTTP).
 {$SITE_ADDRESS} {
-	# zstd for browsers that take it (smaller and faster than gzip on the big JSON payloads).
-	encode zstd gzip
-
-	# Vite fingerprints everything under /assets, so a file there never changes.
-	@hashed path /assets/*
-	header @hashed Cache-Control "public, max-age=31536000, immutable"
-
-	# Base-map outlines/labels (~2.5 MB compressed) only change on deploy; serve them from
-	# cache for a day and revalidate by ETag in the background after that.
-	@basemap path /basemap/*
-	header @basemap Cache-Control "public, max-age=86400, stale-while-revalidate=604800"
-
-	# Existing HIFLD lines are a static reference snapshot.
-	@lines path /api/lines
-	header @lines Cache-Control "public, max-age=3600, stale-while-revalidate=86400"
-
-	# The page itself must always revalidate so a deploy picks up new asset hashes.
-	@html path / /index.html
-	header @html Cache-Control "no-cache"
-
+	encode gzip
 	reverse_proxy app:8000
+}
+
+# www.<host> gets its own certificate and redirects to the bare host. With :80 this
+# becomes a "www." host route that never matches, so plain-HTTP mode is unaffected.
+www.{$SITE_ADDRESS} {
+	redir https://{$SITE_ADDRESS}{uri} permanent
 }

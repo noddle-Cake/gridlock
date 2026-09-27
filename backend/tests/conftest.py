@@ -21,6 +21,7 @@ from hypothesis import HealthCheck, settings
 os.environ.setdefault("PLANNING_FROM", "2026-01-01")
 
 from app.services.geocoding import Candidate  # noqa: E402
+from app.services.llm import AgentTurn  # noqa: E402
 
 settings.register_profile(
     "gridmerge", max_examples=100, deadline=None,
@@ -107,6 +108,10 @@ class FakeLLM:
         self.fail = fail
         self.delay = delay
         self.prompts: list[str] = []
+        # Scripted agent turns for converse(), consumed in order; each call's keyword
+        # arguments are recorded in `conversation`.
+        self.turns: list[AgentTurn] = []
+        self.conversation: list[dict[str, Any]] = []
 
     async def generate_json(self, prompt: str, schema: dict[str, Any]) -> str:
         self.prompts.append(prompt)
@@ -123,6 +128,16 @@ class FakeLLM:
         if self.fail:
             raise RuntimeError("model unavailable")
         return self.brief or "We propose sharing a crane crew across both sites."
+
+    async def converse(self, **kwargs: Any) -> AgentTurn:
+        self.conversation.append(kwargs)
+        if self.delay:
+            await asyncio.sleep(self.delay)
+        if self.fail:
+            raise RuntimeError("model unavailable")
+        if not self.turns:
+            return AgentTurn(calls=[], text="No scripted answer.")
+        return self.turns.pop(0)
 
 
 class FakeGeocoder:
@@ -149,6 +164,7 @@ def api_client():
 
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
     os.environ["AUTOLOAD_PUBLIC_SOURCES"] = "false"  # API tests start from an empty dataset
+    os.environ["AUTH_USERNAME"] = ""  # open, even when a local .env sets credentials
     get_settings.cache_clear()
     run_db(lambda conn: asyncio.sleep(0))  # reset schema + data
 

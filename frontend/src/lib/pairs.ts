@@ -20,6 +20,11 @@ export interface ViewBounds {
 export interface PairFilter {
   query: string
   hiddenUtilities: ReadonlySet<string>
+  /**
+   * The server's matches for `query` (GET /search), which understands ZIP codes, states,
+   * and company acronyms. Until it answers, the text is matched locally instead.
+   */
+  matchIds?: ReadonlySet<number> | null
 }
 
 function matches(p: PairProject, q: string): boolean {
@@ -28,21 +33,28 @@ function matches(p: PairProject, q: string): boolean {
   )
 }
 
-/** Pairs whose utilities are both shown and where either project matches the search text. */
+/** Pairs whose utilities are both shown and where either project matches the search. */
 export function filterPairs(pairs: CoordinationPair[], f: PairFilter): CoordinationPair[] {
   const q = f.query.trim().toLowerCase()
+  const ids = q ? f.matchIds : null
+  const hit = ids
+    ? (p: PairProject) => ids.has(p.id)
+    : (p: PairProject) => !q || matches(p, q)
   return pairs.filter(
     (pair) =>
       !f.hiddenUtilities.has(pair.project_a.utility) &&
       !f.hiddenUtilities.has(pair.project_b.utility) &&
-      (!q || matches(pair.project_a, q) || matches(pair.project_b, q)),
+      (hit(pair.project_a) || hit(pair.project_b)),
   )
 }
 
-/** Projects of the shown utilities that match the search text (the Review table's scope). */
+/** Projects of the shown utilities that match the search (the Review table's scope). */
 export function filterProjects<P extends PairProject>(projects: P[], f: PairFilter): P[] {
   const q = f.query.trim().toLowerCase()
-  return projects.filter((p) => !f.hiddenUtilities.has(p.utility) && (!q || matches(p, q)))
+  const ids = q ? f.matchIds : null
+  return projects.filter(
+    (p) => !f.hiddenUtilities.has(p.utility) && (ids ? ids.has(p.id) : !q || matches(p, q)),
+  )
 }
 
 /** Above this many shown utilities the pair query asks for everything and filters locally. */

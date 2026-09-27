@@ -191,8 +191,12 @@ def test_matches_need_future_overlapping_build_windows(api_client):
         assert p["overlap_days"] >= 30 and p["window_start"] and p["window_end"]
     assert pairs["1-2"]["build_b"] == ["2026-05-01", "2026-09-30"]
 
-    # A pair that isn't a match can't get a brief either.
+    # A pair that isn't a match can't get a brief, nor reach Ask GridMerge's per-project list.
     assert api_client.post("/overlaps/1-3/brief").status_code == 404
+    from tests import conftest  # the shared connection, without run_db's reset
+
+    per_project = conftest._runner.run(matching.pairs_for_project(conftest._conn, 1, 25.0))
+    assert [p.id for p in per_project] == ["1-2"]
 
     # Finished work drops out of the project list too; undated and future work stays.
     listed = {p["id"] for p in api_client.get("/projects").json()}

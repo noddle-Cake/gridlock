@@ -94,6 +94,31 @@ class BriefGenerationError(GridMergeError):
     code = "brief_generation_failed"
 
 
+class AskUnavailableError(GridMergeError):
+    status_code = 503
+    code = "ai_unavailable"
+
+
+class AskTimeoutError(GridMergeError):
+    status_code = 504
+    code = "ask_timeout"
+
+
+class InvalidCredentialsError(GridMergeError):
+    status_code = 401
+    code = "invalid_credentials"
+
+
+class TooManyAttemptsError(GridMergeError):
+    status_code = 429
+    code = "too_many_attempts"
+
+
+class AskFailedError(GridMergeError):
+    status_code = 502
+    code = "ask_failed"
+
+
 class InvalidFieldError(GridMergeError):
     status_code = 422
     code = "invalid_fields"

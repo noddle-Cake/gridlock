@@ -185,3 +185,67 @@ export interface LineCollection {
   type: 'FeatureCollection'
   features: LineFeature[]
 }
+
+// ---------------------------------------------------------------- search and ask
+
+export interface SearchInterpretation {
+  zip: string | null
+  zip_found: boolean
+  zip_label: string | null
+  radius_miles: number | null
+  states: string[]
+  utilities: string[]
+  types: ProjectType[]
+  terms: string[]
+  fuzzy: boolean
+}
+
+export interface CompanySuggestion {
+  utility: string
+  project_count: number
+}
+
+export interface LocationSuggestion {
+  kind: 'state' | 'zip'
+  code: string
+  label: string
+  project_count: number
+}
+
+export interface SearchHit extends Project {
+  miles: number | null
+}
+
+export interface SearchResponse {
+  query: string
+  interpretation: SearchInterpretation
+  companies: CompanySuggestion[]
+  locations: LocationSuggestion[]
+  projects: SearchHit[]
+  /** Every match, for filtering the map and the pair list. */
+  project_ids: number[]
+  total: number
+  /** [south, west, north, east] of the placed matches. */
+  bounds: [number, number, number, number] | null
+  suggest_ai: boolean
+}
+
+export interface AskToolCall {
+  name: string
+  arguments: Record<string, unknown>
+  summary: string
+}
+
+export interface AskResponse {
+  question: string
+  answer: string
+  projects: Project[]
+  tool_calls: AskToolCall[]
+}
+
+/** GET /auth/session. `required` is false when the server has no sign-in configured. */
+export interface Session {
+  required: boolean
+  authenticated: boolean
+  username: string | null
+}

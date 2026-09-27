@@ -107,6 +107,20 @@ function ViewController({
   return null
 }
 
+/** Where a search pick asks the map to go; `seq` makes picking the same place again fly. */
+export interface MapFocus {
+  bounds: [[number, number], [number, number]]
+  seq: number
+}
+
+function FocusController({ focus }: { focus: MapFocus | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (focus) map.flyToBounds(focus.bounds, { ...fitOptions(map), duration: 0.8 })
+  }, [map, focus])
+  return null
+}
+
 /**
  * Reports the visible extent after every pan/zoom. The listener is bound once: re-binding
  * on each render would leave a gap in which the load-time fit's moveend goes unheard.
@@ -312,6 +326,8 @@ interface Props {
   onSelectPair?: (pair: CoordinationPair) => void
   onHoverProject?: (p: Project | null) => void
   onBoundsChange?: (b: ViewBounds) => void
+  /** Fly here when it changes (search picks). */
+  focus?: MapFocus | null
 }
 
 export function MapView({
@@ -330,6 +346,7 @@ export function MapView({
   onSelectPair,
   onHoverProject,
   onBoundsChange,
+  focus = null,
 }: Props) {
   const [showLines, setShowLines] = useState(true)
   const [layers, setLayers] = useState<Record<MapLayer, boolean>>({
@@ -414,6 +431,7 @@ export function MapView({
         <BaseMap highways={layers.highways} counties={layers.counties} labels={layers.labels} />
         {layers.grid ? <PowerGridLayer /> : null}
         <ViewController allBounds={allBounds} pairBounds={pairBounds} />
+        <FocusController focus={focus} />
         <ReportBounds onChange={onBoundsChange} />
         {/* Existing lines sit in their own pane under the project markers. */}
         <Pane name="reference-lines" style={{ zIndex: 350 }}>

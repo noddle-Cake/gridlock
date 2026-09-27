@@ -225,6 +225,18 @@ async def find_pair(
     return pair if qualifies(pair, Rules.current()) else None
 
 
+async def pairs_for_project(
+    conn: asyncpg.Connection, project_id: int, radius: float
+) -> list[CoordinationPairDTO]:
+    """Every match one project belongs to (close in space and time), ranked like `overlaps`."""
+    rules = Rules.current()
+    rows = await repo.candidate_pairs(conn, radius, project_id=project_id)
+    projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
+    rows = _current(_cross_entity(rows, projects), projects, rules)
+    pairs = [p for p in (_build_pair(r, projects, radius) for r in rows) if qualifies(p, rules)]
+    return sorted(pairs, key=rank_key)
+
+
 @dataclass
 class RematchResult:
     pairs: list[CoordinationPairDTO]
