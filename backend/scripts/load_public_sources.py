@@ -33,6 +33,7 @@ from app.core.config import get_settings
 from app.db import repository as repo
 from app.db.pool import apply_schema, create_pool
 from app.models.enums import DatePrecision, ProjectType
+from app.services.names import title_case
 from app.sources import desc, eia860m, florida, gpc_its, region, sertp, snapshot
 from app.sources.locate import PlaceCache, locate
 
@@ -122,9 +123,9 @@ def sertp_projects(
             confidence = 0.6 if where.requires_review else 0.8 if where.approximate else 0.95
             state = e.states[0] if len(e.states) == 1 else None
             out.append(repo.NewProject(
-                utility=e.owner, state=state, name=e.title.title(),
+                utility=e.owner, state=state, name=title_case(e.title),
                 type=ProjectType(e.kind), voltage_kv=e.voltage_kv,
-                location_ref=" - ".join(n.title() for n in e.endpoints) +
+                location_ref=" - ".join(title_case(n) for n in e.endpoints) +
                 f" ({'/'.join(e.states)})",
                 lat=where.lat, lng=where.lng, approximate=where.approximate,
                 requires_review=where.requires_review,
@@ -203,9 +204,9 @@ def gpc_projects(path: Path, *, offline: bool) -> list[repo.NewProject]:
             stats["review" if where.requires_review else
                   "approximate" if where.approximate else "exact"] += 1
             out.append(_located_project(
-                where, utility=gpc_its.UTILITY, state="GA", name=s.title.title(),
+                where, utility=gpc_its.UTILITY, state="GA", name=title_case(s.title),
                 type=ProjectType(s.kind), voltage_kv=s.voltage_kv,
-                location_ref=" - ".join(n.title() for n in s.endpoints),
+                location_ref=" - ".join(title_case(n) for n in s.endpoints),
                 route=where.ends if s.kind == "transmission line" else None,
                 start_date=e.need, end_date=e.need, start_precision=DatePrecision.DAY,
                 end_precision=DatePrecision.DAY, source_url=gpc_its.SOURCE_URL,
@@ -236,7 +237,7 @@ def _florida_projects(entries: list[florida.LineEntry], label: str, *,
             out.append(_located_project(
                 where, utility=e.owner, state="FL", name=e.title,
                 type=ProjectType.TRANSMISSION_LINE, voltage_kv=e.voltage_kv,
-                location_ref=" - ".join(n.title() for n in e.endpoints), route=where.ends,
+                location_ref=" - ".join(title_case(n) for n in e.endpoints), route=where.ends,
                 start_date=e.in_service, end_date=e.in_service,
                 start_precision=DatePrecision.MONTH, end_precision=DatePrecision.MONTH,
                 source_url=e.source_url, source_page=e.page,
