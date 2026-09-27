@@ -89,7 +89,7 @@ def _rows(source: snapshot.Source) -> list[dict]:
 
 def test_committed_snapshots_are_nationwide_and_still_cover_the_region():
     """EIA-860M and SERTP are loaded whole; `load_public_sources --states SC GA FL` would cut
-    them back to the region's 78 EIA sites and 189 SERTP projects."""
+    them back to the region's 78 EIA sites and 188 SERTP projects."""
     eia = _rows(snapshot.EIA860M)
     assert len({r["state"] for r in eia}) > 40
     assert sum(r["state"] in region.REGION_STATES for r in eia) == 78
@@ -98,6 +98,6 @@ def test_committed_snapshots_are_nationwide_and_still_cover_the_region():
     assert sum(region.in_region(float(r["lat"]) if r["lat"] else None,
                                 float(r["lng"]) if r["lng"] else None,
                                 r["location_ref"].rsplit("(", 1)[-1].rstrip(")").split("/"))
-               for r in sertp_rows) == 189
+               for r in sertp_rows) == 188  # TVA's Hampton is in TN, not GA
     florida_rows = _rows(snapshot.FRCC) + _rows(snapshot.TALLAHASSEE)
     assert len(florida_rows) == 25 and {r["state"] for r in florida_rows} == {"FL"}
