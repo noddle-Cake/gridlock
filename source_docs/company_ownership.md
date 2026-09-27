@@ -4,6 +4,9 @@ Collision flags compare different corporate families. The reference pair is
 Dominion Energy South Carolina (Dominion Energy) and Georgia Power (Southern
 Company): they do not share a parent. Sister companies under one parent are
 excluded, even when they are separate LLCs or regulated operating companies.
+Passing the ownership check still requires meeting the distance and timing rules.
+The historical SC/Georgia reference overlaps are excluded by the current timing
+rules because their work is already finished or their build windows do not overlap.
 
 `backend/app/services/owners.py` applies this policy when pairs are read, including
 existing data, exports, project details, brief requests, and rematching after edits.

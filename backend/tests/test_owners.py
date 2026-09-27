@@ -1,6 +1,6 @@
 """Corporate-family exclusions apply to existing rows and every matching entry point."""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from unittest.mock import AsyncMock
 
 import pytest
@@ -64,8 +64,10 @@ async def test_matching_entry_points_filter_stored_company_names(
     monkeypatch, entry, owner, eligible,
 ):
     projects = {
-        1: ProjectDTO(id=1, utility="Frp Miller Solar", confidence=1),
-        2: ProjectDTO(id=2, utility=owner, confidence=1),
+        1: ProjectDTO(id=1, utility="Frp Miller Solar", confidence=1,
+                      start_date=date(2027, 1, 1), end_date=date(2027, 12, 31)),
+        2: ProjectDTO(id=2, utility=owner, confidence=1,
+                      start_date=date(2027, 1, 1), end_date=date(2027, 12, 31)),
     }
     row = repo.CandidateRow(a_id=1, b_id=2, miles=0)
     monkeypatch.setattr(repo, "candidate_pairs", AsyncMock(return_value=[row]))
@@ -85,8 +87,10 @@ async def test_matching_entry_points_filter_stored_company_names(
 
 async def test_rematch_invalidates_brief_for_sister_companies(monkeypatch):
     projects = {
-        1: ProjectDTO(id=1, utility="Frp Miller Solar", confidence=1),
-        2: ProjectDTO(id=2, utility="FPL", confidence=1),
+        1: ProjectDTO(id=1, utility="Frp Miller Solar", confidence=1,
+                      start_date=date(2027, 1, 1), end_date=date(2027, 12, 31)),
+        2: ProjectDTO(id=2, utility="FPL", confidence=1,
+                      start_date=date(2027, 1, 1), end_date=date(2027, 12, 31)),
     }
     row = repo.CandidateRow(a_id=1, b_id=2, miles=0)
     brief = repo.StoredBrief(

@@ -75,7 +75,8 @@ the rest of the demo loop works offline.
 
 Collision flags exclude the same company, known sister companies, and projects with
 a shared corporate owner, including FRP solar LLCs and FPL under NextEra. Dominion SC
-and Georgia Power remain eligible because their parents differ. See the
+and Georgia Power pass the ownership check because their parents differ; matches must
+also meet the future-work and shared-build-window rules above. See the
 [ownership policy and sources](source_docs/company_ownership.md) for coverage.
 
 ### Whole stack in Docker (any OS)
