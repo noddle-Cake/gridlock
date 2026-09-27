@@ -1,7 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 
-import { DEFAULT_CONFIDENCE_THRESHOLD, needsReview } from './review'
+import { DEFAULT_CONFIDENCE_THRESHOLD, inReviewQueue, needsReview } from './review'
 
 const unit = fc.double({ min: 0, max: 1, noNaN: true })
 
@@ -31,5 +31,20 @@ describe('needsReview', () => {
     expect(DEFAULT_CONFIDENCE_THRESHOLD).toBe(0.7)
     expect(needsReview(0.7, 0.7)).toBe(true)
     expect(needsReview(0.71, 0.7)).toBe(false)
+  })
+})
+
+describe('inReviewQueue', () => {
+  const base = { reviewed: false, confidence: 0.9, requires_review: false }
+
+  it('queues low-confidence or unplaced extractions until they are marked reviewed', () => {
+    expect(inReviewQueue(base, 0.7)).toBe(false)
+    expect(inReviewQueue({ ...base, confidence: 0.6 }, 0.7)).toBe(true)
+    expect(inReviewQueue({ ...base, requires_review: true }, 0.7)).toBe(true)
+    expect(inReviewQueue({ ...base, requires_review: true, reviewed: true }, 0.7)).toBe(false)
+  })
+
+  it('ignores unverified corporate ownership, which Review cannot fix', () => {
+    expect(inReviewQueue({ ...base, ownership_review_required: true } as typeof base, 0.7)).toBe(false)
   })
 })
