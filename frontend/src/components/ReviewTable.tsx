@@ -2,8 +2,8 @@ import { useState } from 'react'
 
 import { ApiError } from '../api'
 import { type Draft, toDraft, diffDraft } from '../lib/draft'
-import { OTHER_COLOR, num, pct, rangeLabel } from '../lib/format'
-import { needsReview } from '../lib/review'
+import { OTHER_COLOR, num, pct, plural, rangeLabel } from '../lib/format'
+import { inReviewQueue, needsReview } from '../lib/review'
 import type { Project, ProjectPatch, ProjectType } from '../types'
 import { SourceLink } from './SourceLink'
 
@@ -35,10 +35,9 @@ export function ReviewTable({
   )
   const [saving, setSaving] = useState(false)
 
-  const flagged = (p: Project) => Boolean(p.ownership_review_required) ||
-    (!p.reviewed && (needsReview(p.confidence, threshold) || p.requires_review))
-  const pending = projects.filter((p) => flagged(p))
-  const rows = onlyReview ? projects.filter((p) => flagged(p)) : projects
+  const pending = projects.filter((p) => inReviewQueue(p, threshold))
+  const rows = onlyReview ? pending : projects
+  const unverifiedOwners = projects.filter((p) => p.ownership_review_required).length
 
   function startEdit(p: Project) {
     setEditing(p.id)
@@ -103,6 +102,13 @@ export function ReviewTable({
           Only show projects needing review
         </label>
       </header>
+      {unverifiedOwners ? (
+        <p className="muted review-note">
+          {plural(unverifiedOwners, 'project')} {unverifiedOwners === 1 ? 'has' : 'have'} a
+          corporate owner the ownership audit hasn't verified. That isn't fixed here, so they're
+          not in the queue; their pairs are labelled "ownership unverified".
+        </p>
+      ) : null}
       {readOnly ? (
         <p className="sign-in-prompt inline">
           You're browsing as a guest.{' '}

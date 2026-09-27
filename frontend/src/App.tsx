@@ -34,7 +34,7 @@ import {
   pairsInView,
   sortPairs,
 } from './lib/pairs'
-import { DEFAULT_CONFIDENCE_THRESHOLD, needsReview } from './lib/review'
+import { DEFAULT_CONFIDENCE_THRESHOLD, inReviewQueue } from './lib/review'
 import { type AiJob, useAiJobs } from './lib/useAiJobs'
 import { useColorScheme } from './lib/useColorScheme'
 import { useSearch } from './lib/useSearch'
@@ -188,10 +188,7 @@ export default function App({ account = null }: { account?: Account | null }) {
     () => filterProjects(projects, { query, hiddenUtilities, matchIds }),
     [projects, query, hiddenUtilities, matchIds],
   )
-  const reviewCount = reviewProjects.filter(
-    (p) => p.ownership_review_required ||
-      (!p.reviewed && (needsReview(p.confidence, confidenceThreshold) || p.requires_review)),
-  ).length
+  const reviewCount = reviewProjects.filter((p) => inReviewQueue(p, confidenceThreshold)).length
 
   // Prev/next in the detail view walks the list as it was when the pair was opened. The
   // map flying in to the pair must not shrink that list, so the view limit freezes while

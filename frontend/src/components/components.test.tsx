@@ -175,13 +175,17 @@ describe('ReviewTable (Req 3.3, 13.1-13.3)', () => {
     expect(screen.getByTestId('review-row-3')).toHaveClass('needs-review')
   })
 
-  it('keeps unresolved ownership visible even after extraction review', () => {
-    const pending = project({ id: 99, name: 'Unverified owner', confidence: 1,
+  it('leaves unverified ownership out of the queue but keeps it labelled when showing all', async () => {
+    const owner = project({ id: 99, name: 'Unverified owner', confidence: 1,
       reviewed: true, ownership_review_required: true })
-    render(<ReviewTable projects={[pending]} threshold={0.7} colors={colors} onPatch={vi.fn()} />)
-    expect(screen.getByText('ownership unverified')).toBeInTheDocument()
+    render(<ReviewTable projects={[owner, ...projects]} threshold={0.7} colors={colors} onPatch={vi.fn()} />)
+    // Only the two low-confidence extractions are fixable here.
+    expect(screen.getByText('2 need review')).toBeInTheDocument()
+    expect(screen.queryByText('Unverified owner')).not.toBeInTheDocument()
+    expect(screen.getByText(/1 project has a\s+corporate owner/)).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText('Only show projects needing review'))
     expect(screen.getByText('Unverified owner')).toBeInTheDocument()
-    expect(screen.queryByText('ok')).not.toBeInTheDocument()
+    expect(screen.getByText('ownership unverified')).toBeInTheDocument()
   })
 
   it('marks a project reviewed via PATCH', async () => {

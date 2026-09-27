@@ -2392,6 +2392,12 @@ details summary {
   color: var(--ink-2);
 }
 
+/* Why unverified-ownership projects aren't in the Review queue (components/ReviewTable.tsx). */
+.review-note {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+
 .sign-in-prompt.inline .link-button {
   display: inline;
   font-weight: 600;
