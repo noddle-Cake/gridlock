@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -245,6 +245,57 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('AI answers are off.')
     await userEvent.click(screen.getByRole('button', { name: 'Close answer' }))
     expect(screen.queryByRole('region', { name: 'Ask GridMerge' })).toBeNull()
+  })
+
+  /** Hold responses to `prefix` until the returned function releases them with `body`. */
+  function holdResponses(prefix: string) {
+    const inner = fetchMock.getMockImplementation() as (u: string, i?: RequestInit) => unknown
+    let release: (body: unknown) => void = () => {}
+    const held = new Promise<unknown>((resolve) => (release = resolve))
+    fetchMock.mockImplementation((url: string, init?: RequestInit) =>
+      url.startsWith(prefix) ? held.then((body) => new Response(JSON.stringify(body))) : inner(url, init),
+    )
+    return (body: unknown) => release(body)
+  }
+
+  it('keeps drafting a brief after leaving the pair and says when it is ready', async () => {
+    const finish = holdResponses('/api/overlaps/1-2/brief')
+    document.title = 'GridMerge'
+    render(<App />)
+    await userEvent.click(await screen.findByRole('button', { name: /Hanover breakers/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Generate brief' }))
+    expect(screen.getByRole('button', { name: 'Drafting…' })).toBeDisabled()
+    const tray = screen.getByRole('status', { name: 'AI activity' })
+    expect(tray).toHaveTextContent('Drafting brief')
+
+    // Leave the pair; the draft carries on, and the pair still knows when revisited.
+    await userEvent.click(screen.getByRole('button', { name: '← Back to list' }))
+    finish({ pair_id: '1-2', text: 'Coordinate the outages.', source: 'llm', stale: false })
+    const ready = await within(tray).findByRole('button', { name: /^Brief ready/ })
+    await vi.waitFor(() => expect(document.title).toBe('(1) GridMerge'))
+
+    await userEvent.click(ready)
+    expect(await screen.findByTestId('brief-text')).toHaveTextContent('Coordinate the outages.')
+    expect(within(tray).queryByRole('button', { name: /^Brief ready/ })).toBeNull()
+    await vi.waitFor(() => expect(document.title).toBe('GridMerge'))
+  })
+
+  it('keeps answering after the Ask panel is closed and opens the answer from the header', async () => {
+    const finish = holdResponses('/api/ask')
+    render(<App />)
+    await screen.findByRole('button', { name: /Hanover breakers/ })
+    await userEvent.type(screen.getByLabelText('Search GridMerge'), 'Anything near Hanover?')
+    await userEvent.click(screen.getByRole('button', { name: 'Ask GridMerge' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Close answer' }))
+    expect(screen.queryByRole('region', { name: 'Ask GridMerge' })).toBeNull()
+
+    const tray = screen.getByRole('status', { name: 'AI activity' })
+    expect(tray).toHaveTextContent('Answering')
+    finish({ question: 'Anything near Hanover?', answer: 'Yes: Hanover breakers [#1].',
+      projects: [project()], tool_calls: [] })
+    await userEvent.click(await within(tray).findByRole('button', { name: /^Answer ready/ }))
+    const panel = await screen.findByRole('region', { name: 'Ask GridMerge' })
+    expect(panel).toHaveTextContent('Yes: Hanover breakers')
   })
 
   it('lifts the utility focus when a search is applied', async () => {

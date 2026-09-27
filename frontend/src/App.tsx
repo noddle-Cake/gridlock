@@ -12,6 +12,7 @@ import { ApiError, api } from './api'
 import { AskPanel, type AskState } from './components/AskPanel'
 import type { Account } from './components/AuthGate'
 import { FilterMenu } from './components/FilterMenu'
+import { JobTray } from './components/JobTray'
 import { type MapFocus, MapView } from './components/MapView'
 import { PairList } from './components/PairList'
 import { ReviewTable } from './components/ReviewTable'
@@ -34,6 +35,7 @@ import {
   sortPairs,
 } from './lib/pairs'
 import { DEFAULT_CONFIDENCE_THRESHOLD, needsReview } from './lib/review'
+import { type AiJob, useAiJobs } from './lib/useAiJobs'
 import { useColorScheme } from './lib/useColorScheme'
 import { useSearch } from './lib/useSearch'
 import type {
@@ -75,11 +77,12 @@ export default function App({ account = null }: { account?: Account | null }) {
   // Set by Enter or a company/place pick (and cleared by typing): frame the matches once
   // /search answers for the text.
   const [frameSeq, setFrameSeq] = useState<number | null>(null)
-  const [ask, setAsk] = useState<AskState | null>(null)
+  // The Ask GridMerge answer on screen (a job id), or null when the panel is closed.
+  const [askJobId, setAskJobId] = useState<number | null>(null)
+  const ai = useAiJobs()
   const scheme = useColorScheme()
   const requestSeq = useRef(0)
   const focusSeq = useRef(0)
-  const askAbort = useRef<AbortController | null>(null)
   const search = useSearch(query)
 
   const refresh = useCallback(() => setVersion((v) => v + 1), [])
@@ -265,27 +268,54 @@ export default function App({ account = null }: { account?: Account | null }) {
     [shownPairs, pairs, flyTo],
   )
 
+  // AI work runs as background jobs (lib/useAiJobs.ts): leaving its panel doesn't stop it,
+  // and a result that lands off screen waits in the header tray.
+  const view = useRef({ tab, selectedId, askJobId })
+  useEffect(() => {
+    view.current = { tab, selectedId, askJobId }
+  }, [tab, selectedId, askJobId])
+  const onScreen = useCallback((j: Pick<AiJob, 'id' | 'kind' | 'pairId'>) => {
+    const v = view.current
+    if (v.tab !== 'radar') return false
+    return j.kind === 'ask' ? v.askJobId === j.id : v.selectedId === j.pairId
+  }, [])
+  // Arriving at a finished job's result by any route (the list, a link) counts as seeing it.
+  const { jobs: aiJobs, markSeen } = ai
+  useEffect(() => {
+    for (const j of aiJobs) if (j.unseen && onScreen(j)) markSeen(j.id)
+  }, [aiJobs, markSeen, onScreen, tab, selectedId, askJobId])
+
   function runAsk(question: string) {
     const q = question.trim()
     if (!q) return
-    askAbort.current?.abort()
-    const ctrl = new AbortController()
-    askAbort.current = ctrl
+    const id: number = ai.start({ kind: 'ask', title: q, question: q }, () => api.ask(q), {
+      onScreen: () => onScreen({ id, kind: 'ask' }),
+      describe,
+    })
     setTab('radar')
-    setAsk({ status: 'loading', question: q })
-    api
-      .ask(q, ctrl.signal)
-      .then((response) => {
-        if (!ctrl.signal.aborted) setAsk({ status: 'done', question: q, response })
-      })
-      .catch((e) => {
-        if (!ctrl.signal.aborted) setAsk({ status: 'error', question: q, message: describe(e) })
-      })
+    setAskJobId(id)
   }
 
+  const askJob = aiJobs.find((j) => j.id === askJobId)
+  const ask: AskState | null = !askJob
+    ? null
+    : askJob.status === 'running'
+      ? { status: 'loading', question: askJob.question ?? askJob.title }
+      : askJob.status === 'done' && askJob.answer
+        ? { status: 'done', question: askJob.question ?? askJob.title, response: askJob.answer }
+        : { status: 'error', question: askJob.question ?? askJob.title, message: askJob.error ?? '' }
+
+  /** Close the answer panel. A question still being answered keeps going in the tray. */
   function closeAsk() {
-    askAbort.current?.abort()
-    setAsk(null)
+    if (askJob) ai.remove(askJob.id)
+    setAskJobId(null)
+  }
+
+  function openJob(j: AiJob) {
+    setTab('radar')
+    if (j.kind === 'ask') setAskJobId(j.id)
+    else if (j.pairId) setSelectedId(j.pairId)
+    ai.markSeen(j.id)
   }
 
   // The list and the pair detail share one scrolling panel. A pair opens at its top, and
@@ -325,11 +355,24 @@ export default function App({ account = null }: { account?: Account | null }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [selectedId])
 
-  async function generateBrief(pair: CoordinationPair) {
-    const brief = await api.brief(pair.id, MAX_RADIUS_MILES)
-    setPairs((prev) => prev.map((p) => (p.id === pair.id ? { ...p, brief } : p)))
-    return brief
+  function generateBrief(pair: CoordinationPair) {
+    const names = `${pair.project_a.name || 'Unnamed'} ↔ ${pair.project_b.name || 'Unnamed'}`
+    ai.start(
+      { kind: 'brief', title: names, pairId: pair.id },
+      () => api.brief(pair.id, MAX_RADIUS_MILES),
+      {
+        onDone: (brief) =>
+          setPairs((prev) => prev.map((p) => (p.id === pair.id ? { ...p, brief } : p))),
+        onScreen: () => onScreen({ id: 0, kind: 'brief', pairId: pair.id }),
+        describe,
+      },
+    )
   }
+  // The open pair's latest brief job: drives its "Drafting…" button and error, wherever
+  // the planner went in between.
+  const briefJob = selectedPair
+    ? aiJobs.findLast((j) => j.kind === 'brief' && j.pairId === selectedPair.id)
+    : undefined
 
   async function patchProject(id: number, patch: ProjectPatch) {
     const updated = await api.patchProject(id, patch)
@@ -366,6 +409,7 @@ export default function App({ account = null }: { account?: Account | null }) {
             Review <span className="pill">{reviewCount}</span>
           </button>
         </nav>
+        <JobTray jobs={aiJobs} onOpen={openJob} onDismiss={(j) => ai.markSeen(j.id)} />
         <div className="exports">
           <a href={api.exportUrl('csv', MAX_RADIUS_MILES, bands, scope)} download>
             Export CSV
@@ -489,6 +533,8 @@ export default function App({ account = null }: { account?: Account | null }) {
                   pair={selectedPair}
                   colorOf={colorOf}
                   onGenerateBrief={generateBrief}
+                  briefRunning={briefJob?.status === 'running'}
+                  briefError={briefJob?.status === 'error' ? briefJob.error : undefined}
                 />
               </div>
             ) : (
