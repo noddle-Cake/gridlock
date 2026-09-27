@@ -60,7 +60,9 @@ export default function App({ account = null }: { account?: Account | null }) {
   const [pairs, setPairs] = useState<CoordinationPair[]>([])
   const [rules, setRules] = useState<MatchRules | null>(null)
   const [bands, setBands] = useState<BandId[]>(ALL_BANDS)
-  const [confidenceThreshold, setConfidenceThreshold] = useState(DEFAULT_CONFIDENCE_THRESHOLD)
+  // Fixed for everyone (no longer adjustable in the filter bar), so all planners see the same
+  // Review queue.
+  const confidenceThreshold = DEFAULT_CONFIDENCE_THRESHOLD
   const [selectedId, setSelectedId] = useState<string | null>(pairFromHash)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -469,12 +471,7 @@ export default function App({ account = null }: { account?: Account | null }) {
           aiLocked={guest}
         />
         <div className="chips">
-          <ThresholdControls
-            bands={bands}
-            confidenceThreshold={confidenceThreshold}
-            onBands={setBands}
-            onConfidenceThreshold={setConfidenceThreshold}
-          />
+          <ThresholdControls bands={bands} onBands={setBands} />
           <UtilityFilter
             utilities={utilities}
             counts={utilityCounts}
