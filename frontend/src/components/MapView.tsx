@@ -401,9 +401,8 @@ export function MapView({
         ref={setMap}
         center={[39.8, -77.1]}
         zoom={9}
-        // Without an explicit floor Leaflet borrows the grid tiles' minZoom (5), which is
-        // too close to frame projects from Hawaii to Maine. The grid layer just switches off
-        // below its own minimum.
+        // Far enough out to frame projects from Hawaii to Maine; the power grid draws down to
+        // this floor too (POWER_MIN_ZOOM).
         minZoom={3}
         zoomSnap={0}
         scrollWheelZoom={false}

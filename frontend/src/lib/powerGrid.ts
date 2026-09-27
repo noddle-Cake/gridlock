@@ -7,8 +7,11 @@ export const POWER_TILES_URL = 'https://openinframap.org/map/power/{z}/{x}/{y}.p
 export const POWER_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
   '<a href="https://openinframap.org/copyright">OpenInfraMap</a>'
-/** Tiles below this zoom are country-sized (~1 MB each), so the layer switches off. */
-export const POWER_MIN_ZOOM = 5
+/**
+ * The map's own zoom floor, so the grid never switches off. Below zoom 5 OpenInfraMap already
+ * thins its tiles to the 132 kV+ backbone (~300 KB each), so national views stay light.
+ */
+export const POWER_MIN_ZOOM = 3
 export const POWER_MAX_NATIVE_ZOOM = 17
 
 /** Line colour by voltage band (kV lower bound), matching Open Infrastructure Map's scale. */
