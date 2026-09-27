@@ -18,7 +18,7 @@ import {
   usdRange,
   utilityColors,
 } from './format'
-import { colorLegend, highlightSize, markerScale, markerStyle, projectColor } from './mapStyle'
+import { colorLegend, highlightSize, markerScale, markerStyle, pairLineStyle, projectColor } from './mapStyle'
 import { timelineItems } from './timelineItems'
 
 describe('markerStyle (Req 9.1, 9.3, 9.4)', () => {
@@ -74,6 +74,40 @@ describe('markerStyle (Req 9.1, 9.3, 9.4)', () => {
     expect(markerStyle(project(), '#f00', state).color).toBe('#fff')
     expect(markerStyle(project({ approximate: true }), '#f00', state).color).toBe('#f00')
     expect(markerStyle(project(), '#f00', { ...state, paired: false }).color).toBe('#f00')
+  })
+})
+
+describe('pairLineStyle', () => {
+  const base = { active: false, selected: false, far: false, scheme: 'light' as const }
+
+  it('draws idle connectors as round dots on a wider, non-interactive halo', () => {
+    const { line, halo } = pairLineStyle(base)
+    expect(line.dashArray).toBe('0.1 6.5')
+    expect(line.lineCap).toBe('round')
+    expect(halo.interactive).toBe(false)
+    expect(halo.opacity).toBeGreaterThan(0)
+    expect(halo.weight).toBeGreaterThan(line.weight!)
+  })
+
+  it('makes opened or hovered connectors solid and heavier, still haloed', () => {
+    const idle = pairLineStyle(base).line
+    const { line, halo } = pairLineStyle({ ...base, active: true, selected: true })
+    expect(line.dashArray).toBeUndefined()
+    expect(line.weight).toBeGreaterThan(idle.weight!)
+    expect(line.color).not.toBe(idle.color)
+    expect(halo.opacity).toBeGreaterThan(0)
+  })
+
+  it('keeps zoomed-out connectors faint, hiding (not dropping) the halo unless active', () => {
+    const { line, halo } = pairLineStyle({ ...base, far: true })
+    expect(line).toMatchObject({ weight: 1, opacity: 0.15, dashArray: undefined })
+    // Still returned so its layer stays mounted under the line; see pairLineStyle.
+    expect(halo).toMatchObject({ opacity: 0, interactive: false })
+    expect(pairLineStyle({ ...base, far: true, active: true }).halo.opacity).toBeGreaterThan(0)
+  })
+
+  it('uses a dark halo on the dark map', () => {
+    expect(pairLineStyle({ ...base, scheme: 'dark' }).halo.color).not.toBe(pairLineStyle(base).halo.color)
   })
 })
 

@@ -36,9 +36,19 @@ vi.mock('react-leaflet', () => {
         />
       )
     },
-    Polyline: ({ eventHandlers }: { eventHandlers?: { click?: () => void } }) => (
-      <button data-testid="pair-guide" onClick={eventHandlers?.click} />
-    ),
+    Polyline: ({
+      eventHandlers,
+      pathOptions,
+    }: {
+      eventHandlers?: { click?: () => void }
+      pathOptions?: { interactive?: boolean }
+    }) =>
+      // The halo under a connector is decoration only.
+      pathOptions?.interactive === false ? (
+        <i data-testid="pair-halo" />
+      ) : (
+        <button data-testid="pair-guide" onClick={eventHandlers?.click} />
+      ),
     ScaleControl: () => null,
     Tooltip: () => null,
     useMap: () => map,

@@ -57,6 +57,45 @@ export function highlightSize(zoom: number): { radius: number; weight: number } 
   return { radius, weight: (radius * 3) / 13 }
 }
 
+const PAIR_INK = { light: { idle: '#2b3440', active: '#111' }, dark: { idle: '#d5dce3', active: '#fff' } }
+const PAIR_HALO = { light: '#ffffff', dark: '#10161c' }
+
+/**
+ * A pair connector's line and the halo drawn under it. Idle connectors are a chain of round
+ * dots: county lines are dashed, state lines dash-dotted and the power grid solid, so dots
+ * stay recognisable among them, and the halo lifts them off the grid lines they cross.
+ * Opened or hovered pairs are solid and heavier. Zoomed out past the pair detail zoom
+ * (`far`) connectors are only faint hints and the halo is hidden, not removed: a halo added
+ * after its line would be drawn over it.
+ */
+export function pairLineStyle(
+  { active, selected, far, scheme }: { active: boolean; selected: boolean; far: boolean; scheme: 'light' | 'dark' },
+): { line: PathOptions; halo: PathOptions } {
+  const color = selected ? PAIR_INK[scheme].active : PAIR_INK[scheme].idle
+  if (far && !active) {
+    return {
+      line: { color, weight: 1, opacity: 0.15, dashArray: undefined },
+      halo: { color: PAIR_HALO[scheme], weight: 0, opacity: 0, interactive: false },
+    }
+  }
+  const weight = active ? 4.5 : 3
+  return {
+    line: {
+      color,
+      weight,
+      opacity: active ? 0.95 : 0.85,
+      lineCap: 'round',
+      dashArray: active ? undefined : '0.1 6.5',
+    },
+    halo: { color: PAIR_HALO[scheme], weight: weight + 3.5, opacity: 0.85, lineCap: 'round', interactive: false },
+  }
+}
+
+/** Ring colour for a touching pair's connector, matching `pairLineStyle`. */
+export function pairInk(selected: boolean, scheme: 'light' | 'dark'): string {
+  return selected ? PAIR_INK[scheme].active : PAIR_INK[scheme].idle
+}
+
 export type ColorBy ='type' | 'utility' | 'year'
 export const COLOR_BY_OPTIONS: [ColorBy, string][] = [
   ['type', 'Type'],
