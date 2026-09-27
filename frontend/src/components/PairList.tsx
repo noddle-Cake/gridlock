@@ -28,6 +28,10 @@ interface Props {
   onSort?: (key: SortKey) => void
   limitToView?: boolean
   onLimitToView?: (on: boolean) => void
+  /** Short name of the signed-in planner's company ("FPL"); shows the "only ours" toggle. */
+  ownCompany?: string | null
+  onlyOwn?: boolean
+  onOnlyOwn?: (on: boolean) => void
   onSelect: (pair: CoordinationPair) => void
   onHover?: (pair: CoordinationPair | null) => void
 }
@@ -67,6 +71,9 @@ export function PairList({
   onSort,
   limitToView = false,
   onLimitToView,
+  ownCompany = null,
+  onlyOwn = false,
+  onOnlyOwn,
   onSelect,
   onHover,
 }: Props) {
@@ -93,6 +100,16 @@ export function PairList({
           </span>
         </div>
         <div className="list-tools">
+          {ownCompany && onOnlyOwn ? (
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={onlyOwn}
+                onChange={(e) => onOnlyOwn(e.target.checked)}
+              />
+              Only {ownCompany}&rsquo;s opportunities
+            </label>
+          ) : null}
           {onLimitToView ? (
             <label className="toggle">
               <input
@@ -129,8 +146,11 @@ export function PairList({
         <p className="empty">
           {offscreen > 0
             ? 'Nothing in this part of the map. Zoom out or turn off “Only pairs in map view”.'
-            : 'No projects here are close in both place and time. Try more opportunity types or ' +
-              'more utilities.'}
+            : ownCompany && onlyOwn
+              ? `No ${ownCompany} projects here are close in both place and time to another ` +
+                `company's. Turn off “Only ${ownCompany}’s opportunities” to see everyone's.`
+              : 'No projects here are close in both place and time. Try more opportunity types ' +
+                'or more utilities.'}
         </p>
       ) : null}
       <ol className="cards">

@@ -53,6 +53,24 @@ describe('PairList', () => {
     expect(within(first).queryByText('ownership unverified')).toBeNull()
     expect(within(second).getByText('ownership unverified')).toBeInTheDocument()
   })
+
+  it("offers an \"only my company's\" toggle to a signed-in planner, and explains an empty list", async () => {
+    const onOnlyOwn = vi.fn()
+    render(
+      <PairList pairs={[]} selectedId={null} loading={false} onSelect={vi.fn()}
+        ownCompany="FPL" onlyOwn onOnlyOwn={onOnlyOwn} />,
+    )
+    const toggle = screen.getByLabelText('Only FPL’s opportunities')
+    expect(toggle).toBeChecked()
+    expect(screen.getByText(/No FPL projects here/)).toBeInTheDocument()
+    await userEvent.click(toggle)
+    expect(onOnlyOwn).toHaveBeenCalledWith(false)
+  })
+
+  it('has no company toggle for guests', () => {
+    render(<PairList pairs={[]} selectedId={null} loading={false} onSelect={vi.fn()} />)
+    expect(screen.queryByLabelText(/^Only .*’s opportunities$/)).toBeNull()
+  })
 })
 
 describe('WhyFlaggedPanel (Req 11)', () => {

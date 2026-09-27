@@ -253,7 +253,7 @@ describe('project color encodings', () => {
     const both = { A: '#123456', C: '#654321' }
     const byCompany = colorLegend([gen, busier, bare], 'utility', both, 'light', 'C')
     expect(byCompany.map((r) => [r.label, r.count])).toEqual([
-      ['C (your company)', 1],
+      ['C (you)', 1],
       ['A', 2],
     ])
   })
