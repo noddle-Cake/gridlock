@@ -225,6 +225,10 @@ export default function App({ account = null }: { account?: Account | null }) {
   }, [frameSeq, searchBounds, focus])
 
   function editQuery(text: string) {
+    if (/^\d{5}(?:-\d{4})?$/.test(text.trim())) {
+      applySearch(text)
+      return
+    }
     setQuery(text)
     setFrameSeq(null)
   }
@@ -387,6 +391,7 @@ export default function App({ account = null }: { account?: Account | null }) {
           onChange={editQuery}
           result={search.result}
           loading={search.loading}
+          error={search.error}
           onApply={() => applySearch()}
           onPickCompany={(c) => applySearch(c.utility)}
           onPickLocation={(l) => applySearch(l.kind === 'zip' ? l.code : l.label)}

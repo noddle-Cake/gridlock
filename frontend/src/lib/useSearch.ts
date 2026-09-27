@@ -10,10 +10,15 @@ const DEBOUNCE_MS = 200
  * `result` is only the answer for the current text: while a newer request is in flight
  * (or when the API is unreachable) it is null, and callers fall back to local matching.
  */
-export function useSearch(query: string): { result: SearchResponse | null; loading: boolean } {
+export function useSearch(query: string): {
+  result: SearchResponse | null
+  loading: boolean
+  error: string | null
+} {
   const q = query.trim()
   const [state, setState] = useState<{ q: string; result: SearchResponse } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [failedQuery, setFailedQuery] = useState<string | null>(null)
 
   useEffect(() => {
     if (!q) return
@@ -22,9 +27,16 @@ export function useSearch(query: string): { result: SearchResponse | null; loadi
       setLoading(true)
       api
         .search(q, ctrl.signal)
-        .then((result) => setState({ q, result }))
+        .then((result) => {
+          if (ctrl.signal.aborted) return
+          setFailedQuery(null)
+          setState({ q, result })
+        })
         .catch(() => {
-          /* aborted or unreachable: local text matching still applies */
+          if (!ctrl.signal.aborted) {
+            setState(null)
+            setFailedQuery(q)
+          }
         })
         .finally(() => {
           if (!ctrl.signal.aborted) setLoading(false)
@@ -36,5 +48,11 @@ export function useSearch(query: string): { result: SearchResponse | null; loadi
     }
   }, [q])
 
-  return { result: q && state?.q === q ? state.result : null, loading: Boolean(q) && loading }
+  return {
+    result: q && state?.q === q ? state.result : null,
+    loading: Boolean(q) && loading,
+    error: q && failedQuery === q
+      ? 'Search is unavailable. ZIP codes need the search service; please try again.'
+      : null,
+  }
 }

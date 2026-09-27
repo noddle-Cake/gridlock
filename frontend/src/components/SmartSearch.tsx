@@ -24,6 +24,7 @@ interface Props {
   /** The /search answer for `value`, or null while it loads or when the API is down. */
   result: SearchResponse | null
   loading: boolean
+  error?: string | null
   /** Enter on plain text: keep the text as the filter and frame its matches. */
   onApply: () => void
   onPickCompany: (c: CompanySuggestion) => void
@@ -97,6 +98,7 @@ export function SmartSearch({
   onChange,
   result,
   loading,
+  error = null,
   onApply,
   onPickCompany,
   onPickLocation,
@@ -248,8 +250,10 @@ export function SmartSearch({
         </button>
       </div>
 
+      {!showList && error ? <p className="ss-empty" role="alert">{error}</p> : null}
       {showList ? (
         <div className="ss-popover">
+          {error ? <p className="ss-empty" role="alert">{error}</p> : null}
           {reading.length ? (
             <p className="ss-reading">
               {result!.interpretation.fuzzy ? 'Close matches for ' : 'Searching '}
@@ -317,9 +321,11 @@ export function SmartSearch({
                   </span>,
                 )
               : null}
-            {result && !result.total && !result.companies.length && !result.locations.length ? (
+            {result && !result.total ? (
               <li role="presentation" className="ss-empty">
-                No projects match “{q}”.
+                {result.interpretation.zip_found
+                  ? `No matching planned projects within ${result.interpretation.radius_miles} mi of ZIP ${result.interpretation.zip}.`
+                  : `No projects match “${q}”.`}
               </li>
             ) : null}
             {!result && loading ? (
