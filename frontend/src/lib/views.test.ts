@@ -15,7 +15,7 @@ import {
   usdRange,
   utilityColors,
 } from './format'
-import { colorLegend, markerStyle, projectColor } from './mapStyle'
+import { colorLegend, highlightSize, markerScale, markerStyle, projectColor } from './mapStyle'
 import { timelineItems } from './timelineItems'
 
 describe('markerStyle (Req 9.1, 9.3, 9.4)', () => {
@@ -36,6 +36,16 @@ describe('markerStyle (Req 9.1, 9.3, 9.4)', () => {
     expect(approx.dashArray).toBeTruthy()
     expect(exact.dashArray).toBeUndefined()
     expect(approx.fillOpacity!).toBeLessThan(0.2)
+  })
+
+  it('shrinks the selected pair with the view but keeps it above its neighbours', () => {
+    const at = (zoom: number, paired: boolean, selected: boolean) =>
+      markerStyle(project(), '#f00', { paired, selected }, markerScale(zoom), zoom).radius
+    expect(at(4, false, true)).toBeLessThan(at(10, false, true))
+    for (const zoom of [3, 5, 6.5, 8, 11]) {
+      expect(at(zoom, false, true)).toBeGreaterThan(at(zoom, true, false))
+    }
+    expect(highlightSize(4.5).radius).toBeLessThan(highlightSize(5).radius)
   })
 })
 
