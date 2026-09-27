@@ -1213,7 +1213,8 @@ a {
   transition: opacity 0.2s;
 }
 
-.power-grid.power-grid-stale {
+.power-grid.power-grid-stale,
+.power-grid.power-grid-off {
   opacity: 0 !important;
 }
 

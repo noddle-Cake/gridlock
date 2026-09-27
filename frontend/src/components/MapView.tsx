@@ -27,7 +27,7 @@ import {
 import { LiveZoomCanvas, type ZoomStyle } from '../lib/liveCanvas'
 import { legendStartsOpen } from '../lib/legendLayout'
 import { type ViewBounds, pairEnds } from '../lib/pairs'
-import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE } from '../lib/powerGrid'
+import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE, gridVisible } from '../lib/powerGrid'
 import { enableSmoothWheelZoom } from '../lib/smoothWheelZoom'
 import type { CoordinationPair, Project } from '../types'
 import { BaseMap } from './BaseMap'
@@ -367,6 +367,7 @@ export function MapView({
   })
   const [map, setMap] = useState<LeafletMap | null>(null)
   const [far, setFar] = useState(false)
+  const [gridShown, setGridShown] = useState(false)
   const renderer = useMemo(() => new LiveZoomCanvas(), [])
   const wrap = useRef<HTMLDivElement>(null)
 
@@ -379,10 +380,13 @@ export function MapView({
     return () => ro.disconnect()
   }, [map])
 
-  // Only crossing PAIR_DETAIL_ZOOM re-renders the connectors, not every zoom.
+  // Only crossing PAIR_DETAIL_ZOOM (or the grid's zoom floor) re-renders, not every zoom.
   useEffect(() => {
     if (!map) return
-    const update = () => setFar(map.getZoom() < PAIR_DETAIL_ZOOM)
+    const update = () => {
+      setFar(map.getZoom() < PAIR_DETAIL_ZOOM)
+      setGridShown(gridVisible(map.getZoom()))
+    }
     update()
     map.on('zoomend', update)
     return () => void map.off('zoomend', update)
@@ -596,7 +600,7 @@ export function MapView({
           </div>
           {layers.grid ? (
             <div className="map-legend grid-legend" aria-label="Power grid legend">
-              <span>Power grid (kV){far ? ', shown when zoomed in' : ''}:</span>
+              <span>Power grid (kV){gridShown ? '' : ', shown from state level'}:</span>
               {[...VOLTAGE_SCALE].reverse().map(([kv, c]) => (
                 <span key={kv} className="legend-item">
                   <span className="swatch swatch-line" style={{ background: c }} />

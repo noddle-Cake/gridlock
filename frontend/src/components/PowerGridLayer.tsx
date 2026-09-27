@@ -10,6 +10,7 @@ import {
   POWER_MIN_ZOOM,
   POWER_TILES_URL,
   drawPowerTile,
+  gridVisible,
 } from '../lib/powerGrid'
 
 /**
@@ -45,6 +46,9 @@ class PowerGridTiles extends L.GridLayer {
   onAdd(map: L.Map): this {
     super.onAdd(map)
     this.settledZoom = map.getZoom()
+    this.showAtZoom()
+    map.on('zoom', this.showAtZoom, this)
+    map.on('zoomend', this.syncTileZoom, this)
     // Registered after GridLayer's own moveend, which has requested the new tiles by then.
     map.on('zoom', this.fadeIfStretched, this)
     map.on('moveend', this.settle, this)
@@ -52,9 +56,27 @@ class PowerGridTiles extends L.GridLayer {
   }
 
   onRemove(map: L.Map): this {
+    map.off('zoom', this.showAtZoom, this)
+    map.off('zoomend', this.syncTileZoom, this)
     map.off('zoom', this.fadeIfStretched, this)
     map.off('moveend', this.settle, this)
     return super.onRemove(map)
+  }
+
+  /**
+   * The smooth wheel zoom (lib/smoothWheelZoom.ts) moves the map the way a pinch does, which
+   * never tells a GridLayer its new tile zoom: tiles stayed at the old level, or never loaded
+   * when the wheel zoom started below POWER_MIN_ZOOM. Re-sync once any zoom settles; zoomend
+   * fires before the moveend that `settle` listens for.
+   */
+  private syncTileZoom() {
+    const grid = this as unknown as { _resetView(): void }
+    grid._resetView()
+  }
+
+  /** Hidden below POWER_MIN_ZOOM, where Leaflet's tile-zoom rounding would already draw it. */
+  private showAtZoom() {
+    this.getContainer()?.classList.toggle('power-grid-off', !gridVisible(this._map.getZoom()))
   }
 
   private fadeIfStretched() {
