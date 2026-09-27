@@ -50,13 +50,22 @@ def _haversine_miles(a, b) -> float:
     return 2 * r * math.asin(math.sqrt(h))
 
 
-def _qualifies(a, b, radius: float, slack: float) -> bool:
-    """Distance alone decides membership; timing only ranks (dates may be missing)."""
+def _in_time(a, b, rules: matching.Rules) -> bool:
+    """Both still ahead of the cutoff and building together long enough (matching.qualifies)."""
+    wa = timing.build_window(a.start_date, a.end_date)
+    wb = timing.build_window(b.start_date, b.end_date)
+    if wa is None or wb is None or min(wa.end, wb.end) < rules.planning_from:
+        return False
+    return timing.compare(wa, wb).overlap_days >= rules.min_overlap_days
+
+
+def _qualifies(a, b, radius: float, slack: float, rules: matching.Rules) -> bool:
+    """A match is close in space (within the radius) and in time (_in_time)."""
     if a.lat is None or b.lat is None:
         return False
     if a.utility.strip().lower() == b.utility.strip().lower():
         return False
-    return _haversine_miles(a, b) <= radius * slack
+    return _haversine_miles(a, b) <= radius * slack and _in_time(a, b, rules)
 
 
 project_sets = st.lists(new_projects(), min_size=0, max_size=12)
@@ -71,6 +80,7 @@ def test_valid_pair_membership(projects, radius):
         return ids, await matching.overlaps(conn, radius)
 
     ids, pairs = run_db(body)
+    rules = matching.Rules.current()  # PLANNING_FROM is pinned by conftest
     by_id = dict(zip(ids, projects, strict=True))
     found = set()
     for pair in pairs:
@@ -80,25 +90,20 @@ def test_valid_pair_membership(projects, radius):
         assert a.utility.strip().lower() != b.utility.strip().lower()
         assert a.lat is not None and b.lat is not None
         assert 0 <= pair.miles <= radius + 1e-3
-        wa = timing.build_window(a.start_date, a.end_date)
-        wb = timing.build_window(b.start_date, b.end_date)
-        if wa is None or wb is None:
-            # Undated: timing unknown, never a reason to drop the pair.
-            assert pair.overlap_ratio is None and pair.time_gap_days is None
-            assert pair.overlap_days == 0 and pair.window_start is None
-            assert "overlap" in pair.scores.indeterminate_factors
-        else:
-            # Timing comes from the stored dates alone.
-            t = timing.compare(wa, wb)
-            assert pair.overlap_ratio == round(t.ratio, 4)
-            assert pair.overlap_days == t.overlap_days
-            assert pair.time_gap_days == t.in_service_gap_days
-            assert pair.window_start == (t.shared.start if t.shared else None)
+        # Close in time: dated, still ahead, building together long enough.
+        assert _in_time(a, b, rules)
+        # Timing comes from the stored dates alone.
+        t = timing.compare(timing.build_window(a.start_date, a.end_date),
+                           timing.build_window(b.start_date, b.end_date))
+        assert pair.overlap_ratio == round(t.ratio, 4)
+        assert pair.overlap_days == t.overlap_days >= rules.min_overlap_days
+        assert pair.time_gap_days == t.in_service_gap_days
+        assert pair.window_start == t.shared.start
         found.add((ia, ib))
 
-    # Completeness (sanity): pairs clearly inside the radius are never missed.
+    # Completeness (sanity): pairs clearly inside the radius and close in time are never missed.
     for (ia, a), (ib, b) in itertools.combinations(sorted(by_id.items()), 2):
-        if _qualifies(a, b, radius, slack=0.99):
+        if _qualifies(a, b, radius, slack=0.99, rules=rules):
             assert (ia, ib) in found
 
 
@@ -305,17 +310,19 @@ def test_line_route_measured_at_closest_point():
 def test_rematch_rechecks_briefs_on_routes_not_midpoints():
     # Crossing lines whose midpoints are ~30 km apart: 0 km as matched, so an edit that
     # doesn't move them must keep the brief as-is (not refresh it to the midpoint distance).
+    when = {"start_date": date(2026, 3, 1), "end_date": date(2026, 12, 31)}  # a match in time
     a = repo.NewProject(utility="A", confidence=1, lat=33.0, lng=-81.72,
-                        route=[(33.0, -82.0), (33.0, -81.44)])
+                        route=[(33.0, -82.0), (33.0, -81.44)], **when)
     b = repo.NewProject(utility="B", confidence=1, lat=33.13, lng=-81.5,
-                        route=[(32.9, -81.5), (33.36, -81.5)])
+                        route=[(32.9, -81.5), (33.36, -81.5)], **when)
 
     async def body(conn):
         ids = await repo.insert_projects(conn, [a, b])
         (row,) = await repo.candidate_pairs(conn, 25.0)
+        (pair,) = await matching.overlaps(conn, 25.0)
         await repo.upsert_brief(conn, pair_id=matching.pair_id(*ids), a_id=ids[0],
-                                b_id=ids[1], text="brief", miles=row.miles, overlap_days=0,
-                                radius=25.0)
+                                b_id=ids[1], text="brief", miles=row.miles,
+                                overlap_days=pair.overlap_days, radius=25.0)
         await repo.update_project(conn, ids[0], {"name": "renamed"})
         return row, await matching.rematch_project(conn, ids[0])
 

@@ -1,3 +1,4 @@
+from datetime import date
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -44,12 +45,21 @@ class Settings(BaseSettings):
 
     # Matching defaults (Req 6.5, 6.6, 7.2)
     default_radius_miles: float = 25.0
+    # A match is close in space AND time: both projects still ahead (in service on or after
+    # PLANNING_FROM; unset = today, since finished work can't be coordinated) and building
+    # at the same time for at least MIN_OVERLAP_DAYS.
+    planning_from: date | None = None
+    min_overlap_days: int = 30
     # Search bar: a ZIP code matches projects within this distance of its centroid.
     search_zip_radius_miles: float = 25.0
 
     # Ingestion limits (Req 1.4, 1.5)
     max_upload_bytes: int = 50 * 1024 * 1024
     max_utilities: int = 50
+
+    @property
+    def planning_cutoff(self) -> date:
+        return self.planning_from or date.today()
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -314,12 +314,18 @@ def parse_query(q: str, companies: CompanyIndex) -> ParsedQuery:
     return parsed
 
 
+def _ahead():
+    """Search, like the map and Review, lists only work not yet finished (PLANNING_FROM)."""
+    return get_settings().planning_cutoff
+
+
 def to_filter(parsed: ParsedQuery) -> tuple[repo.ProjectFilter, tuple[float, float] | None]:
     """The project filter for a parsed query, and the ZIP centroid it searched around."""
     radius = get_settings().search_zip_radius_miles
     f = repo.ProjectFilter(
         utilities=list(parsed.utilities), states=list(parsed.states),
         types=[t.value for t in parsed.types], terms=list(parsed.terms), radius_miles=radius,
+        ahead_of=_ahead(),
     )
     point = zip_centroid(parsed.zip) if parsed.zip else None
     if point:
@@ -348,7 +354,7 @@ async def search_with_fallback(
         return result, False
     fuzzy = repo.ProjectFilter(
         utilities=f.utilities, states=f.states, types=f.types, near=f.near,
-        radius_miles=f.radius_miles, fuzzy_text=" ".join(words),
+        radius_miles=f.radius_miles, fuzzy_text=" ".join(words), ahead_of=f.ahead_of,
     )
     fuzzy_result = await repo.search_projects(conn, fuzzy, limit=limit)
     return (fuzzy_result, True) if fuzzy_result.total else (result, False)
@@ -386,7 +392,7 @@ async def run_search(conn: asyncpg.Connection, q: str, *, limit: int) -> SearchR
             f" · near {county.label}" if county else ""
         )
         # Everything near the ZIP, whatever else was typed, widening like the search.
-        near = repo.ProjectFilter(near=point, radius_miles=f.radius_miles)
+        near = repo.ProjectFilter(near=point, radius_miles=f.radius_miles, ahead_of=f.ahead_of)
         n = await repo.count_projects(conn, near)
         for radius in ZIP_WIDER_RADII:
             if not n and radius > near.radius_miles:
@@ -397,7 +403,7 @@ async def run_search(conn: asyncpg.Connection, q: str, *, limit: int) -> SearchR
             label=f"{interpretation.zip_label} · {near.radius_miles:g} mi",
         ))
     for code in _state_suggestions(parsed):
-        n = await repo.count_projects(conn, repo.ProjectFilter(states=[code]))
+        n = await repo.count_projects(conn, repo.ProjectFilter(states=[code], ahead_of=f.ahead_of))
         locations.append(LocationSuggestionDTO(
             kind="state", code=code, label=STATE_LABELS.get(code, code), project_count=n,
         ))

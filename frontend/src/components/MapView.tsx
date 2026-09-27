@@ -23,7 +23,7 @@ import {
 } from 'react-leaflet'
 
 import { milesToKm } from '../lib/distanceBands'
-import { escapeHtml as esc, rangeLabel, timingLabel } from '../lib/format'
+import { bothBuildingLabel, durationLabel, escapeHtml as esc, rangeLabel } from '../lib/format'
 import { lineBounds, lineStyle, lineTooltip } from '../lib/lines'
 import {
   COLOR_BY_OPTIONS,
@@ -258,8 +258,11 @@ const PairLine = memo(function PairLine({
   useEffect(() => {
     const l = ref.current
     if (!l) return
-    const where = touching ? 'touching' : `${milesToKm(pair.miles).toFixed(1)} km`
-    l.bindTooltip(() => esc(`${where} · ${timingLabel(pair)}`), { sticky: true })
+    const where = touching ? 'touching' : `${milesToKm(pair.miles).toFixed(1)} km apart`
+    l.bindTooltip(
+      () => esc(`${where} · ${bothBuildingLabel(pair)} (${durationLabel(pair.overlap_days)})`),
+      { sticky: true },
+    )
     return () => void l.unbindTooltip()
   }, [pair, touching])
   useEffect(() => {

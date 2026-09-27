@@ -11,7 +11,7 @@ import pytest
 
 from app.core.errors import AskTimeoutError, AskUnavailableError
 from app.db import repository as repo
-from app.models.enums import ProjectType
+from app.models.enums import DatePrecision, ProjectType
 from app.services.ask import AskService
 from app.services.llm import AgentTurn, ToolCall, UnconfiguredClient
 from app.services.search import (
@@ -224,6 +224,27 @@ def test_search_text_and_limit(api_client):
     assert body["project_ids"] == [ids["gtc"]]
     body = search(api_client, "FL", limit=1)
     assert len(body["projects"]) == 1 and body["total"] == 4
+
+
+def test_search_leaves_out_finished_projects(api_client):
+    """Search lists work not yet in service, like the map and Review (PLANNING_FROM is pinned
+    to 2026-01-01 in tests). A year-only date runs to Dec 31; undated work stays findable."""
+    def fpl(name, start=None, end=None, precision=None):
+        return repo.NewProject(
+            utility="Florida Power & Light", name=name, lat=27.0, lng=-81.0, state="FL",
+            confidence=0.9, source_url=SRC, start_date=start, end_date=end,
+            start_precision=precision, end_precision=precision,
+        )
+
+    ids = seed([
+        fpl("Ahead", date(2027, 1, 1), date(2028, 6, 30)),
+        fpl("Done", date(2024, 1, 1), date(2025, 6, 30)),
+        fpl("Undated"),
+        fpl("Year 2025", date(2025, 1, 1), date(2025, 1, 1), DatePrecision.YEAR),
+        fpl("Year 2026", date(2026, 1, 1), date(2026, 1, 1), DatePrecision.YEAR),
+    ])
+    body = search(api_client, "FPL")
+    assert sorted(body["project_ids"]) == [ids[0], ids[2], ids[4]]
 
 
 def test_question_suggests_ai_and_empty_query(api_client):

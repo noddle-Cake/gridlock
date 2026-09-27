@@ -1,14 +1,16 @@
 """Load structured public sources straight into the projects table (no LLM needed).
 
-    python -m scripts.load_public_sources eia860m                 # nationwide
+    python -m scripts.load_public_sources eia860m                 # region: SC, GA, FL
     python -m scripts.load_public_sources eia860m --states GA AL TN
-    python -m scripts.load_public_sources sertp                   # all 7 SERTP areas
-    python -m scripts.load_public_sources sertp --areas SOUTHERN TVA
+    python -m scripts.load_public_sources sertp                   # SERTP rows in the region
+    python -m scripts.load_public_sources sertp --areas SOUTHERN DUKE CAROLINAS
     python -m scripts.load_public_sources desc                    # DESC $2M+ projects
     python -m scripts.load_public_sources gpc                     # Georgia Power ITS list
     python -m scripts.load_public_sources all --dry-run          # parse + CSV only
 
-Inputs default to the raw copies in source_docs/. Every run writes a citation table to
+Only the planning region is kept (app/sources/region.py: SC, GA, FL): EIA-860M plants in
+those states and SERTP projects located there. Inputs default to the raw copies in
+source_docs/. Every run writes a citation table to
 source_docs/extracted/ (one row per project: source file, page/sheet, rows, excerpt) and,
 unless --dry-run, replaces that source's previous load in DATABASE_URL.
 
@@ -30,7 +32,7 @@ from app.core.config import get_settings
 from app.db import repository as repo
 from app.db.pool import apply_schema, create_pool
 from app.models.enums import DatePrecision, ProjectType
-from app.sources import desc, eia860m, gpc_its, sertp, snapshot
+from app.sources import desc, eia860m, florida, gpc_its, region, sertp, snapshot
 from app.sources.locate import PlaceCache, locate
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -105,6 +107,9 @@ def sertp_projects(path: Path, areas: set[str] | None, *, offline: bool) -> list
         for i, e in enumerate(entries, start=1):
             where = locate(e.endpoints, e.states, places, operator=e.owner,
                            bounds=sertp.AREA_BOUNDS.get(e.area))
+            if not region.in_region(where.lat, where.lng, e.states):
+                stats["outside region"] += 1
+                continue
             stats["review" if where.requires_review else
                   "approximate" if where.approximate else "exact"] += 1
             if i % 50 == 0:
@@ -129,7 +134,7 @@ def sertp_projects(path: Path, areas: set[str] | None, *, offline: bool) -> list
             ))
     finally:
         places.save()
-    print(f"SERTP: {len(entries)} projects; location {dict(stats)}")
+    print(f"SERTP: {len(entries)} projects, {len(out)} in the region; location {dict(stats)}")
     print("  by owner:", dict(Counter(p.utility for p in out).most_common()))
     return out
 
@@ -209,6 +214,47 @@ def gpc_projects(path: Path, *, offline: bool) -> list[repo.NewProject]:
     return out
 
 
+# ---------------------------------------------------------------- Florida
+
+
+def _florida_projects(entries: list[florida.LineEntry], label: str, *,
+                      offline: bool) -> list[repo.NewProject]:
+    places = PlaceCache(offline=offline, user_agent=get_settings().geocoder_user_agent)
+    out, stats = [], Counter()
+    try:
+        for e in entries:
+            # Joint lines ("Duke Energy Florida / Seminole ...") locate with the first owner's
+            # hints; the terminal names carry the rest.
+            operator = e.owner.split(" / ")[0]
+            where = locate(e.endpoints, florida.STATES, places, operator=operator,
+                           bounds=florida.BOUNDS)
+            stats["review" if where.requires_review else
+                  "approximate" if where.approximate else "exact"] += 1
+            out.append(_located_project(
+                where, utility=e.owner, state="FL", name=e.title,
+                type=ProjectType.TRANSMISSION_LINE, voltage_kv=e.voltage_kv,
+                location_ref=" - ".join(n.title() for n in e.endpoints), route=where.ends,
+                start_date=e.in_service, end_date=e.in_service,
+                start_precision=DatePrecision.MONTH, end_precision=DatePrecision.MONTH,
+                source_url=e.source_url, source_page=e.page,
+                raw_excerpt=f"{e.excerpt()}\n{where.how}"[:2000],
+            ))
+    finally:
+        places.save()
+    print(f"{label}: {len(entries)} lines; location {dict(stats)}")
+    print("  by owner:", dict(Counter(p.utility for p in out).most_common()))
+    return out
+
+
+def frcc_projects(path: Path, *, offline: bool) -> list[repo.NewProject]:
+    return _florida_projects(florida.parse_frcc(path), "FRCC Form 13", offline=offline)
+
+
+def tallahassee_projects(path: Path, *, offline: bool) -> list[repo.NewProject]:
+    return _florida_projects(florida.parse_tallahassee(path), "City of Tallahassee",
+                             offline=offline)
+
+
 # ---------------------------------------------------------------- main
 
 
@@ -226,13 +272,17 @@ async def load(source: snapshot.Source, projects: list[repo.NewProject], csv_pat
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Load EIA-860M / SERTP public data.")
-    ap.add_argument("source", choices=["eia860m", "sertp", "desc", "gpc", "all"])
+    ap.add_argument("source",
+                    choices=["eia860m", "sertp", "desc", "gpc", "frcc", "tallahassee", "all"])
     ap.add_argument("--eia-file", type=Path, default=DOCS / snapshot.EIA860M.filename)
     ap.add_argument("--sertp-file", type=Path, default=DOCS / snapshot.SERTP.filename)
     ap.add_argument("--desc-file", type=Path, default=DOCS / snapshot.DESC.filename)
     ap.add_argument("--gpc-file", type=Path, default=DOCS / snapshot.GPC_ITS.filename)
-    ap.add_argument("--states", nargs="+", default=["ALL"],
-                    help="EIA-860M plant states (default ALL = nationwide)")
+    ap.add_argument("--frcc-file", type=Path, default=DOCS / snapshot.FRCC.filename)
+    ap.add_argument("--tallahassee-file", type=Path,
+                    default=DOCS / snapshot.TALLAHASSEE.filename)
+    ap.add_argument("--states", nargs="+", default=list(region.REGION_STATES),
+                    help="EIA-860M plant states (default: the region; ALL = nationwide)")
     ap.add_argument("--areas", nargs="+", help=f"SERTP areas, default all: {list(sertp.AREAS)}")
     ap.add_argument("--offline", action="store_true",
                     help="no Nominatim calls when placing SERTP/DESC/GPC projects")
@@ -258,6 +308,8 @@ def main() -> None:
     for name, source, build, path in (
         ("desc", snapshot.DESC, desc_projects, args.desc_file),
         ("gpc", snapshot.GPC_ITS, gpc_projects, args.gpc_file),
+        ("frcc", snapshot.FRCC, frcc_projects, args.frcc_file),
+        ("tallahassee", snapshot.TALLAHASSEE, tallahassee_projects, args.tallahassee_file),
     ):
         if args.source in (name, "all"):
             projects = build(path, offline=args.offline)

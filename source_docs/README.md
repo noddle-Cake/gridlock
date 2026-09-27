@@ -28,15 +28,15 @@ general terms. GridMerge labels matches as *potential coordination opportunities
 
 | File | Source (retrieved 2026-09-26) | How it's loaded | Content |
 | --- | --- | --- | --- |
-| `eia860m_august_generator2026.xlsx` | [EIA-860M, August 2026](https://www.eia.gov/electricity/data/eia860m/xls/august_generator2026.xlsx) (newest edition that downloads; the Sep-Dec links on the EIA page return 503) | `load_public_sources eia860m` (no LLM) | "Planned" sheet: 2,312 generators planned but not yet operating, with plant lat/long and planned operation month. Default load is nationwide: 2,311 generators (one row has no state or coordinates) at 1,649 plant / in-service-month sites (`--states` narrows it; the first load was AL, GA, MS, FL, TN, KY, NC, SC = 194 sites). Puerto Rico (`Planned_PR` sheet) is not loaded. |
-| `sertp_2026_preliminary_expansion_plan.pdf` | [SERTP 2026 Preliminary Expansion Plan Report (Non-CEII)](https://www.southeasternrtp.com/docs/general/2026/2026_SERTP_Preliminary_Expansion_Plan_Report_(Non-CEII).pdf), dated 06/12/2026 | `load_public_sources sertp` (pdfplumber, no LLM) | 426 projects, in-service 2027-2036, by balancing area: AECI p1 (3), Duke Carolinas p2-16 (56), Duke Progress East p17-22 (17), Duke Progress West p23 (1), LG&E/KU p24-26 (10), Southern p27-102 (288: SOCO 204, GTC 67, MEAG 12, PowerSouth 4, Dalton 1), TVA p103-115 (51). |
+| `eia860m_august_generator2026.xlsx` | [EIA-860M, August 2026](https://www.eia.gov/electricity/data/eia860m/xls/august_generator2026.xlsx) (newest edition that downloads; the Sep-Dec links on the EIA page return 503) | `load_public_sources eia860m` (no LLM) | "Planned" sheet: 2,312 generators planned but not yet operating, with plant lat/long and planned operation month. Default load is the region (SC, GA, FL): 86 generators at 78 plant / in-service-month sites (`--states ALL` loads the nationwide 1,649). Puerto Rico (`Planned_PR` sheet) is not loaded. |
+| `sertp_2026_preliminary_expansion_plan.pdf` | [SERTP 2026 Preliminary Expansion Plan Report (Non-CEII)](https://www.southeasternrtp.com/docs/general/2026/2026_SERTP_Preliminary_Expansion_Plan_Report_(Non-CEII).pdf), dated 06/12/2026 | `load_public_sources sertp` (pdfplumber, no LLM) | 426 projects, in-service 2027-2036, by balancing area: AECI p1 (3), Duke Carolinas p2-16 (56), Duke Progress East p17-22 (17), Duke Progress West p23 (1), LG&E/KU p24-26 (10), Southern p27-102 (288: SOCO 204, GTC 67, MEAG 12, PowerSouth 4, Dalton 1), TVA p103-115 (51). The 189 located in SC, GA or FL are loaded (Southern Company 92, GTC 67, Duke Energy Carolinas 14, MEAG 12, ...). |
 | `desc_2024-2028_projects_2m_and_above.pdf` | [DESC Planned Transmission Projects $2M and above, 2024-2028](https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf) (SCRTP; also in the Sperry Tech challenge kit) | `load_public_sources desc` (pdfplumber, no LLM) | 44 Dominion Energy South Carolina projects, one per page: title, project ID, description, need, status, planned in-service date and estimated cost by year. |
 | `georgia_power_2025_irp_vol3_public.pdf` | Georgia Power 2025 IRP, Volume 3 (public disclosure), [Georgia PSC Docket #56002](https://psc.ga.gov/search/facts-docket/?docketId=56002); from the Sperry Tech challenge kit | `load_public_sources gpc` (pdfplumber, no LLM), pages 177-190 | Table 2 "Georgia ITS 10 Year Plan Project List": 208 rows. The 138 Georgia Power rows (sponsor GPC or SAV) are loaded; GTC/MEAG/DU rows are other utilities already listed in SERTP. |
-| `sperry_reference_overlaps.xlsx` | Sperry Tech challenge kit (`Projects_Overlaps.xlsx`) | not loaded; used by `tests/test_desc_gpc.py` | Sperry's hand-built reference: 5 DESC + 5 Georgia Power projects and the 6 overlaps between them. The acceptance test requires all 6 to be flagged. |
-| `frcc_2026_load_resource_plan.pdf` | [FRCC 2026 Load & Resource Plan](https://www.floridapsc.com/pscfiles/website-files/PDF/Utilities/Electricgas/TenYearSitePlans/2026/FRCC_RLRP.pdf) | `ingest.sh` (Gemini), pages 62, 85 | Form 13 "Proposed Transmission Lines", every Florida utility. |
+| `sperry_reference_overlaps.xlsx` | Sperry Tech challenge kit (`Projects_Overlaps.xlsx`) | not loaded; used by `tests/test_desc_gpc.py` | Sperry's hand-built reference: 5 DESC + 5 Georgia Power projects and the 6 overlaps between them. The acceptance test requires all 6 to be found within range; none is a current match (each involves DESC work due by 2025 or build windows years apart). |
+| `frcc_2026_load_resource_plan.pdf` | [FRCC 2026 Load & Resource Plan](https://www.floridapsc.com/pscfiles/website-files/PDF/Utilities/Electricgas/TenYearSitePlans/2026/FRCC_RLRP.pdf) | `load_public_sources frcc` (pdfplumber, no LLM), pages 62, 85 | Form 13 "Proposed Transmission Lines" as of Jan 1, 2026: 23 lines of Duke Energy Florida, FPL, Tampa Electric, Lakeland, Seminole (p62) and PowerSouth ("PEC", p85). |
 | `duke_energy_florida_2026_tysp.pdf` | [Duke Energy Florida 2026 TYSP](https://www.floridapsc.com/pscfiles/website-files/PDF/Utilities/Electricgas/TenYearSitePlans/2026/Duke%20Energy%20Florida.pdf) | `ingest.sh` (Gemini), pages 107-117 | Schedule 10 (201-211 repeats it; skipped). |
 | `fpl_2026_tysp.pdf` | [FPL 2026 TYSP](https://www.floridapsc.com/pscfiles/website-files/PDF/Utilities/Electricgas/TenYearSitePlans/2026/Florida%20Power%20and%20Light%20Company.pdf) | `ingest.sh` (Gemini), pages 329-412, 439-440 | Schedule 10 (solar-site lines, statewide) + transmission narrative. 29 MB. |
-| `city_of_tallahassee_2026_tysp.pdf` | [City of Tallahassee 2026 TYSP](https://www.floridapsc.com/pscfiles/website-files/PDF/Utilities/Electricgas/TenYearSitePlans/2026/City%20of%20Tallahassee.pdf) | `ingest.sh` (Gemini), pages 47-49 | Table 4.2 Planned Transmission Projects. |
+| `city_of_tallahassee_2026_tysp.pdf` | [City of Tallahassee 2026 TYSP](https://www.floridapsc.com/pscfiles/website-files/PDF/Utilities/Electricgas/TenYearSitePlans/2026/City%20of%20Tallahassee.pdf) | `load_public_sources tallahassee` (pdfplumber, no LLM), page 49 | Table 4.2 Planned Transmission Projects: 2 lines (115 kV reconductor, Dec 2030). |
 
 Not ingested: JEA's 2026 TYSP (Schedule 10: "None to Report"; its transmission chapter
 describes only existing facilities).
@@ -56,24 +56,39 @@ fe01df4ed0691d55fd565784a7510ddfe4682316ff63fb70b963b934c5974f24  sperry_referen
 ```bash
 cd backend
 # Structured sources, straight into DATABASE_URL (re-runnable: replaces its own last load)
-.venv/bin/python -m scripts.load_public_sources all
-.venv/bin/python -m scripts.load_public_sources sertp --areas SOUTHERN TVA   # a subset
-.venv/bin/python -m scripts.load_public_sources eia860m --states GA AL TN   # one region
+.venv/bin/python -m scripts.load_public_sources all          # region: SC, GA, FL
+.venv/bin/python -m scripts.load_public_sources sertp --areas SOUTHERN       # a subset
+.venv/bin/python -m scripts.load_public_sources eia860m --states ALL         # nationwide
 .venv/bin/python -m scripts.load_public_sources desc                         # DESC PDF
 .venv/bin/python -m scripts.load_public_sources gpc                          # Georgia Power
-.venv/bin/python -m scripts.load_public_sources all --dry-run                # CSVs only
+.venv/bin/python -m scripts.load_public_sources frcc                         # Florida, Form 13
+.venv/bin/python -m scripts.load_public_sources tallahassee                  # City of Tallahassee
+.venv/bin/python -m scripts.load_public_sources all --dry-run --offline      # CSVs only
 
 # Deployed (AWS Lightsail): nothing to run. extracted/*.csv ship in the image and the
 # app (re)inserts a source at startup when its plan is missing or its CSV changed
 # (AUTOLOAD_PUBLIC_SOURCES).
 
-# Florida PDFs through the Gemini upload path (needs GEMINI_API_KEY and a running app)
+# Optional: the Duke Energy Florida and FPL TYSP schedules (more detail than Form 13) through
+# the Gemini upload path (needs GEMINI_API_KEY and a running app)
 bash ../source_docs/ingest.sh
 ```
 
-**Gemini quota:** the Florida pages are ~12 model requests. The free tier allows 5 per
-minute (the app paces to `GEMINI_RPM`) and 20 per day per model; a failed plan can simply
-be uploaded again once the quota resets.
+**Gemini quota:** those pages are ~12 model requests. The free tier allows 5 per minute
+(the app paces to `GEMINI_RPM`) and 20 per day per model; a failed plan can simply be
+uploaded again once the quota resets.
+
+## Region and timing
+
+Only the region is loaded (`app/sources/region.py`: SC, GA, FL). EIA-860M is cut by plant
+state; SERTP by the state of each located project (nearest county centre), keeping an
+unplaced project only when its owner operates in region states alone (GTC, MEAG). The
+utilities' own filings (DESC, Georgia Power, Florida) are the region by definition.
+
+Matching then keeps only future work that builds at the same time: both projects in
+service on or after `PLANNING_FROM` (default today) and building together for at least
+`MIN_OVERLAP_DAYS` (30). Finished projects stay in the database but drop out of the map,
+the Review list and the matches.
 
 ## How each source becomes project records
 
@@ -149,5 +164,23 @@ straight segment between them); matching measures closest points on it.
 - Georgia Power and SERTP's "Southern Company" rows are one planning entity
   (`services/owners.py`), so a project listed in both never pairs with itself.
 
-A pdfplumber pass reads all 426 entries, so no LLM is needed for SERTP. Messier filings
-(the Florida TYSPs) go through the existing Gemini upload path.
+### Florida (FRCC Form 13, City of Tallahassee)
+
+- `app/sources/florida.py`. Form 13's two terminals are separate columns whose position
+  differs between page 62 and page 85, so each row's terminal words are split at the widest
+  gap between them. Owner codes are canonicalized (`DEF` Duke Energy Florida, `FPL`, `TEC`
+  Tampa Electric, `LAK` City of Lakeland, `SEC` Seminole, `PEC` PowerSouth); joint lines
+  ("DEF-SEC") keep both owners. Three FPL lines print "12/3033", read as 2033 and noted in
+  the excerpt. In-service dates are month precision.
+- Tallahassee's Table 4.2 names buses ("Sub 7", "Sub 16"), placed at Leon County's centre
+  (approximate).
+- Located like the others, with corrections from Duke's 2026 TYSP Schedule 10:
+  - DEF's new Sweetwater, Turnpike and Lonesome Camp interconnections sit on its Holopaw
+    lines in Osceola County, not at FPL's same-named Miami and St. Lucie substations.
+  - Lakeland's Hamilton is in Polk County, not Hamilton County on the Georgia line.
+- Result: 1 placed on substations, 17 approximate (Tallahassee's 2 included), 7 for review
+  (new solar and storage sites OSM doesn't have yet).
+
+A pdfplumber pass reads all 426 SERTP entries and the Florida tables, so no LLM is needed.
+The Duke Energy Florida and FPL TYSP schedules can still go through the Gemini upload path
+for more detail.

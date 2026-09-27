@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from datetime import date
 
 import asyncpg
 
@@ -110,6 +111,46 @@ def _window(p: ProjectDTO) -> timing.Window | None:
     return timing.build_window(p.start_date, p.end_date, p.start_precision, p.end_precision)
 
 
+@dataclass(frozen=True)
+class Rules:
+    """When a pair close in space is also close in time, and so a match."""
+
+    planning_from: date  # both projects must still be in service on or after this date
+    min_overlap_days: int  # and building together for at least this long
+
+    @classmethod
+    def current(cls) -> Rules:
+        s = get_settings()
+        return cls(planning_from=s.planning_cutoff, min_overlap_days=max(1, s.min_overlap_days))
+
+
+def is_past(p: ProjectDTO, cutoff: date) -> bool:
+    """In service before `cutoff` (its whole in-service period is behind it): finished work,
+    nothing left to coordinate. Undated projects are not known to be past."""
+    w = _window(p)
+    return w is not None and w.end < cutoff
+
+
+def _ahead(p: ProjectDTO, rules: Rules) -> bool:
+    """Dated and not past: only such projects can be shown to build at the same time."""
+    w = _window(p)
+    return w is not None and w.end >= rules.planning_from
+
+
+def qualifies(pair: CoordinationPairDTO, rules: Rules) -> bool:
+    """Close in time as well as space: both projects still ahead and their build windows
+    sharing at least `min_overlap_days`. Years apart, finished, or undated -> not a match."""
+    return (_ahead(pair.project_a, rules) and _ahead(pair.project_b, rules)
+            and pair.overlap_days >= rules.min_overlap_days)
+
+
+def _current(
+    rows: list[repo.CandidateRow], projects: dict[int, ProjectDTO], rules: Rules
+) -> list[repo.CandidateRow]:
+    """Candidates whose two projects are still ahead, before building their pair records."""
+    return [r for r in rows if _ahead(projects[r.a_id], rules) and _ahead(projects[r.b_id], rules)]
+
+
 def _build_pair(
     row: repo.CandidateRow, projects: dict[int, ProjectDTO], radius: float
 ) -> CoordinationPairDTO:
@@ -151,16 +192,18 @@ def parse_utilities(raw: list[str] | None) -> list[str] | None:
 
 async def overlaps(
     conn: asyncpg.Connection, radius: float, *, bands: set[str] | None = None,
-    utilities: list[str] | None = None,
+    utilities: list[str] | None = None, rules: Rules | None = None,
 ) -> list[CoordinationPairDTO]:
-    """Every qualifying pair, ranked. `utilities` keeps only pairs between those utilities,
-    filtered in SQL so a two-utility view doesn't build thousands of pairs it would drop."""
+    """Every match, ranked: within `radius` and close in time (`qualifies`). `utilities`
+    keeps only pairs between those utilities, filtered in SQL so a two-utility view doesn't
+    build thousands of pairs it would drop."""
+    rules = rules or Rules.current()
     rows = await repo.candidate_pairs(conn, radius, utilities=utilities)
     if bands is not None:
         rows = [r for r in rows if distance_band(r.miles) in bands]
     projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
-    rows = _cross_entity(rows, projects)
-    pairs = [_build_pair(r, projects, radius) for r in rows]
+    rows = _current(_cross_entity(rows, projects), projects, rules)
+    pairs = [p for p in (_build_pair(r, projects, radius) for r in rows) if qualifies(p, rules)]
     briefs = await repo.briefs_for_pairs(conn, [p.id for p in pairs])
     for p in pairs:
         if p.id in briefs:
@@ -178,17 +221,20 @@ async def find_pair(
     projects = await repo.get_projects(conn, [a_id, b_id])
     if not _cross_entity(rows, projects):
         return None
-    return _build_pair(rows[0], projects, radius)
+    pair = _build_pair(rows[0], projects, radius)
+    return pair if qualifies(pair, Rules.current()) else None
 
 
 async def pairs_for_project(
     conn: asyncpg.Connection, project_id: int, radius: float
 ) -> list[CoordinationPairDTO]:
-    """Every pair one project belongs to, ranked like `overlaps`."""
+    """Every match one project belongs to (close in space and time), ranked like `overlaps`."""
+    rules = Rules.current()
     rows = await repo.candidate_pairs(conn, radius, project_id=project_id)
     projects = await repo.get_projects(conn, sorted({i for r in rows for i in (r.a_id, r.b_id)}))
-    rows = _cross_entity(rows, projects)
-    return sorted((_build_pair(r, projects, radius) for r in rows), key=rank_key)
+    rows = _current(_cross_entity(rows, projects), projects, rules)
+    pairs = [p for p in (_build_pair(r, projects, radius) for r in rows) if qualifies(p, rules)]
+    return sorted(pairs, key=rank_key)
 
 
 @dataclass
@@ -202,10 +248,11 @@ async def rematch_project(conn: asyncpg.Connection, project_id: int) -> RematchR
     """Re-run matching for one edited project and fix up its stored pairs (Req 13.4).
 
     Pairs that carry a stored brief are re-checked under the radius they were flagged
-    with: no longer qualifying -> invalidated (removed); still qualifying -> facts
-    refreshed, and the brief marked stale if the facts changed.
+    with and the current timing rules: no longer qualifying -> invalidated (removed); still
+    qualifying -> facts refreshed, and the brief marked stale if the facts changed.
     """
     radius = get_settings().default_radius_miles
+    rules = Rules.current()
     rows = await repo.candidate_pairs(conn, radius, project_id=project_id)
     briefs = await repo.briefs_for_project(conn, project_id)
     # Re-check every briefed pair in one query instead of a match query per brief.
@@ -214,14 +261,14 @@ async def rematch_project(conn: asyncpg.Connection, project_id: int) -> RematchR
     projects = await repo.get_projects(conn, sorted(ids))
     rows = _cross_entity(rows, projects)
     qualifying = {k: r for k, r in qualifying.items() if _cross_entity([r], projects)}
-    pairs = [_build_pair(r, projects, radius) for r in rows]
+    pairs = [p for p in (_build_pair(r, projects, radius) for r in rows) if qualifies(p, rules)]
 
     invalidated: list[str] = []
     updated: list[str] = []
     for brief in briefs:
         row = qualifying.get(brief.pair_id)
         still = _build_pair(row, projects, brief.radius) if row else None
-        if still is None:
+        if still is None or not qualifies(still, rules):
             await repo.delete_brief(conn, brief.pair_id)
             invalidated.append(brief.pair_id)
             continue

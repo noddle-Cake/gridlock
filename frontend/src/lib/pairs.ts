@@ -48,10 +48,13 @@ export function filterPairs(pairs: CoordinationPair[], f: PairFilter): Coordinat
   )
 }
 
-/** Projects of the shown utilities that match the search text (the Review table's scope). */
+/** Projects of the shown utilities that match the search (the Review table's scope). */
 export function filterProjects<P extends PairProject>(projects: P[], f: PairFilter): P[] {
   const q = f.query.trim().toLowerCase()
-  return projects.filter((p) => !f.hiddenUtilities.has(p.utility) && (!q || matches(p, q)))
+  const ids = q ? f.matchIds : null
+  return projects.filter(
+    (p) => !f.hiddenUtilities.has(p.utility) && (ids ? ids.has(p.id) : !q || matches(p, q)),
+  )
 }
 
 /** Above this many shown utilities the pair query asks for everything and filters locally. */

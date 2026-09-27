@@ -21,7 +21,7 @@ import asyncpg
 
 from app.db import repository as repo
 from app.models.enums import DatePrecision, ProjectType
-from app.sources import desc, eia860m, gpc_its, sertp
+from app.sources import desc, eia860m, florida, gpc_its, sertp
 from app.sources.store import LOADER_SUFFIX, replace_source
 
 log = logging.getLogger(__name__)
@@ -55,7 +55,16 @@ GPC_ITS = Source(
     "Georgia Power 2025 IRP: Georgia ITS 10-year plan project list", gpc_its.SOURCE_URL,
     "georgia_power_2025_irp_vol3_public.pdf", "pdf", "georgia_power_its_10yr_projects.csv",
 )
-SOURCES = [EIA860M, SERTP, DESC, GPC_ITS]
+FRCC = Source(
+    "FRCC 2026 Load and Resource Plan: Form 13 proposed transmission lines", florida.FRCC_URL,
+    "frcc_2026_load_resource_plan.pdf", "pdf", "frcc_2026_proposed_lines.csv",
+)
+TALLAHASSEE = Source(
+    "City of Tallahassee 2026 Ten Year Site Plan: planned transmission projects",
+    florida.TALLAHASSEE_URL, "city_of_tallahassee_2026_tysp.pdf", "pdf",
+    "tallahassee_2026_planned_transmission.csv",
+)
+SOURCES = [EIA860M, SERTP, DESC, GPC_ITS, FRCC, TALLAHASSEE]
 
 
 def _bool(value: str) -> bool:

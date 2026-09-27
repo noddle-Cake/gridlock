@@ -139,6 +139,10 @@ class CoordinationPairDTO(BaseModel):
 
 class OverlapsResponse(BaseModel):
     radius: float
+    # The timing rules every pair met (matching.Rules): both projects in service on or after
+    # planning_from, building together for at least min_overlap_days.
+    planning_from: date
+    min_overlap_days: int
     pairs: list[CoordinationPairDTO]
 
 

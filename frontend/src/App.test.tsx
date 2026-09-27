@@ -72,6 +72,8 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
         const bands = params.get('bands')?.split(',') ?? []
         return jsonResponse({
           radius: Number(params.get('radius')),
+          planning_from: '2026-09-26',
+          min_overlap_days: 30,
           pairs: bands.includes('40') ? [pair()] : [],
         })
       }
@@ -98,11 +100,23 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     await userEvent.click(screen.getByText(/Distance apart:/))
     await userEvent.click(screen.getByRole('checkbox', { name: '25–40 km' }))
     await vi.waitFor(() => expect(params().get('bands')).toBe('touching,1.6,8,25'))
-    await screen.findByText(/No project pairs at these thresholds/)
+    await screen.findByText(/close in both place and time/)
     expect(screen.getByRole('link', { name: 'Export CSV' })).toHaveAttribute(
       'href',
       expect.stringContaining('bands=touching%2C1.6%2C8%2C25'),
     )
+  })
+
+  it('states the timing rules and how long each pair builds together', async () => {
+    render(<App />)
+    const card = await screen.findByRole('button', { name: /Hanover breakers/ })
+    expect(screen.getByTestId('match-rules')).toHaveTextContent(
+      'Future work only (in service from Sep 26, 2026), within 40 km, and building at the ' +
+        'same time for at least 30 days.',
+    )
+    // The fixture pair shares Apr 1 - Oct 30, 2026 (213 days).
+    expect(card).toHaveTextContent('7 months building together')
+    expect(card).toHaveTextContent('Both building Apr 2026 – Oct 2026 · 58% of their build time')
   })
 
   it('no longer shows the timeline under the map', async () => {
@@ -183,7 +197,7 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     expect(screen.queryByRole('region', { name: 'Ask GridMerge' })).toBeNull()
   })
 
-  it('lifts the opening utility focus when a search is applied', async () => {
+  it('lifts the utility focus when a search is applied', async () => {
     const desc = project({ id: 7, utility: 'Dominion Energy South Carolina', name: 'Jasper – Okatie' })
     const gpc = project({ id: 8, utility: 'Georgia Power', name: 'McIntosh reactors' })
     const inner = fetchMock.getMockImplementation() as (u: string, i?: RequestInit) => unknown
@@ -195,6 +209,9 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
           : inner(url, init),
     )
     render(<App />)
+    await screen.findByRole('button', { name: /Hanover breakers/ })
+    await userEvent.click(screen.getByText('All utilities'))
+    await userEvent.click(screen.getByRole('button', { name: 'Only Dominion SC ↔ Georgia Power' }))
     expect(await screen.findByText('Dominion SC ↔ Georgia Power')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Hanover breakers/ })).toBeNull()
 
@@ -202,7 +219,7 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     expect(await screen.findByRole('button', { name: /Hanover breakers/ })).toBeInTheDocument()
   })
 
-  it('opens on Dominion SC ↔ Georgia Power when both are loaded', async () => {
+  it('opens on every utility; "Only Dominion SC ↔ Georgia Power" scopes the view', async () => {
     // Low confidence, so both would be listed in Review if it ignored the focus.
     const desc = project({
       id: 7,
@@ -215,22 +232,32 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
       url.startsWith('/api/projects')
         ? jsonResponse([project({ confidence: 0.4 }), desc, gpc])
         : url.startsWith('/api/overlaps')
-          ? jsonResponse({ radius: 25, pad: 365, max_overlap_days: 365, pairs: [pair()] })
+          ? jsonResponse({
+              radius: 25,
+              planning_from: '2026-09-26',
+              min_overlap_days: 30,
+              pairs: [pair()],
+            })
           : jsonResponse({ type: 'FeatureCollection', features: [] }),
     )
     render(<App />)
-    expect(await screen.findByText('Dominion SC ↔ Georgia Power')).toBeInTheDocument()
-    // The Keystone/Chesapeake fixture pair is hidden by the focus.
-    expect(screen.queryByRole('button', { name: /Hanover breakers/ })).toBeNull()
+    // Every utility is shown at first, and the pair query covers them all.
+    expect(await screen.findByRole('button', { name: /Hanover breakers/ })).toBeInTheDocument()
+    expect(screen.getByText('All utilities')).toBeInTheDocument()
+    expect(new URL(overlapCalls()[0], 'http://x').searchParams.has('utility')).toBe(false)
 
-    // Only the two utilities' pairs are asked for, from the very first request.
-    await vi.waitFor(() => expect(overlapCalls().length).toBeGreaterThan(0))
-    for (const url of overlapCalls()) {
-      expect(new URL(url, 'http://x').searchParams.getAll('utility')).toEqual([
+    await userEvent.click(screen.getByText('All utilities'))
+    await userEvent.click(screen.getByRole('button', { name: 'Only Dominion SC ↔ Georgia Power' }))
+    expect(await screen.findByText('Dominion SC ↔ Georgia Power')).toBeInTheDocument()
+    // The Keystone/Chesapeake fixture pair is hidden by the focus ...
+    expect(screen.queryByRole('button', { name: /Hanover breakers/ })).toBeNull()
+    // ... and only the two utilities' pairs are asked for.
+    await vi.waitFor(() =>
+      expect(new URL(overlapCalls().at(-1)!, 'http://x').searchParams.getAll('utility')).toEqual([
         'Dominion Energy South Carolina',
         'Georgia Power',
-      ])
-    }
+      ]),
+    )
     expect(screen.getByRole('link', { name: 'Export CSV' })).toHaveAttribute(
       'href',
       expect.stringContaining('utility=Georgia+Power'),

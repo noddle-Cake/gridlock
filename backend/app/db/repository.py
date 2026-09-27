@@ -261,6 +261,9 @@ class ProjectFilter:
     radius_miles: float = 25.0
     terms: list[str] = field(default_factory=list)  # each in utility, name, or location
     fuzzy_text: str | None = None  # trigram word match on utility/name/location
+    # Leave out projects whose in-service period ended before this date (finished work);
+    # undated projects stay. Not a narrowing field: it doesn't make a filter non-empty.
+    ahead_of: date | None = None
 
     @property
     def empty(self) -> bool:
@@ -333,7 +336,23 @@ def _search_where(f: ProjectFilter, args: list[Any]) -> tuple[str, str, str]:
             f"word_similarity({t}, lower(coalesce(p.location_ref, ''))))"
         )
         conds.append(f"{similarity} >= {FUZZY_THRESHOLD}")
+    if f.ahead_of:
+        conds.append(f"(COALESCE(p.end_date, p.start_date) IS NULL OR "
+                     f"{_IN_SERVICE_END} >= {arg(f.ahead_of)}::date)")
     return " AND ".join(conds), miles, similarity
+
+
+# The last day of a project's in-service period, as timing.build_window reads it: the end
+# date (else the start) at its precision, so "2026" runs to Dec 31, 2026.
+_IN_SERVICE_END = """(CASE CASE WHEN p.end_date IS NOT NULL THEN p.end_precision
+                               ELSE p.start_precision END
+      WHEN 'year' THEN date_trunc('year', COALESCE(p.end_date, p.start_date))
+                       + interval '1 year - 1 day'
+      WHEN 'quarter' THEN date_trunc('quarter', COALESCE(p.end_date, p.start_date))
+                          + interval '3 months - 1 day'
+      WHEN 'month' THEN date_trunc('month', COALESCE(p.end_date, p.start_date))
+                        + interval '1 month - 1 day'
+      ELSE COALESCE(p.end_date, p.start_date) END)::date"""
 
 
 async def search_projects(

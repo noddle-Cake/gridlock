@@ -44,6 +44,33 @@ export function timingLabel(p: {
   return `in service ${gapLabel(p.time_gap_days)} apart`
 }
 
+/** "5 weeks", "7 months", "1.5 years": how long two projects are building at once. */
+export function durationLabel(days: number): string {
+  if (days < 60) return `${Math.max(1, Math.round(days / 7))} weeks`
+  if (days < 730) return `${Math.round(days / 30.4)} months`
+  return `${(days / 365.25).toFixed(1)} years`
+}
+
+/**
+ * "Both building Jun 2026 – Dec 2027": the stretch that makes a pair close in time. Every
+ * match has one (the backend requires shared build time); the fallback is defensive.
+ */
+export function bothBuildingLabel(p: {
+  window_start: string | null
+  window_end: string | null
+}): string {
+  if (!p.window_start || !p.window_end) return 'Not building at the same time'
+  return `Both building ${rangeLabel(p.window_start, p.window_end, 'month', 'month')}`
+}
+
+/** The rules every listed pair met (the backend's planning cutoff and minimum shared time). */
+export function rulesLabel(planningFrom: string, minOverlapDays: number): string {
+  return (
+    `Future work only (in service from ${dayLabel(planningFrom)}), within 40 km, and building ` +
+    `at the same time for at least ${minOverlapDays} ${minOverlapDays === 1 ? 'day' : 'days'}.`
+  )
+}
+
 /** Like pct(), but never rounds a real overlap down to "0%". */
 export function overlapPct(ratio: number): string {
   return ratio > 0 && ratio < 0.005 ? '<1%' : pct(ratio)
