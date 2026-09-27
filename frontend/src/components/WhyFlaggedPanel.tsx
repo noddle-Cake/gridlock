@@ -1,6 +1,5 @@
 import { useState } from 'react'
 
-import { ApiError } from '../api'
 import { milesToKm } from '../lib/distanceBands'
 import {
   FACTOR_LABELS,
@@ -13,7 +12,7 @@ import {
 } from '../lib/format'
 import { type Span, windowScale } from '../lib/buildWindows'
 import { scoreBand } from '../lib/pairs'
-import type { CoordinationBrief, CoordinationPair, Impact, PairProject } from '../types'
+import type { CoordinationPair, Impact, PairProject } from '../types'
 import { SourceLink } from './SourceLink'
 
 /**
@@ -83,7 +82,12 @@ function BuildWindows({
 interface Props {
   pair: CoordinationPair | null
   colorOf: (p: PairProject) => string
-  onGenerateBrief: (pair: CoordinationPair) => Promise<CoordinationBrief>
+  /** Starts drafting in the background; the result lands on `pair.brief`. */
+  onGenerateBrief: (pair: CoordinationPair) => void
+  /** A brief for this pair is being drafted (possibly started on an earlier visit). */
+  briefRunning?: boolean
+  /** Why the last draft for this pair failed. */
+  briefError?: string
 }
 
 function ProjectCard({ p, color }: { p: PairProject; color: string }) {
@@ -166,9 +170,13 @@ function ImpactSection({ impact }: { impact: Impact }) {
   )
 }
 
-export function WhyFlaggedPanel({ pair, colorOf, onGenerateBrief }: Props) {
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export function WhyFlaggedPanel({
+  pair,
+  colorOf,
+  onGenerateBrief,
+  briefRunning = false,
+  briefError,
+}: Props) {
   const [copied, setCopied] = useState(false)
 
   if (!pair) {
@@ -178,19 +186,6 @@ export function WhyFlaggedPanel({ pair, colorOf, onGenerateBrief }: Props) {
         <p>Select a pair from the list or map to compare the two projects.</p>
       </section>
     )
-  }
-
-  async function generate() {
-    if (!pair) return
-    setBusy(true)
-    setError(null)
-    try {
-      await onGenerateBrief(pair)
-    } catch (e) {
-      setError(e instanceof ApiError ? e.body.message : String(e))
-    } finally {
-      setBusy(false)
-    }
   }
 
   async function copy() {
@@ -326,8 +321,13 @@ export function WhyFlaggedPanel({ pair, colorOf, onGenerateBrief }: Props) {
           </p>
         )}
         <div className="brief-actions">
-          <button type="button" className="primary" onClick={generate} disabled={busy}>
-            {busy ? 'Drafting…' : pair.brief ? 'Regenerate brief' : 'Generate brief'}
+          <button
+            type="button"
+            className="primary"
+            onClick={() => onGenerateBrief(pair)}
+            disabled={briefRunning}
+          >
+            {briefRunning ? 'Drafting…' : pair.brief ? 'Regenerate brief' : 'Generate brief'}
           </button>
           {pair.brief ? (
             <button type="button" onClick={copy}>
@@ -335,9 +335,14 @@ export function WhyFlaggedPanel({ pair, colorOf, onGenerateBrief }: Props) {
             </button>
           ) : null}
         </div>
-        {error ? (
+        {briefRunning ? (
+          <p className="muted brief-note">
+            Keeps drafting if you leave this pair; the header shows when it's ready.
+          </p>
+        ) : null}
+        {briefError ? (
           <p role="alert" className="error">
-            {error}
+            {briefError}
           </p>
         ) : null}
       </div>
