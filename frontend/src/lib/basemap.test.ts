@@ -3,6 +3,7 @@ import { topology } from 'topojson-server'
 import { describe, expect, it } from 'vitest'
 
 import {
+  chunkLines,
   countyLines,
   type LabelCandidate,
   layoutLabels,
@@ -130,5 +131,17 @@ describe('countyLines / stateBorders', () => {
     const pts = borders.coordinates.flat()
     // Every interior edge touches x=1 or y=1; outer edges (x=0/2, y=0/2 all along) are absent.
     expect(pts.every(([x, y]) => x === 1 || y === 1)).toBe(true)
+  })
+})
+
+describe('chunkLines', () => {
+  it('cuts long lines into short pieces that join up with no gaps', () => {
+    const line = Array.from({ length: 600 }, (_, i) => [i, 0])
+    const pieces = chunkLines({ type: 'MultiLineString', coordinates: [line, [[0, 1], [1, 1]]] }, 256)
+      .features.map((f) => f.geometry.coordinates)
+    expect(pieces.map((p) => p.length)).toEqual([256, 256, 90, 2])
+    expect(pieces[1][0]).toEqual(pieces[0][255])
+    expect(pieces[2][0]).toEqual(pieces[1][255])
+    expect(pieces[2].at(-1)).toEqual([599, 0])
   })
 })

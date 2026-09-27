@@ -2,7 +2,7 @@
 // scripts/build-basemap.mjs writes to public/basemap/. Pure helpers live here; the Leaflet
 // wiring is in components/BaseMap.tsx.
 
-import type { MultiLineString } from 'geojson'
+import type { Feature, FeatureCollection, LineString, MultiLineString } from 'geojson'
 import { mesh } from 'topojson-client'
 import type { GeometryCollection, Topology } from 'topojson-specification'
 
@@ -126,6 +126,25 @@ export function nationalOutlines(land: Topology): MultiLineString[] {
     mesh(land, land.objects.states as Collection, (a, b) => a === b),
     mesh(land, land.objects.countries as Collection),
   ]
+}
+
+/**
+ * A line mesh cut into pieces of at most `size` points (consecutive pieces share an end
+ * point, so there are no gaps). One mesh is one map layer, reprojected whole whenever the
+ * map redraws mid-zoom (lib/liveCanvas.ts); pieces let it skip what is out of view.
+ */
+export function chunkLines(m: MultiLineString, size = 256): FeatureCollection<LineString> {
+  const features: Feature<LineString>[] = []
+  for (const line of m.coordinates) {
+    for (let i = 0; i < line.length - 1; i += size - 1) {
+      features.push({
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates: line.slice(i, i + size) },
+      })
+    }
+  }
+  return { type: 'FeatureCollection', features }
 }
 
 /** Lines between counties of the same state (state lines are drawn separately, heavier). */

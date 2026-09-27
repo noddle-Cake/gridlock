@@ -1082,6 +1082,16 @@ a {
   accent-color: var(--accent);
 }
 
+/* Power grid tiles fade out while a zoom stretches them past a level
+   (components/PowerGridLayer.tsx); Leaflet sets the container's opacity inline. */
+.power-grid {
+  transition: opacity 0.2s;
+}
+
+.power-grid.power-grid-stale {
+  opacity: 0 !important;
+}
+
 /* Place names, highway signs and county names (components/BaseMap.tsx). The icon element is a
    zero-size anchor at the point; the text is positioned around it. */
 .map-label {

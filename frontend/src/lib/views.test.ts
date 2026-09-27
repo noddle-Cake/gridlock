@@ -40,12 +40,30 @@ describe('markerStyle (Req 9.1, 9.3, 9.4)', () => {
 
   it('shrinks the selected pair with the view but keeps it above its neighbours', () => {
     const at = (zoom: number, paired: boolean, selected: boolean) =>
-      markerStyle(project(), '#f00', { paired, selected }, markerScale(zoom), zoom).radius
+      markerStyle(project(), '#f00', { paired, selected }, zoom).radius
     expect(at(4, false, true)).toBeLessThan(at(10, false, true))
     for (const zoom of [3, 5, 6.5, 8, 11]) {
       expect(at(zoom, false, true)).toBeGreaterThan(at(zoom, true, false))
     }
     expect(highlightSize(4.5).radius).toBeLessThan(highlightSize(5).radius)
+  })
+
+  it('resizes markers smoothly as the map zooms, with no jumps', () => {
+    for (const state of [
+      { paired: false, selected: false },
+      { paired: true, selected: false },
+      { paired: false, selected: true },
+    ]) {
+      let prev = markerStyle(project(), '#f00', state, 3)
+      for (let zoom = 3.05; zoom <= 12; zoom += 0.05) {
+        const next = markerStyle(project(), '#f00', state, zoom)
+        expect(Math.abs(next.radius - prev.radius)).toBeLessThan(0.1)
+        expect(Math.abs(next.weight - prev.weight)).toBeLessThan(0.1)
+        prev = next
+      }
+    }
+    expect(markerScale(3)).toBe(0.5)
+    expect(markerScale(7)).toBe(1)
   })
 })
 

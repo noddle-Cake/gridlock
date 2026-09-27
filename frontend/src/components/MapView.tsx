@@ -1,22 +1,15 @@
 import 'leaflet/dist/leaflet.css'
 
-import L, {
-  type CircleMarker as LeafletCircleMarker,
-  type LatLngBoundsExpression,
-  type LatLngExpression,
-  type Map as LeafletMap,
-  type Polyline as LeafletPolyline,
+import type {
+  CircleMarker as LeafletCircleMarker,
+  LatLngBoundsExpression,
+  LatLngExpression,
+  Map as LeafletMap,
+  PathOptions,
+  Polyline as LeafletPolyline,
 } from 'leaflet'
-import { memo, type Ref, type RefObject, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  CircleMarker,
-  MapContainer,
-  Polyline,
-  ScaleControl,
-  Tooltip,
-  useMap,
-  useMapEvents,
-} from 'react-leaflet'
+import { memo, type Ref, useEffect, useMemo, useRef, useState } from 'react'
+import { CircleMarker, MapContainer, Polyline, ScaleControl, Tooltip, useMap } from 'react-leaflet'
 
 import { milesToKm } from '../lib/distanceBands'
 import { bothBuildingLabel, durationLabel, escapeHtml as esc, rangeLabel } from '../lib/format'
@@ -25,9 +18,9 @@ import {
   type ColorBy,
   type LegendEntry,
   highlightSize,
-  markerScale,
   markerStyle,
 } from '../lib/mapStyle'
+import { LiveZoomCanvas, type ZoomStyle } from '../lib/liveCanvas'
 import { type ViewBounds, pairEnds } from '../lib/pairs'
 import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE } from '../lib/powerGrid'
 import { enableSmoothWheelZoom } from '../lib/smoothWheelZoom'
@@ -36,18 +29,6 @@ import { BaseMap } from './BaseMap'
 import { PowerGridLayer } from './PowerGridLayer'
 
 const FIT_MAX_ZOOM = 11
-
-/**
- * Canvas for project markers and connectors that redraws on every frame of a zoom. Leaflet's
- * stock canvas just stretches its last frame until the zoom ends, so flying to a pair blew
- * the dots up to many times their size and then snapped them back on arrival.
- */
-const LiveZoomCanvas = L.Canvas.extend({
-  _onZoom(this: { _onZoomEnd(): void; _update(): void }) {
-    this._onZoomEnd() // reproject every path at the in-flight zoom
-    this._update() // resize, clear and redraw
-  },
-})
 
 /**
  * Fit options that keep framed projects clear of the legend stack in the top-right corner
@@ -157,31 +138,10 @@ function ReportBounds({ onChange }: { onChange?: (b: ViewBounds) => void }) {
   return null
 }
 
-function ZoomWatcher({ onZoom }: { onZoom: (z: number) => void }) {
-  const map = useMapEvents({ zoomend: () => onZoom(map.getZoom()) })
-  useEffect(() => onZoom(map.getZoom()), [map, onZoom])
-  return null
-}
-
 function SmoothWheelZoom() {
   const map = useMap()
   useEffect(() => enableSmoothWheelZoom(map), [map])
   return null
-}
-
-/**
- * Size for a highlighted circle, kept current on every frame of a zoom while `active` rather
- * than at the zoomend re-render, so the pair's dots resize smoothly during a fly.
- */
-function useHighlightSize(ref: RefObject<LeafletCircleMarker | null>, active: boolean) {
-  const map = useMap()
-  useEffect(() => {
-    if (!active) return
-    const resize = () => ref.current?.setStyle(highlightSize(map.getZoom()))
-    map.on('zoom', resize)
-    return () => void map.off('zoom', resize)
-  }, [map, ref, active])
-  return highlightSize(map.getZoom())
 }
 
 function projectTooltip(p: Project): string {
@@ -201,14 +161,14 @@ function projectTooltip(p: Project): string {
 
 /**
  * One project dot. Memoised so hovering a pair repaints the two markers it touches instead of
- * re-rendering ~2,000. The tooltip is built on first open rather than mounted per marker.
+ * re-rendering ~2,000, and never re-rendered by zooming: its `zoomStyle` lets the canvas size
+ * it for the zoom as it draws. The tooltip is built on first open, not mounted per marker.
  */
 const ProjectMarker = memo(function ProjectMarker({
   project: p,
   color,
   paired,
   highlighted,
-  scale,
   onSelect,
   onHover,
 }: {
@@ -216,14 +176,14 @@ const ProjectMarker = memo(function ProjectMarker({
   color: string
   paired: boolean
   highlighted: boolean
-  scale: number
   onSelect: (p: Project) => void
   onHover?: (p: Project | null) => void
 }) {
   const ref = useRef<LeafletCircleMarker>(null)
   const zoom = useMap().getZoom()
-  useHighlightSize(ref, highlighted)
-  const style = markerStyle(p, color, { paired, selected: highlighted }, scale, zoom)
+  const state = { paired, selected: highlighted }
+  const zoomStyle: ZoomStyle = (z) => markerStyle(p, color, state, z)
+  const style = { ...markerStyle(p, color, state, zoom), zoomStyle }
   useEffect(() => {
     const m = ref.current
     if (!m) return
@@ -279,7 +239,7 @@ const PairLine = memo(function PairLine({
   const [from, to] = pairEnds(pair)
   const touching = Math.abs(from[0] - to[0]) < SAME_POINT && Math.abs(from[1] - to[1]) < SAME_POINT
   const active = selected || hovered
-  const ring = useHighlightSize(ref as RefObject<LeafletCircleMarker | null>, touching && active)
+  const zoom = useMap().getZoom()
   useEffect(() => {
     const l = ref.current
     if (!l) return
@@ -296,17 +256,21 @@ const PairLine = memo(function PairLine({
   const handlers = useMemo(() => (onSelect ? { click: () => onSelect(pair) } : {}), [pair, onSelect])
   const ink = selected ? PAIR_INK[scheme].active : PAIR_INK[scheme].idle
   if (touching) {
+    // Radius goes in the path options too: restyling a circle falls back to its current,
+    // zoom-sized radius otherwise.
+    const ring: PathOptions & { radius: number; zoomStyle?: ZoomStyle } = {
+      ...(active ? highlightSize(zoom) : { radius: 6, weight: 1.5 }),
+      zoomStyle: active ? highlightSize : undefined,
+      color: ink,
+      opacity: active ? 0.95 : 0.5,
+      fill: false,
+    }
     return (
       <CircleMarker
         ref={ref as Ref<LeafletCircleMarker>}
         center={from}
-        radius={active ? ring.radius : 6}
-        pathOptions={{
-          color: ink,
-          weight: active ? ring.weight : 1.5,
-          opacity: active ? 0.95 : 0.5,
-          fill: false,
-        }}
+        radius={ring.radius}
+        pathOptions={ring}
         eventHandlers={handlers}
       />
     )
@@ -374,7 +338,6 @@ export function MapView({
     labels: true,
   })
   const [map, setMap] = useState<LeafletMap | null>(null)
-  const [zoom, setZoom] = useState(9)
   const renderer = useMemo(() => new LiveZoomCanvas(), [])
   const wrap = useRef<HTMLDivElement>(null)
 
@@ -443,7 +406,6 @@ export function MapView({
         className="map"
       >
         <SmoothWheelZoom />
-        <ZoomWatcher onZoom={setZoom} />
         <ScaleControl position="bottomleft" imperial={false} metric />
         <BaseMap counties={layers.counties} labels={layers.labels} />
         {layers.grid ? <PowerGridLayer /> : null}
@@ -497,7 +459,6 @@ export function MapView({
             color={colorOf(p)}
             paired={pairedIds.has(p.id)}
             highlighted={highlightedIds.has(p.id)}
-            scale={markerScale(zoom)}
             onSelect={onSelectProject}
             onHover={onHoverProject}
           />
