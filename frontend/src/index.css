@@ -1053,32 +1053,6 @@ a {
   color: var(--error);
 }
 
-.slider {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.slider-label {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 12.5px;
-  color: var(--ink-2);
-}
-
-.slider output {
-  font-weight: 700;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-
-.slider input {
-  accent-color: var(--accent);
-  border: 0;
-  padding: 0;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;

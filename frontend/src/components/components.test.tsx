@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -227,31 +227,16 @@ describe('ReviewTable (Req 3.3, 13.1-13.3)', () => {
 })
 
 describe('ThresholdControls (Req 10.1, 10.2)', () => {
-  it('reports confidence changes and has no date-padding control', () => {
-    const onConfidence = vi.fn()
-    render(
-      <ThresholdControls
-        bands={['touching', '1.6', '8', '25', '40']}
-        confidenceThreshold={0.7}
-        onBands={vi.fn()}
-        onConfidenceThreshold={onConfidence}
-      />,
-    )
-    fireEvent.change(screen.getByLabelText('Confidence threshold'), { target: { value: '0.5' } })
-    expect(onConfidence).toHaveBeenCalledWith(0.5)
+  it('has no confidence-threshold or date-padding control', () => {
+    render(<ThresholdControls bands={['touching', '1.6', '8', '25', '40']} onBands={vi.fn()} />)
+    expect(screen.queryByLabelText('Confidence threshold')).toBeNull()
+    expect(screen.queryByText(/Review </)).toBeNull()
     expect(screen.queryByText(/Build window/)).toBeNull()
   })
 
   it('filters by what the two projects could share, not by distance', async () => {
     const onBands = vi.fn()
-    render(
-      <ThresholdControls
-        bands={['touching', '8']}
-        confidenceThreshold={0.7}
-        onBands={onBands}
-        onConfidenceThreshold={vi.fn()}
-      />,
-    )
+    render(<ThresholdControls bands={['touching', '8']} onBands={onBands} />)
     expect(screen.getByText(/Opportunity type:/).parentElement).toHaveTextContent(
       'Shared outage & crossing, Shared laydown yard',
     )
