@@ -18,6 +18,7 @@ import {
   type ColorBy,
   type LegendEntry,
   highlightSize,
+  markerScale,
   markerStyle,
 } from '../lib/mapStyle'
 import { LiveZoomCanvas, type ZoomStyle } from '../lib/liveCanvas'
@@ -168,6 +169,7 @@ const ProjectMarker = memo(function ProjectMarker({
   project: p,
   color,
   paired,
+  halo,
   highlighted,
   onSelect,
   onHover,
@@ -175,13 +177,14 @@ const ProjectMarker = memo(function ProjectMarker({
   project: Project
   color: string
   paired: boolean
+  halo: string
   highlighted: boolean
   onSelect: (p: Project) => void
   onHover?: (p: Project | null) => void
 }) {
   const ref = useRef<LeafletCircleMarker>(null)
   const zoom = useMap().getZoom()
-  const state = { paired, selected: highlighted }
+  const state = { paired, selected: highlighted, halo }
   const zoomStyle: ZoomStyle = (z) => markerStyle(p, color, state, z)
   const style = { ...markerStyle(p, color, state, zoom), zoomStyle }
   useEffect(() => {
@@ -213,10 +216,25 @@ const ProjectMarker = memo(function ProjectMarker({
   )
 })
 
+/** The --map-land colours: paired dots are ringed in the land they sit on. */
+const MARKER_HALO = { light: '#fbfbf9', dark: '#1b242d' }
+
 const PAIR_INK = { light: { idle: '#3d4852', active: '#111' }, dark: { idle: '#c3ccd4', active: '#fff' } }
 
 /** Ends this close (degrees, ~1 m) are one point: the projects touch or cross there. */
 const SAME_POINT = 1e-5
+
+/**
+ * Below this zoom a pair's ends are at most ~20 px apart, so its connector is mostly hidden
+ * under its markers and the dashed stubs that show only speckle the map: idle ones go faint.
+ */
+const PAIR_DETAIL_ZOOM = 6
+
+/** An idle touch-point ring, sized like the paired markers it circles. */
+const idleRing: ZoomStyle = (z) => {
+  const scale = markerScale(z)
+  return { radius: Math.max(3, 8 * scale), weight: Math.max(1, 2 * scale) }
+}
 
 /**
  * The connector between a pair's two projects, neutral so it never reads as a project colour.
@@ -227,12 +245,15 @@ const PairLine = memo(function PairLine({
   selected,
   hovered,
   scheme,
+  far,
   onSelect,
 }: {
   pair: CoordinationPair
   selected: boolean
   hovered: boolean
   scheme: 'light' | 'dark'
+  /** Zoomed out past PAIR_DETAIL_ZOOM. */
+  far: boolean
   onSelect?: (pair: CoordinationPair) => void
 }) {
   const ref = useRef<LeafletPolyline | LeafletCircleMarker>(null)
@@ -258,11 +279,12 @@ const PairLine = memo(function PairLine({
   if (touching) {
     // Radius goes in the path options too: restyling a circle falls back to its current,
     // zoom-sized radius otherwise.
+    const size = active ? highlightSize : idleRing
     const ring: PathOptions & { radius: number; zoomStyle?: ZoomStyle } = {
-      ...(active ? highlightSize(zoom) : { radius: 8, weight: 2 }),
-      zoomStyle: active ? highlightSize : undefined,
+      ...size(zoom),
+      zoomStyle: size,
       color: ink,
-      opacity: active ? 0.95 : 0.5,
+      opacity: active ? 0.95 : far ? 0.35 : 0.5,
       fill: false,
     }
     return (
@@ -281,9 +303,9 @@ const PairLine = memo(function PairLine({
       positions={[from, to]}
       pathOptions={{
         color: ink,
-        weight: active ? 4.5 : 1.8,
-        opacity: active ? 0.95 : 0.5,
-        dashArray: active ? undefined : '3 5',
+        weight: active ? 4.5 : far ? 1 : 1.8,
+        opacity: active ? 0.95 : far ? 0.15 : 0.5,
+        dashArray: active || far ? undefined : '3 5',
       }}
       eventHandlers={handlers}
     />
@@ -338,6 +360,7 @@ export function MapView({
     labels: true,
   })
   const [map, setMap] = useState<LeafletMap | null>(null)
+  const [far, setFar] = useState(false)
   const renderer = useMemo(() => new LiveZoomCanvas(), [])
   const wrap = useRef<HTMLDivElement>(null)
 
@@ -348,6 +371,15 @@ export function MapView({
     const ro = new ResizeObserver(() => map.invalidateSize({ pan: false }))
     ro.observe(wrap.current)
     return () => ro.disconnect()
+  }, [map])
+
+  // Only crossing PAIR_DETAIL_ZOOM re-renders the connectors, not every zoom.
+  useEffect(() => {
+    if (!map) return
+    const update = () => setFar(map.getZoom() < PAIR_DETAIL_ZOOM)
+    update()
+    map.on('zoomend', update)
+    return () => void map.off('zoomend', update)
   }, [map])
 
   const placed = useMemo(() => projects.filter((p) => p.lat != null && p.lng != null), [projects])
@@ -449,6 +481,7 @@ export function MapView({
             selected={selectedPair?.id === pair.id}
             hovered={hoveredPair?.id === pair.id}
             scheme={scheme}
+            far={far}
             onSelect={onSelectPair}
           />
         ))}
@@ -458,6 +491,7 @@ export function MapView({
             project={p}
             color={colorOf(p)}
             paired={pairedIds.has(p.id)}
+            halo={MARKER_HALO[scheme]}
             highlighted={highlightedIds.has(p.id)}
             onSelect={onSelectProject}
             onHover={onHoverProject}
