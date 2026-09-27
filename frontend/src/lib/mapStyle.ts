@@ -22,9 +22,9 @@ export function markerStyle(
   const hl = highlightSize(zoom)
   const scale = markerScale(zoom)
   return {
-    radius: s.selected ? hl.radius : Math.max(2, (s.paired ? 7 : 4) * scale),
+    radius: s.selected ? hl.radius : Math.max(2, (s.paired ? 9 : 4) * scale),
     color: s.selected ? '#111' : color,
-    weight: s.selected ? hl.weight : s.paired ? Math.max(1.25, 2 * scale) : 0.75,
+    weight: s.selected ? hl.weight : s.paired ? Math.max(1.5, 2.5 * scale) : 0.75,
     opacity: s.paired || s.selected ? 1 : 0.6,
     fillColor: color,
     fillOpacity: p.approximate ? 0.08 : s.paired || s.selected ? 0.85 : 0.3,
@@ -45,8 +45,8 @@ export function markerScale(zoom: number): number {
  * neighbours when zoomed out, and stays larger than any other paired marker.
  */
 export function highlightSize(zoom: number): { radius: number; weight: number } {
-  const radius = Math.min(11, Math.max(6, 6 + (zoom - 4) * 1.5))
-  return { radius, weight: (radius * 3) / 11 }
+  const radius = Math.min(13, Math.max(7, 7 + (zoom - 4) * 1.75))
+  return { radius, weight: (radius * 3) / 13 }
 }
 
 export type ColorBy ='type' | 'utility' | 'year'

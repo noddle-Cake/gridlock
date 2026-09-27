@@ -133,12 +133,13 @@ export function drawPowerTile(ctx: Ctx, tile: TileLike, zoom: number, size: numb
     }
   }
 
-  const sub = zoom >= 10 ? 3.5 : 2.5
+  // Context, not the story: kept small so the opportunity markers drawn above stand out.
+  const sub = zoom >= 10 ? 2.25 : 1.5
   for (const f of features(tile, 'power_substation_point')) {
-    ctx.globalAlpha = 0.9
+    ctx.globalAlpha = 0.8
     ctx.fillStyle = voltageColor(featureVoltage(f.properties))
     ctx.strokeStyle = '#333'
-    ctx.lineWidth = 0.75
+    ctx.lineWidth = 0.5
     eachPoint(f, (x, y) => {
       ctx.beginPath()
       ctx.rect(x - sub, y - sub, sub * 2, sub * 2)
@@ -148,12 +149,12 @@ export function drawPowerTile(ctx: Ctx, tile: TileLike, zoom: number, size: numb
   }
 
   // Diamonds, so plants never read as the round project markers drawn above.
-  const d = sub + 1
+  const d = sub + 0.75
   for (const f of features(tile, 'power_plant_point')) {
-    ctx.globalAlpha = 0.9
+    ctx.globalAlpha = 0.8
     ctx.fillStyle = PLANT_COLOR
     ctx.strokeStyle = '#fff'
-    ctx.lineWidth = 0.75
+    ctx.lineWidth = 0.5
     eachPoint(f, (x, y) => {
       ctx.beginPath()
       ctx.moveTo(x, y - d)

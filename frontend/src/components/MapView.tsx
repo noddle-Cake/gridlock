@@ -259,7 +259,7 @@ const PairLine = memo(function PairLine({
     // Radius goes in the path options too: restyling a circle falls back to its current,
     // zoom-sized radius otherwise.
     const ring: PathOptions & { radius: number; zoomStyle?: ZoomStyle } = {
-      ...(active ? highlightSize(zoom) : { radius: 6, weight: 1.5 }),
+      ...(active ? highlightSize(zoom) : { radius: 8, weight: 2 }),
       zoomStyle: active ? highlightSize : undefined,
       color: ink,
       opacity: active ? 0.95 : 0.5,
@@ -281,8 +281,8 @@ const PairLine = memo(function PairLine({
       positions={[from, to]}
       pathOptions={{
         color: ink,
-        weight: active ? 3.5 : 1.2,
-        opacity: active ? 0.95 : 0.35,
+        weight: active ? 4.5 : 1.8,
+        opacity: active ? 0.95 : 0.5,
         dashArray: active ? undefined : '3 5',
       }}
       eventHandlers={handlers}
@@ -424,7 +424,7 @@ export function MapView({
                 positions={p.route!}
                 pathOptions={{
                   color: colorOf(p),
-                  weight: highlighted ? 6 : paired ? 4 : 2.5,
+                  weight: highlighted ? 7 : paired ? 5 : 2.5,
                   opacity: highlighted ? 1 : paired ? 0.85 : 0.5,
                   lineCap: 'round',
                 }}
