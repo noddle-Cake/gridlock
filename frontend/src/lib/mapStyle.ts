@@ -186,7 +186,7 @@ export function colorLegend(
       .filter((u) => utilityColors[u])
       .sort((a, b) => Number(b === own) - Number(a === own))
     rows = named.map((u) => ({
-      label: u === own ? `${u} (your company)` : u,
+      label: u === own ? `${u} (you)` : u,
       color: utilityColors[u],
       count: count((p) => p.utility === u),
     }))

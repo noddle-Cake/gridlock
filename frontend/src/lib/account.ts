@@ -9,6 +9,15 @@ const EMAIL_DOMAIN_COMPANY: Record<string, string> = {
   'fpl.com': 'Florida Power & Light',
 }
 
+/** How planners refer to their company in labels ("Only FPL's opportunities"). */
+const SHORT_NAMES: Record<string, string> = {
+  'Florida Power & Light': 'FPL',
+}
+
+export function shortName(company: string): string {
+  return SHORT_NAMES[company] ?? company
+}
+
 /** The account's company, if its email domain is known and the company has projects loaded. */
 export function accountCompany(
   username: string | null | undefined,
@@ -22,6 +31,11 @@ export function accountCompany(
 /** Whether a (possibly jointly owned, "A / B") utility includes `company`. */
 function includes(utility: string, company: string): boolean {
   return utility === company || utility.split(' / ').includes(company)
+}
+
+/** Whether one of the pair's projects belongs to `company` (alone or jointly). */
+export function involves(pair: CoordinationPair, company: string): boolean {
+  return includes(pair.project_a.utility, company) || includes(pair.project_b.utility, company)
 }
 
 /**

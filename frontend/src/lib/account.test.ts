@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { CoordinationPair } from '../types'
-import { accountCompany, pairPartners } from './account'
+import { accountCompany, involves, pairPartners, shortName } from './account'
 
 const FPL = 'Florida Power & Light'
 
@@ -38,5 +38,18 @@ describe('pairPartners', () => {
   it('counts jointly owned projects and skips pairs within the company', () => {
     const pairs = [pair(`${FPL} / Seminole Electric Cooperative`, 'JEA'), pair(FPL, FPL)]
     expect(pairPartners(pairs, FPL)).toEqual(['JEA'])
+  })
+
+  it("tells whether a pair is the company's, alone or jointly owned", () => {
+    expect(involves(pair('JEA', FPL), FPL)).toBe(true)
+    expect(involves(pair(`Seminole Electric Cooperative / ${FPL}`, 'JEA'), FPL)).toBe(true)
+    expect(involves(pair('JEA', 'Tampa Electric'), FPL)).toBe(false)
+  })
+})
+
+describe('shortName', () => {
+  it('uses the name planners say, falling back to the full name', () => {
+    expect(shortName(FPL)).toBe('FPL')
+    expect(shortName('Tampa Electric')).toBe('Tampa Electric')
   })
 })

@@ -11,6 +11,7 @@ import type {
 import { memo, type Ref, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { CircleMarker, MapContainer, Polyline, ScaleControl, Tooltip, useMap } from 'react-leaflet'
 
+import { involves } from '../lib/account'
 import { milesToKm } from '../lib/distanceBands'
 import { bothBuildingLabel, durationLabel, escapeHtml as esc, num, plural, rangeLabel } from '../lib/format'
 import { type LatLng, homePoints } from '../lib/homeView'
@@ -342,6 +343,8 @@ interface Props {
   onBoundsChange?: (b: ViewBounds) => void
   /** Fly here when it changes (search picks). */
   focus?: MapFocus | null
+  /** The signed-in planner's company: the map opens on its projects rather than the nation. */
+  homeCompany?: string | null
 }
 
 export function MapView({
@@ -359,6 +362,7 @@ export function MapView({
   onHoverProject,
   onBoundsChange,
   focus = null,
+  homeCompany = null,
 }: Props) {
   const [layers, setLayers] = useState<Record<MapLayer, boolean>>({
     grid: true,
@@ -406,8 +410,27 @@ export function MapView({
     return pts.length ? pts : null
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placed.length])
-  // Opens on the lower 48; "Fit all" still frames Alaska, Hawaii and the territories too.
-  const homeBounds = useMemo(() => allBounds && homePoints(allBounds), [allBounds])
+  // Opens on the signed-in company's projects and both ends of its pairs (Florida for FPL),
+  // else on the lower 48; "Fit all" still frames Alaska, Hawaii and the territories too.
+  // Keyed on the pair ids so re-sorting or re-filtering the same pairs doesn't refly the map.
+  const ownPairs = homeCompany ? pairs.filter((p) => involves(p, homeCompany)) : []
+  const ownPairKey = ownPairs.map((p) => p.id).join()
+  const ownPoints = useMemo<LatLng[]>(
+    () => {
+      if (!homeCompany) return []
+      const own = placed.filter((p) => p.utility.split(' / ').includes(homeCompany))
+      const ends = ownPairs.flatMap((p) => [p.project_a, p.project_b])
+      return [...own, ...ends]
+        .filter((p) => p.lat != null && p.lng != null)
+        .map((p) => [p.lat!, p.lng!] as LatLng)
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [homeCompany, placed.length, ownPairKey],
+  )
+  const homeBounds = useMemo(
+    () => (ownPoints.length ? homePoints(ownPoints) : allBounds && homePoints(allBounds)),
+    [ownPoints, allBounds],
+  )
 
   // Keyed on coordinates, not the pair object, so a data refresh doesn't re-trigger the fly.
   const a = selectedPair?.project_a
