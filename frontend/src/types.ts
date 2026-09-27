@@ -228,7 +228,7 @@ export interface SearchResponse {
   /** Every match, for filtering the map and the pair list. */
   project_ids: number[]
   total: number
-  /** [south, west, north, east] of the placed matches. */
+  /** [south, west, north, east] framing matches, centered on the ZIP for ZIP searches. */
   bounds: [number, number, number, number] | null
   suggest_ai: boolean
 }

@@ -427,14 +427,13 @@ async def run_search(conn: asyncpg.Connection, q: str, *, limit: int) -> SearchR
     bounds = list(result.bounds) if result.bounds else None
     if point:
         interpretation.radius_miles = f.radius_miles
-        # A ZIP is a destination even when no loaded projects match. Include its
-        # location when matches are farther away after widening the search, too.
+        # Keep the ZIP at the centre even if every match is farther north (or in
+        # any one direction). Fitting the ZIP and matches together would instead
+        # send the planner halfway towards the projects. Empty ZIPs still locate.
         lat, lng = point
-        bounds = (
-            [min(bounds[0], lat), min(bounds[1], lng),
-             max(bounds[2], lat), max(bounds[3], lng)]
-            if bounds else [lat, lng, lat, lng]
-        )
+        lat_span = max(abs(bounds[0] - lat), abs(bounds[2] - lat)) if bounds else 0
+        lng_span = max(abs(bounds[1] - lng), abs(bounds[3] - lng)) if bounds else 0
+        bounds = [lat - lat_span, lng - lng_span, lat + lat_span, lng + lng_span]
     return SearchResponse(
         query=parsed.raw,
         interpretation=interpretation,
