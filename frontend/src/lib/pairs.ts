@@ -146,7 +146,3 @@ export function bestPairFor(p: PairProject, pairs: CoordinationPair[]): Coordina
   return best
 }
 
-/** Score band used for the colored score chip on list cards. */
-export function scoreBand(composite: number): 'high' | 'mid' | 'low' {
-  return composite >= 0.7 ? 'high' : composite >= 0.45 ? 'mid' : 'low'
-}

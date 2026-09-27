@@ -8,7 +8,6 @@ import {
   pairEnds,
   pairScope,
   pairsInView,
-  scoreBand,
   sortPairs,
 } from './pairs'
 
@@ -132,16 +131,11 @@ describe('sortPairs', () => {
   })
 })
 
-describe('bestPairFor / scoreBand', () => {
+describe('bestPairFor', () => {
   it('picks the highest-scoring pair a project is in', () => {
     const also = pair({ id: '1-9', scores: { ...near.scores, composite: 0.95 } })
     expect(bestPairFor(project(), [near, also, far])?.id).toBe('1-9')
     expect(bestPairFor(project({ id: 99 }), [near])).toBeNull()
   })
 
-  it('bands composite scores', () => {
-    expect(scoreBand(0.8)).toBe('high')
-    expect(scoreBand(0.5)).toBe('mid')
-    expect(scoreBand(0.2)).toBe('low')
-  })
 })

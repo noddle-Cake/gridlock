@@ -1,16 +1,15 @@
 import { useState } from 'react'
 
-import { milesToKm, TIERS } from '../lib/distanceBands'
+import { milesToKm, opportunityType } from '../lib/distanceBands'
 import {
   OTHER_COLOR,
   bothBuildingLabel,
   durationLabel,
   overlapPct,
-  pct,
   rulesLabel,
   usdRange,
 } from '../lib/format'
-import { SORT_LABELS, type SortKey, scoreBand } from '../lib/pairs'
+import { SORT_LABELS, type SortKey } from '../lib/pairs'
 import type { CoordinationPair, MatchRules, PairProject } from '../types'
 
 interface Props {
@@ -128,15 +127,14 @@ export function PairList({
         <p className="empty">
           {offscreen > 0
             ? 'Nothing in this part of the map. Zoom out or turn off “Only pairs in map view”.'
-            : 'No projects here are close in both place and time. Try more distance bands or ' +
+            : 'No projects here are close in both place and time. Try more opportunity types or ' +
               'more utilities.'}
         </p>
       ) : null}
       <ol className="cards">
         {pairs.slice(0, limit).map((pair) => {
           const { project_a: a, project_b: b } = pair
-          const band = scoreBand(pair.scores.composite)
-          const tier = pair.tier != null ? TIERS[pair.tier] : undefined
+          const type = opportunityType(pair.tier)
           const approximate = a.approximate || b.approximate
           const unverified = a.ownership_review_required || b.ownership_review_required
           return (
@@ -154,9 +152,11 @@ export function PairList({
                 onBlur={() => onHover?.(null)}
               >
                 <span className="card-top">
-                  <span className={`score-chip score-${band}`} title="Composite score">
-                    {pct(pair.scores.composite)}
-                  </span>
+                  {type ? (
+                    <span className={`type-chip type-${type.tier}`} title={type.detail}>
+                      {type.label}
+                    </span>
+                  ) : null}
                   <span className="card-stats">
                     <strong>{milesToKm(pair.miles).toFixed(1)} km</strong> apart ·{' '}
                     <strong className="together">{durationLabel(pair.overlap_days)}</strong>{' '}
@@ -168,11 +168,6 @@ export function PairList({
                     </span>
                   ) : null}
                 </span>
-                {tier ? (
-                  <span className={`tier tier-${pair.tier}`} title={tier.detail}>
-                    {tier.label} <span className="tier-detail">· {tier.detail}</span>
-                  </span>
-                ) : null}
                 {pair.impact && pair.impact.if_aligned_high > 0 ? (
                   <span className="card-value" title="Rough, assumption-based estimate">
                     {pair.impact.total_high > 0

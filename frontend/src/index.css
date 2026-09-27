@@ -1595,23 +1595,73 @@ a {
   margin-left: auto;
 }
 
-/* Ranking tier: what two projects this close can share. Closer tiers read stronger. */
-.tier {
+/* Opportunity type: what two projects this close can share (lib/distanceBands.ts
+   OPPORTUNITY_TYPES). Nearer types read stronger. */
+.type-chip {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--accent);
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.tier-detail {
-  font-weight: 400;
+.type-lg {
+  margin-bottom: 8px;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.type-chip.type-0,
+.type-dot.type-0 {
+  background: var(--error);
+  color: #fff;
+}
+
+.type-chip.type-1,
+.type-dot.type-1 {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.type-chip.type-2,
+.type-dot.type-2 {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  box-shadow: inset 0 0 0 1px var(--warn-line);
+}
+
+.type-chip.type-3,
+.type-dot.type-3 {
+  background: var(--surface-2);
+  color: var(--ink-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.type-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.type-option label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.type-detail {
+  display: block;
+  margin: 2px 0 0 39px;
+  font-size: 11.5px;
   color: var(--ink-2);
 }
 
-.tier-0 {
-  color: var(--error);
-}
-
-.tier-3 {
+.type-explainer {
+  margin: 4px 0 0;
+  font-size: 12.5px;
   color: var(--ink-2);
 }
 
@@ -1676,33 +1726,6 @@ a {
 .impact-assumptions ul {
   margin: 6px 0 0;
   padding-left: 18px;
-}
-
-.score-chip {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-weight: 700;
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  background: var(--surface-2);
-  color: var(--ink-2);
-}
-
-.score-high {
-  background: var(--accent);
-  color: var(--accent-ink);
-}
-
-.score-mid {
-  background: var(--warn-bg);
-  color: var(--warn-ink);
-}
-
-.score-lg {
-  font-size: 22px;
-  padding: 8px 12px;
-  border-radius: 10px;
 }
 
 .card-project {

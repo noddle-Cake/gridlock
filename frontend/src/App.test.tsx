@@ -102,13 +102,13 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     expect(Number(params().get('radius'))).toBeCloseTo(24.855, 3) // 40 km
     expect(params().has('pad')).toBe(false)
 
-    await userEvent.click(screen.getByText(/Distance apart:/))
-    await userEvent.click(screen.getByRole('checkbox', { name: '25–40 km' }))
-    await vi.waitFor(() => expect(params().get('bands')).toBe('touching,1.6,8,25'))
+    await userEvent.click(screen.getByText(/Opportunity type:/))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Shared crews & equipment' }))
+    await vi.waitFor(() => expect(params().get('bands')).toBe('touching,1.6,8'))
     await screen.findByText(/close in both place and time/)
     expect(screen.getByRole('link', { name: 'Export CSV' })).toHaveAttribute(
       'href',
-      expect.stringContaining('bands=touching%2C1.6%2C8%2C25'),
+      expect.stringContaining('bands=touching%2C1.6%2C8'),
     )
   })
 

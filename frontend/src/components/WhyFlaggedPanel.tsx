@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { milesToKm } from '../lib/distanceBands'
+import { milesToKm, opportunityType } from '../lib/distanceBands'
 import {
   FACTOR_LABELS,
   dayLabel,
@@ -11,7 +11,6 @@ import {
   usdRange,
 } from '../lib/format'
 import { type Span, windowScale } from '../lib/buildWindows'
-import { scoreBand } from '../lib/pairs'
 import type { CoordinationPair, Impact, PairProject } from '../types'
 import { SourceLink } from './SourceLink'
 
@@ -187,6 +186,7 @@ export function WhyFlaggedPanel({
       </section>
     )
   }
+  const type = opportunityType(pair.tier)
 
   async function copy() {
     if (!pair?.brief) return
@@ -199,10 +199,12 @@ export function WhyFlaggedPanel({
   return (
     <section className="why-panel" aria-label="Why flagged">
       <header className="detail-head">
-        <span className={`score-chip score-lg score-${scoreBand(pair.scores.composite)}`}>
-          {pct(pair.scores.composite)}
-        </span>
         <div>
+          {type ? (
+            <span className={`type-chip type-lg type-${type.tier}`} title={type.detail}>
+              {type.label}
+            </span>
+          ) : null}
           <h2>
             {pair.project_a.name || 'Unnamed'} <span className="muted">↔</span>{' '}
             {pair.project_b.name || 'Unnamed'}
@@ -210,6 +212,7 @@ export function WhyFlaggedPanel({
           <p className="muted">
             {pair.project_a.utility} and {pair.project_b.utility} · why this pair was flagged
           </p>
+          {type ? <p className="type-explainer">{type.detail}</p> : null}
         </div>
       </header>
 
