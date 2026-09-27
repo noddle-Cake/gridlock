@@ -337,6 +337,14 @@ def _search_where(f: ProjectFilter, args: list[Any]) -> tuple[str, str, str]:
         )
         conds.append(f"{similarity} >= {FUZZY_THRESHOLD}")
     if f.ahead_of:
+        from app.services.project_status import OPERATING_EVIDENCE
+
+        for evidence in OPERATING_EVIDENCE:
+            if evidence.as_of <= f.ahead_of:
+                conds.append(
+                    f"NOT (p.source_url IS NOT DISTINCT FROM {arg(evidence.plan_url)}::text "
+                    f"AND p.name IS NOT DISTINCT FROM {arg(evidence.name)}::text)"
+                )
         conds.append(f"(COALESCE(p.end_date, p.start_date) IS NULL OR "
                      f"{_IN_SERVICE_END} >= {arg(f.ahead_of)}::date)")
     return " AND ".join(conds), miles, similarity

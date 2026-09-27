@@ -144,6 +144,15 @@ describe('ReviewTable (Req 3.3, 13.1-13.3)', () => {
     expect(screen.getByTestId('review-row-3')).toHaveClass('needs-review')
   })
 
+  it('keeps unresolved ownership visible even after extraction review', () => {
+    const pending = project({ id: 99, name: 'Unverified owner', confidence: 1,
+      reviewed: true, ownership_review_required: true })
+    render(<ReviewTable projects={[pending]} threshold={0.7} colors={colors} onPatch={vi.fn()} />)
+    expect(screen.getByText('ownership unverified')).toBeInTheDocument()
+    expect(screen.getByText('Unverified owner')).toBeInTheDocument()
+    expect(screen.queryByText('ok')).not.toBeInTheDocument()
+  })
+
   it('marks a project reviewed via PATCH', async () => {
     const onPatch = vi.fn().mockResolvedValue(project())
     render(<ReviewTable projects={projects} threshold={0.7} colors={colors} onPatch={onPatch} />)

@@ -56,7 +56,8 @@ def _in_time(a, b, rules: matching.Rules) -> bool:
     wb = timing.build_window(b.start_date, b.end_date)
     if wa is None or wb is None or min(wa.end, wb.end) < rules.planning_from:
         return False
-    return timing.compare(wa, wb).overlap_days >= rules.min_overlap_days
+    remaining = (min(wa.end, wb.end) - max(wa.start, wb.start, rules.planning_from)).days + 1
+    return remaining >= rules.min_overlap_days
 
 
 def _qualifies(a, b, radius: float, slack: float, rules: matching.Rules) -> bool:
@@ -311,9 +312,9 @@ def test_rematch_rechecks_briefs_on_routes_not_midpoints():
     # Crossing lines whose midpoints are ~30 km apart: 0 km as matched, so an edit that
     # doesn't move them must keep the brief as-is (not refresh it to the midpoint distance).
     when = {"start_date": date(2026, 3, 1), "end_date": date(2026, 12, 31)}  # a match in time
-    a = repo.NewProject(utility="A", confidence=1, lat=33.0, lng=-81.72,
+    a = repo.NewProject(utility="JEA", confidence=1, lat=33.0, lng=-81.72,
                         route=[(33.0, -82.0), (33.0, -81.44)], **when)
-    b = repo.NewProject(utility="B", confidence=1, lat=33.13, lng=-81.5,
+    b = repo.NewProject(utility="FPL", confidence=1, lat=33.13, lng=-81.5,
                         route=[(32.9, -81.5), (33.36, -81.5)], **when)
 
     async def body(conn):

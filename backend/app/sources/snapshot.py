@@ -37,6 +37,7 @@ class Source:
     filename: str  # the raw file in source_docs/
     detected_format: str
     export: str  # CSV in source_docs/extracted/
+    supersedes: tuple[tuple[str, str], ...] = ()  # exact (URL, raw filename) loader identities
 
 
 EIA860M = Source(
@@ -47,9 +48,15 @@ SERTP = Source(
     "SERTP 2026 preliminary expansion plan", sertp.SOURCE_URL,
     "sertp_2026_preliminary_expansion_plan.pdf", "pdf", "sertp_2026_preliminary_projects.csv",
 )
-DESC = Source(
-    "Dominion Energy SC planned transmission projects 2024-2028 ($2M+)", desc.SOURCE_URL,
+DESC_LEGACY = Source(
+    "Dominion Energy SC planned transmission projects 2024-2028 ($2M+)",
+    "https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf",
     "desc_2024-2028_projects_2m_and_above.pdf", "pdf", "desc_2024_2028_projects.csv",
+)
+DESC = Source(
+    "Dominion Energy SC planned transmission projects 2026-2030 ($2M+)", desc.SOURCE_URL,
+    "desc_2026-2030_projects_2m_and_above.pdf", "pdf", "desc_2026_2030_projects.csv",
+    supersedes=((DESC_LEGACY.source_url, DESC_LEGACY.filename),),
 )
 GPC_ITS = Source(
     "Georgia Power 2025 IRP: Georgia ITS 10-year plan project list", gpc_its.SOURCE_URL,
@@ -141,12 +148,17 @@ async def save(
     conn: asyncpg.Connection, source: Source, projects: list[repo.NewProject],
     snapshot_sha: str | None = None,
 ) -> str:
-    return await replace_source(
-        conn, label=source.label, source_url=source.source_url, filename=source.filename,
-        detected_format=source.detected_format, projects=projects,
-        page_range=page_range(projects) if source.detected_format == "pdf" else None,
-        snapshot_sha=snapshot_sha,
-    )
+    async with conn.transaction():
+        for url, filename in source.supersedes:
+            # Replace obsolete loader editions atomically; preserve user uploads.
+            await conn.execute("DELETE FROM plans WHERE source_url = $1 AND filename = $2",
+                               url, filename + LOADER_SUFFIX)
+        return await replace_source(
+            conn, label=source.label, source_url=source.source_url, filename=source.filename,
+            detected_format=source.detected_format, projects=projects,
+            page_range=page_range(projects) if source.detected_format == "pdf" else None,
+            snapshot_sha=snapshot_sha,
+        )
 
 
 async def load_snapshots(pool: asyncpg.Pool, directory: Path = EXTRACTED_DIR) -> None:

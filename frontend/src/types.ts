@@ -27,6 +27,9 @@ export interface Project {
   raw_excerpt: string | null
   reviewed: boolean
   approximate: boolean
+  ownership_review_required?: boolean
+  operating_as_of?: string | null
+  operating_source_url?: string | null
   requires_review: boolean
 }
 

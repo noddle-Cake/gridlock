@@ -177,8 +177,8 @@ def desc_projects(path: Path, *, offline: bool) -> list[repo.NewProject]:
                 location_ref=" - ".join(e.endpoints),
                 route=where.ends if e.kind == "transmission line" else None,
                 cost_usd=e.cost_usd, start_date=start, end_date=end,
-                start_precision=DatePrecision.DAY if start else None,
-                end_precision=DatePrecision.DAY if end else None,
+                start_precision=e.date_precision if start else None,
+                end_precision=e.date_precision if end else None,
                 source_url=desc.SOURCE_URL, source_page=e.page,
                 raw_excerpt=f"{e.excerpt()}\n{where.how}"[:2000],
             ))

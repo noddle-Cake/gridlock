@@ -7,8 +7,10 @@ key on the name, so every source goes through `canonical_utility`.
 
 from __future__ import annotations
 
+import csv
 import re
 from functools import lru_cache
+from pathlib import Path
 
 # Keys are cleaned names (see _key): upper case, no punctuation or corporate suffixes.
 ALIASES = {
@@ -148,25 +150,44 @@ def canonical_utility(raw: str | None) -> str | None:
     return ALIASES.get(key, _title(key))
 
 
+@lru_cache(maxsize=1)
+def ownership_registry() -> dict[str, dict[str, str]]:
+    path = Path(__file__).resolve().parents[1] / "data" / "company_ownership.csv"
+    with path.open(encoding="utf-8", newline="") as f:
+        return {canonical_utility(row["utility"]): row for row in csv.DictReader(f)}
+
+
+def _parent(owner: str) -> str | None:
+    row = ownership_registry().get(owner)
+    if row is not None:
+        return row["corporate_group"] if row["status"] == "verified" else None
+    if _FRP_SOLAR.fullmatch(_key(owner)):
+        return "NextEra Energy"
+    return CORPORATE_PARENT.get(owner)
+
+
+@lru_cache(maxsize=4096)
+def ownership_review_required(utility: str) -> bool:
+    name = canonical_utility(utility)
+    return name is None or any(_parent(owner) is None for owner in name.split(" / "))
+
+
 @lru_cache(maxsize=4096)
 def corporate_entities(utility: str) -> frozenset[str]:
-    """Normalized owners/parents, retaining every owner of a joint project.
+    """Known parents, retaining individual identities for unreviewed names.
 
-    Unmapped names keep their canonical identity; ownership is never inferred from
-    a shared state, balancing authority, or an arbitrary similar name.
+    Identity alone does not establish independent ownership: different_companies
+    also requires every owner to have a reviewed corporate family.
     """
     name = canonical_utility(utility)
     if name is None:
         return frozenset()
-    entities = set()
-    for owner in name.split(" / "):
-        parent = ("NextEra Energy" if _FRP_SOLAR.fullmatch(_key(owner))
-                  else CORPORATE_PARENT.get(owner, owner))
-        entities.add(parent.casefold())
-    return frozenset(entities)
+    return frozenset((_parent(owner) or owner).casefold() for owner in name.split(" / "))
 
 
 def different_companies(utility_a: str, utility_b: str) -> bool:
-    """Only flag identifiable companies with no shared known corporate owner."""
+    """Only flag reviewed corporate families with no common owner, including joint owners."""
+    if ownership_review_required(utility_a) or ownership_review_required(utility_b):
+        return False
     a, b = corporate_entities(utility_a), corporate_entities(utility_b)
     return bool(a and b and a.isdisjoint(b))

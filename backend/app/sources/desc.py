@@ -1,6 +1,6 @@
 """Dominion Energy South Carolina: "Planned Transmission Projects $2M and above" -> records.
 
-The PDF (DESC's SCRTP 2024-2028 project descriptions, from the Sperry Tech challenge kit)
+The PDF (DESC's SCRTP project descriptions, refreshed to the 2026-2030 filing)
 is one project per page, laid out as
 
     Project 23 of 44
@@ -27,11 +27,13 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
+from app.models.enums import DatePrecision
+
 UTILITY = "Dominion Energy South Carolina"
 # Published by SCRTP (South Carolina Regional Transmission Planning), where DESC posts its
-# planned project lists; the same file is in the Sperry challenge kit.
+# planned project lists. The challenge kit's 2024-2028 edition is retained as history.
 SOURCE_URL = (
-    "https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf"
+    "https://www.scrtp.com/assets/pdfs/home/2026-2030-2million-and-above-project-descriptions.pdf"
 )
 # Planned lines can end in Georgia (Stevens Creek hydro in Martinez, GA; Thurmond Dam).
 STATES = ["SC", "GA"]
@@ -75,8 +77,25 @@ class DescEntry:
         found = []
         for m, d, y in _DATE.findall(self.in_service_text):
             year = int(y) + 2000 if len(y) == 2 else int(y)
-            found.append(date(year, int(m), int(d)))
+            try:
+                found.append(date(year, int(m), int(d)))
+            except ValueError:
+                # The 2026 filing prints April 31 and June 31. Preserve only the
+                # supported month, mark its precision, and disclose the typo.
+                if not 1 <= int(d) <= 31:
+                    raise
+                found.append(date(year, int(m), 1))
         return (min(found), max(found)) if found else None
+
+    @property
+    def date_precision(self) -> DatePrecision:
+        for m, d, y in _DATE.findall(self.in_service_text):
+            year = int(y) + 2000 if len(y) == 2 else int(y)
+            try:
+                date(year, int(m), int(d))
+            except ValueError:
+                return DatePrecision.MONTH
+        return DatePrecision.DAY
 
     @property
     def cost_usd(self) -> int | None:
@@ -125,7 +144,9 @@ class DescEntry:
             f"{self.title}\nProject ID: {self.project_id}\nDescription: {self.description}\n"
             f"Need: {self.need}\nStatus: {self.status}\n"
             f"Planned In-Service Date: {self.in_service_text}\n"
-            f"Estimated cost (Previous, 2024-2028, Total): {costs}"
+            f"Estimated cost (Previous, five budget years, Total): {costs}"
+            + ("\nSource prints an invalid calendar day; retained at month precision."
+               if self.date_precision == DatePrecision.MONTH else "")
         )
 
 
