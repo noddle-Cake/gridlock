@@ -109,8 +109,7 @@ def sertp_projects(
     stats: Counter[str] = Counter()
     try:
         for i, e in enumerate(entries, start=1):
-            where = locate(e.endpoints, e.states, places, operator=e.owner,
-                           bounds=sertp.AREA_BOUNDS.get(e.area))
+            where = sertp.locate_entry(e, places)
             if states and not region.in_region(where.lat, where.lng, e.states, states):
                 stats["outside --states"] += 1
                 continue
@@ -122,11 +121,14 @@ def sertp_projects(
             year = date(e.year, 1, 1)
             confidence = 0.6 if where.requires_review else 0.8 if where.approximate else 0.95
             state = e.states[0] if len(e.states) == 1 else None
+            # The state(s) the project was placed in; unplaced ones keep the utility's
+            # whole footprint (any of those states), which the state filter relies on.
+            where_states = [s for s in where.states if s in e.states] or e.states
             out.append(repo.NewProject(
                 utility=e.owner, state=state, name=title_case(e.title),
                 type=ProjectType(e.kind), voltage_kv=e.voltage_kv,
                 location_ref=" - ".join(title_case(n) for n in e.endpoints) +
-                f" ({'/'.join(e.states)})",
+                f" ({'/'.join(where_states)})",
                 lat=where.lat, lng=where.lng, approximate=where.approximate,
                 requires_review=where.requires_review,
                 route=where.ends if e.kind == "transmission line" else None,

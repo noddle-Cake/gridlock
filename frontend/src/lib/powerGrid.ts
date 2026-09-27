@@ -46,6 +46,17 @@ export function lineWidth(kv: number | null, zoom: number): number {
   return base * Math.min(2.5, Math.max(0.6, 0.6 + (zoom - 6) * 0.2))
 }
 
+/**
+ * Line opacity by zoom: faint at national scale, where the grid would otherwise outweigh the
+ * project markers drawn above it, reaching full strength by zoom 8.
+ */
+export function gridAlpha(zoom: number): number {
+  return Math.min(0.85, Math.max(0.4, 0.4 + (zoom - 5) * 0.15))
+}
+
+/** Substation and plant symbols start here; farther out they are only speckle. */
+export const GRID_POINT_MIN_ZOOM = 7
+
 type Ctx = Pick<
   CanvasRenderingContext2D,
   | 'beginPath'
@@ -113,7 +124,7 @@ export function drawPowerTile(ctx: Ctx, tile: TileLike, zoom: number, size: numb
     const p = f.properties
     const hidden = p.location === 'underground' || p.tunnel === true
     path(f, false)
-    ctx.globalAlpha = p.construction || p.disused ? 0.4 : 0.85
+    ctx.globalAlpha = gridAlpha(zoom) * (p.construction || p.disused ? 0.5 : 1)
     ctx.strokeStyle = voltageColor(kv)
     ctx.lineWidth = lineWidth(kv, zoom)
     ctx.setLineDash(hidden || p.construction ? [4, 3] : [])
@@ -131,6 +142,11 @@ export function drawPowerTile(ctx: Ctx, tile: TileLike, zoom: number, size: numb
         ctx.fill()
       })
     }
+  }
+
+  if (zoom < GRID_POINT_MIN_ZOOM) {
+    ctx.globalAlpha = 1
+    return
   }
 
   // Context, not the story: kept small so the opportunity markers drawn above stand out.

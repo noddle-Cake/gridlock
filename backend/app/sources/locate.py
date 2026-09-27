@@ -20,7 +20,7 @@ import json
 import math
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
@@ -77,6 +77,9 @@ class Located:
     # Both endpoints matched exact OSM substations: the straight segment between them,
     # as (lat, lng) points. Callers use it as the route of a planned line.
     ends: list[tuple[float, float]] | None = None
+    # States of the resolved endpoint(s), e.g. ['GA'] or ['AL', 'GA'] for a line across
+    # the border; empty when unplaced or unknown.
+    states: list[str] = field(default_factory=list)
 
 
 class PlaceCache:
@@ -146,6 +149,7 @@ class Override:
     lng: float | None
     approximate: bool
     label: str
+    state: str | None = None
 
 
 @lru_cache
@@ -159,11 +163,13 @@ def _overrides(path: Path = OVERRIDES_PATH) -> dict[tuple[str, str], Override]:
             if row["county"]:
                 (hit,) = county_centroid(row["county"], row["state"])  # curated: must resolve
                 ov = Override(hit.lat, hit.lng, True,
-                              f"{row['county']}, {row['state']} (county centre, curated)")
+                              f"{row['county']}, {row['state']} (county centre, curated)",
+                              row["state"])
             elif row["lat"]:
                 exact = row["approximate"].strip().lower() != "true"
                 ov = Override(float(row["lat"]), float(row["lng"]), not exact,
-                              f"curated point ({row['source'].split(';')[0][:80]})")
+                              f"curated point ({row['source'].split(';')[0][:80]})",
+                              row["state"] or None)
             else:
                 ov = Override(None, None, False, "no public location (curated block)")
             table[key] = ov
@@ -176,15 +182,20 @@ def override(operator: str | None, name: str) -> Override | None:
     return _overrides().get((planning_entity(operator), name_key(name)))
 
 
-def _county_point(place: dict) -> tuple[float, float, str] | None:
+# A resolved endpoint: (lat, lng, how it was found, state or None).
+Point = tuple[float, float, str, str | None]
+
+
+def _county_point(place: dict) -> tuple[float, float, str, str] | None:
     """County centre for a place match; the place itself if it has no county (VA cities)."""
     county = place.get("county") or ""
     if county:
         hits = county_centroid(county if "county" in county.lower() or "parish" in
                                county.lower() else f"{county} County", place["state"])
         if len(hits) == 1:
-            return hits[0].lat, hits[0].lng, f"{county}, {place['state']} (county centre)"
-    return place["lat"], place["lng"], f"{place['label']} (place)"
+            return (hits[0].lat, hits[0].lng, f"{county}, {place['state']} (county centre)",
+                    place["state"])
+    return place["lat"], place["lng"], f"{place['label']} (place)", place["state"]
 
 
 def locate(
@@ -194,39 +205,40 @@ def locate(
     def inside(lat: float, lng: float) -> bool:
         return bounds is None or (bounds[0] <= lat <= bounds[1] and bounds[2] <= lng <= bounds[3])
 
-    exact: list[tuple[float, float, str]] = []
+    exact: list[Point] = []
     ambiguous: dict[str, list] = {}
     rough_names: list[str] = []
-    curated_rough: list[tuple[float, float, str]] = []
+    curated_rough: list[Point] = []
     for name in endpoints:
         if ov := override(operator, name):
             if ov.lat is not None and ov.lng is not None:
-                point = (ov.lat, ov.lng, f"{name} = {ov.label}")
+                point = (ov.lat, ov.lng, f"{name} = {ov.label}", ov.state)
                 (curated_rough if ov.approximate else exact).append(point)
             continue  # blocked names are never looked up elsewhere
         subs = [s for s in candidates(name, states, operator_hint=operator)
                 if inside(s.lat, s.lng)]
         if len(subs) == 1:
             s = subs[0]
-            exact.append((s.lat, s.lng, f"{name} = OSM {s.power} '{s.name}' ({s.state})"))
+            exact.append((s.lat, s.lng, f"{name} = OSM {s.power} '{s.name}' ({s.state})",
+                          s.state))
         elif subs:
             ambiguous[name] = subs
         else:
             rough_names.append(name)
 
-    def nearest(options: list[tuple[float, float, str]], to: tuple[float, float, str]):
+    def nearest(options: list[Point], to: Point):
         best = min(options, key=lambda q: _miles(q[:2], to[:2]))
         return best if _miles(best[:2], to[:2]) <= MAX_SPAN_MILES else None
 
     # Same-named substations (several "Morrow"s in GA): the other endpoint decides.
     for name, subs in list(ambiguous.items()):
         options = [(s.lat, s.lng, f"{name} = OSM {s.power} '{s.name}' ({s.state}), nearest "
-                    f"of {len(subs)} same-named") for s in subs]
+                    f"of {len(subs)} same-named", s.state) for s in subs]
         if exact and (pick := nearest(options, exact[0])):
             exact.append(pick)
             del ambiguous[name]
 
-    rough: list[tuple[float, float, str]] = list(curated_rough)
+    rough: list[Point] = list(curated_rough)
     for name in rough_names:
         matches = [p for p in places.places(name)
                    if p["state"] in states and inside(p["lat"], p["lng"])]
@@ -235,23 +247,26 @@ def locate(
             pt = _county_point(p)
             if pt:
                 points[(round(pt[0], 2), round(pt[1], 2))] = pt
-        options = [(q[0], q[1], f"{name} ~ {q[2]}") for q in points.values()]
+        options = [(q[0], q[1], f"{name} ~ {q[2]}", q[3]) for q in points.values()]
         if len(options) == 1:
             rough.append(options[0])
         elif options and exact and (pick := nearest(options, exact[0])):
             # Same-named towns in several states: take the one nearest the resolved end.
-            rough.append((pick[0], pick[1], pick[2] + f" (nearest of {len(options)})"))
+            rough.append((pick[0], pick[1], pick[2] + f" (nearest of {len(options)})",
+                          pick[3]))
 
     for name, subs in ambiguous.items():
         anchor = (exact + rough)[0] if exact or rough else None
-        options = [(s.lat, s.lng, f"{name} = OSM '{s.name}' ({s.state})") for s in subs]
+        options = [(s.lat, s.lng, f"{name} = OSM '{s.name}' ({s.state})", s.state)
+                   for s in subs]
         if anchor and (pick := nearest(options, anchor)):
             exact.append(pick)
         elif max(_miles(a[:2], b[:2]) for a in options for b in options) <= CLUSTER_MILES:
             lat = sum(o[0] for o in options) / len(options)
             lng = sum(o[1] for o in options) / len(options)
+            same = {o[3] for o in options}
             rough.append((lat, lng, f"{name} ~ centre of {len(options)} nearby same-named "
-                          "OSM substations"))
+                          "OSM substations", same.pop() if len(same) == 1 else None))
 
     resolved = [(*e, True) for e in exact] + [(*r, False) for r in rough]
     if not resolved:
@@ -264,11 +279,13 @@ def locate(
     else:
         lat, lng = first[0], first[1]
         used = [first]
-    approximate = not all(u[3] for u in used) or len(used) < len(endpoints)
+    approximate = not all(u[4] for u in used) or len(used) < len(endpoints)
     how = "Located: " + "; ".join(u[2] for u in used)
     ends = None
     if len(used) == 2:
         how += " (midpoint)"
-        if all(u[3] for u in used):
+        if all(u[4] for u in used):
             ends = [(round(u[0], 5), round(u[1], 5)) for u in used]
-    return Located(round(lat, 3), round(lng, 3), approximate=approximate, how=how, ends=ends)
+    states = list(dict.fromkeys(u[3] for u in used if u[3]))
+    return Located(round(lat, 3), round(lng, 3), approximate=approximate, how=how, ends=ends,
+                   states=states)

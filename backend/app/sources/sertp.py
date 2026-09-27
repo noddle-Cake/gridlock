@@ -23,8 +23,10 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.services.geocoding import STATE_NAMES, county_centroid
 from app.services.names import title_case
 from app.services.owners import canonical_utility
+from app.sources.locate import Located, PlaceCache, locate
 
 SOURCE_URL = (
     "https://www.southeasternrtp.com/docs/general/2026/"
@@ -91,6 +93,13 @@ _TAIL = re.compile(
 _VERB = re.compile(
     r"^(REPLACE|INSTALL|ADD|CONSTRUCT|UPGRADE|EXPAND|REMOVE LIMITING ELEMENTS (ON|AT))\s+"
 )
+# "... in the Montgomery County, TN and Todd County, KY area": counties the text places the
+# project in. Up to three capitalised words before "County"; the gazetteer decides which.
+_STATE_WORDS = "|".join(sorted((n.title() for n in STATE_NAMES), key=len, reverse=True))
+_NAMED_COUNTY = re.compile(
+    r"((?:[A-Z][A-Za-z.']*\s+){1,3})County,?\s+"
+    rf"([A-Z]{{2}}\b|{_STATE_WORDS})"
+)
 _SPLIT = re.compile(r"\s+[-–]\s+|(?<=[A-Z])[-–](?=[A-Z])|\s+TO\s+|\s+AND\s+|\s*&\s*")
 
 
@@ -137,6 +146,21 @@ class SertpEntry:
             return "transmission line"
         return "substation"
 
+    @property
+    def named_counties(self) -> list[tuple[str, str]]:
+        """(county, state) pairs the description/supporting statement names, e.g.
+        [('Montgomery County', 'TN'), ('Todd County', 'KY')]."""
+        found = []
+        for m in _NAMED_COUNTY.finditer(f"{self.description} {self.supporting}"):
+            state = STATE_NAMES.get(m[2].lower(), m[2])
+            words = m[1].split()
+            for i in range(len(words)):  # "In Montgomery" -> "Montgomery"
+                county = " ".join(words[i:]) + " County"
+                if len(county_centroid(county, state)) == 1:
+                    found.append((county, state))
+                    break
+        return list(dict.fromkeys(found))
+
     def excerpt(self) -> str:
         return (
             f"In-Service Year: {self.year}\nProject Name: {self.name}\n"
@@ -165,6 +189,25 @@ def _owner(entry: SertpEntry) -> tuple[str, list[str]]:
         owner = canonical_utility(m.group(1)) or default_owner
         return owner, OWNER_STATES.get(owner, states)
     return default_owner, states
+
+
+def locate_entry(entry: SertpEntry, places: PlaceCache) -> Located:
+    """Place an entry's named substations/towns within its utility's states. When the text
+    names counties in some of those states, only those states are searched (TVA's Hampton
+    station serves Montgomery County, TN, not Hampton, GA), and if nothing there matches
+    the named county's centre is used."""
+    named = entry.named_counties
+    states = [s for s in entry.states if s in {st for _, st in named}] or entry.states
+    where = locate(entry.endpoints, states, places, operator=entry.owner,
+                   bounds=AREA_BOUNDS.get(entry.area))
+    in_states = [(c, st) for c, st in named if st in states]
+    if where.lat is None and in_states:
+        county, state = in_states[0]
+        (hit,) = county_centroid(county, state)
+        return Located(round(hit.lat, 3), round(hit.lng, 3), approximate=True,
+                       how=f"Located: {county}, {state} (county centre, named in the text)",
+                       states=[state])
+    return where
 
 
 def parse_page_text(body: str, *, page: int, area: str) -> list[SertpEntry]:

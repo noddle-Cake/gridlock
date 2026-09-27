@@ -26,7 +26,8 @@ vi.mock('react-leaflet', () => {
       pathOptions: { fill?: boolean; zoomStyle?: ZoomStyle }
       eventHandlers?: { click?: () => void }
     }) => {
-      if (pathOptions.zoomStyle) view.zoomStyles.push(pathOptions.zoomStyle)
+      // Project dots only; touch-point rings size themselves for the zoom too.
+      if (pathOptions.zoomStyle && pathOptions.fill !== false) view.zoomStyles.push(pathOptions.zoomStyle)
       return (
         <button
           data-testid={pathOptions.fill === false ? 'touching-ring' : 'project-circle'}

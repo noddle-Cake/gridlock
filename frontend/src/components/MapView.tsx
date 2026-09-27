@@ -8,19 +8,22 @@ import type {
   PathOptions,
   Polyline as LeafletPolyline,
 } from 'leaflet'
-import { memo, type Ref, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, type Ref, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { CircleMarker, MapContainer, Polyline, ScaleControl, Tooltip, useMap } from 'react-leaflet'
 
 import { milesToKm } from '../lib/distanceBands'
 import { bothBuildingLabel, durationLabel, escapeHtml as esc, rangeLabel } from '../lib/format'
+import { type LatLng, homePoints } from '../lib/homeView'
 import {
   COLOR_BY_OPTIONS,
   type ColorBy,
   type LegendEntry,
   highlightSize,
+  markerScale,
   markerStyle,
 } from '../lib/mapStyle'
 import { LiveZoomCanvas, type ZoomStyle } from '../lib/liveCanvas'
+import { legendStartsOpen } from '../lib/legendLayout'
 import { type ViewBounds, pairEnds } from '../lib/pairs'
 import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE } from '../lib/powerGrid'
 import { enableSmoothWheelZoom } from '../lib/smoothWheelZoom'
@@ -47,7 +50,7 @@ function fitOptions(map: LeafletMap) {
 }
 
 /**
- * Frames all projects on load and glides to a pair when one is selected. Leaving the
+ * Frames the home view (lower-48 projects) on load and glides to a pair when one is selected. Leaving the
  * pair returns to wherever the planner was looking before, like closing a listing.
  */
 function ViewController({
@@ -168,6 +171,7 @@ const ProjectMarker = memo(function ProjectMarker({
   project: p,
   color,
   paired,
+  halo,
   highlighted,
   onSelect,
   onHover,
@@ -175,13 +179,14 @@ const ProjectMarker = memo(function ProjectMarker({
   project: Project
   color: string
   paired: boolean
+  halo: string
   highlighted: boolean
   onSelect: (p: Project) => void
   onHover?: (p: Project | null) => void
 }) {
   const ref = useRef<LeafletCircleMarker>(null)
   const zoom = useMap().getZoom()
-  const state = { paired, selected: highlighted }
+  const state = { paired, selected: highlighted, halo }
   const zoomStyle: ZoomStyle = (z) => markerStyle(p, color, state, z)
   const style = { ...markerStyle(p, color, state, zoom), zoomStyle }
   useEffect(() => {
@@ -213,10 +218,25 @@ const ProjectMarker = memo(function ProjectMarker({
   )
 })
 
+/** The --map-land colours: paired dots are ringed in the land they sit on. */
+const MARKER_HALO = { light: '#fbfbf9', dark: '#1b242d' }
+
 const PAIR_INK = { light: { idle: '#3d4852', active: '#111' }, dark: { idle: '#c3ccd4', active: '#fff' } }
 
 /** Ends this close (degrees, ~1 m) are one point: the projects touch or cross there. */
 const SAME_POINT = 1e-5
+
+/**
+ * Below this zoom a pair's ends are at most ~20 px apart, so its connector is mostly hidden
+ * under its markers and the dashed stubs that show only speckle the map: idle ones go faint.
+ */
+const PAIR_DETAIL_ZOOM = 6
+
+/** An idle touch-point ring, sized like the paired markers it circles. */
+const idleRing: ZoomStyle = (z) => {
+  const scale = markerScale(z)
+  return { radius: Math.max(3, 8 * scale), weight: Math.max(1, 2 * scale) }
+}
 
 /**
  * The connector between a pair's two projects, neutral so it never reads as a project colour.
@@ -227,12 +247,15 @@ const PairLine = memo(function PairLine({
   selected,
   hovered,
   scheme,
+  far,
   onSelect,
 }: {
   pair: CoordinationPair
   selected: boolean
   hovered: boolean
   scheme: 'light' | 'dark'
+  /** Zoomed out past PAIR_DETAIL_ZOOM. */
+  far: boolean
   onSelect?: (pair: CoordinationPair) => void
 }) {
   const ref = useRef<LeafletPolyline | LeafletCircleMarker>(null)
@@ -258,11 +281,12 @@ const PairLine = memo(function PairLine({
   if (touching) {
     // Radius goes in the path options too: restyling a circle falls back to its current,
     // zoom-sized radius otherwise.
+    const size = active ? highlightSize : idleRing
     const ring: PathOptions & { radius: number; zoomStyle?: ZoomStyle } = {
-      ...(active ? highlightSize(zoom) : { radius: 8, weight: 2 }),
-      zoomStyle: active ? highlightSize : undefined,
+      ...size(zoom),
+      zoomStyle: size,
       color: ink,
-      opacity: active ? 0.95 : 0.5,
+      opacity: active ? 0.95 : far ? 0.35 : 0.5,
       fill: false,
     }
     return (
@@ -281,9 +305,9 @@ const PairLine = memo(function PairLine({
       positions={[from, to]}
       pathOptions={{
         color: ink,
-        weight: active ? 4.5 : 1.8,
-        opacity: active ? 0.95 : 0.5,
-        dashArray: active ? undefined : '3 5',
+        weight: active ? 4.5 : far ? 1 : 1.8,
+        opacity: active ? 0.95 : far ? 0.15 : 0.5,
+        dashArray: active || far ? undefined : '3 5',
       }}
       eventHandlers={handlers}
     />
@@ -338,6 +362,7 @@ export function MapView({
     labels: true,
   })
   const [map, setMap] = useState<LeafletMap | null>(null)
+  const [far, setFar] = useState(false)
   const renderer = useMemo(() => new LiveZoomCanvas(), [])
   const wrap = useRef<HTMLDivElement>(null)
 
@@ -350,6 +375,15 @@ export function MapView({
     return () => ro.disconnect()
   }, [map])
 
+  // Only crossing PAIR_DETAIL_ZOOM re-renders the connectors, not every zoom.
+  useEffect(() => {
+    if (!map) return
+    const update = () => setFar(map.getZoom() < PAIR_DETAIL_ZOOM)
+    update()
+    map.on('zoomend', update)
+    return () => void map.off('zoomend', update)
+  }, [map])
+
   const placed = useMemo(() => projects.filter((p) => p.lat != null && p.lng != null), [projects])
   const pairedIds = useMemo(
     () => new Set(pairs.flatMap((p) => [p.project_a.id, p.project_b.id])),
@@ -359,11 +393,13 @@ export function MapView({
     [selectedPair, hoveredPair].flatMap((p) => (p ? [p.project_a.id, p.project_b.id] : [])),
   )
 
-  const allBounds = useMemo<LatLngBoundsExpression | null>(() => {
-    const pts = placed.map((p) => [p.lat!, p.lng!] as [number, number])
+  const allBounds = useMemo<LatLng[] | null>(() => {
+    const pts = placed.map((p) => [p.lat!, p.lng!] as LatLng)
     return pts.length ? pts : null
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placed.length])
+  // Opens on the lower 48; "Fit all" still frames Alaska, Hawaii and the territories too.
+  const homeBounds = useMemo(() => allBounds && homePoints(allBounds), [allBounds])
 
   // Keyed on coordinates, not the pair object, so a data refresh doesn't re-trigger the fly.
   const a = selectedPair?.project_a
@@ -390,6 +426,17 @@ export function MapView({
     [pairs],
   )
 
+  // On a small map (stacked tablet layout, squeezed split) the open colour card hides the
+  // Southeast, where most projects are: start it collapsed there. Runs once, before the
+  // first fit and paint; after that the planner's own toggles stand.
+  const colorCard = useRef<HTMLDetailsElement>(null)
+  useLayoutEffect(() => {
+    const el = wrap.current
+    if (el && colorCard.current && !legendStartsOpen(el.clientWidth, el.clientHeight)) {
+      colorCard.current.open = false
+    }
+  }, [])
+
   return (
     <div className="map-wrap" ref={wrap}>
       <MapContainer
@@ -409,7 +456,7 @@ export function MapView({
         <ScaleControl position="bottomleft" imperial={false} metric />
         <BaseMap counties={layers.counties} labels={layers.labels} />
         {layers.grid ? <PowerGridLayer /> : null}
-        <ViewController allBounds={allBounds} pairBounds={pairBounds} />
+        <ViewController allBounds={homeBounds} pairBounds={pairBounds} />
         <FocusController focus={focus} />
         <ReportBounds onChange={onBoundsChange} />
         {/* Planned lines: a straight segment between the endpoint substations. */}
@@ -449,6 +496,7 @@ export function MapView({
             selected={selectedPair?.id === pair.id}
             hovered={hoveredPair?.id === pair.id}
             scheme={scheme}
+            far={far}
             onSelect={onSelectPair}
           />
         ))}
@@ -458,6 +506,7 @@ export function MapView({
             project={p}
             color={colorOf(p)}
             paired={pairedIds.has(p.id)}
+            halo={MARKER_HALO[scheme]}
             highlighted={highlightedIds.has(p.id)}
             onSelect={onSelectProject}
             onHover={onHoverProject}
@@ -481,7 +530,7 @@ export function MapView({
             Fit all
           </button>
         ) : null}
-        <details className="legend-card color-card" open>
+        <details className="legend-card color-card" open ref={colorCard}>
           <summary>
             Color by {COLOR_BY_OPTIONS.find(([k]) => k === colorBy)?.[1].toLowerCase()}
           </summary>
