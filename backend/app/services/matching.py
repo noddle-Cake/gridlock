@@ -14,7 +14,7 @@ from app.db import repository as repo
 from app.models.dto import CoordinationPairDTO, ProjectDTO
 from app.services import timing
 from app.services.impact import estimate
-from app.services.owners import planning_entity
+from app.services.owners import different_companies
 from app.services.scoring import score_pair
 
 
@@ -102,9 +102,10 @@ def parse_bands(raw: str | None) -> set[str] | None:
 def _cross_entity(
     rows: list[repo.CandidateRow], projects: dict[int, ProjectDTO]
 ) -> list[repo.CandidateRow]:
-    """Drop pairs whose utilities plan together (owners.PLANNING_ENTITY)."""
-    return [r for r in rows if planning_entity(projects[r.a_id].utility)
-            != planning_entity(projects[r.b_id].utility)]
+    """Drop aliases, sister companies, and projects sharing a corporate owner."""
+    return [r for r in rows if different_companies(
+        projects[r.a_id].utility, projects[r.b_id].utility,
+    )]
 
 
 def _window(p: ProjectDTO) -> timing.Window | None:

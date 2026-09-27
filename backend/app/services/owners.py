@@ -8,6 +8,7 @@ key on the name, so every source goes through `canonical_utility`.
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 
 # Keys are cleaned names (see _key): upper case, no punctuation or corporate suffixes.
 ALIASES = {
@@ -33,6 +34,8 @@ ALIASES = {
     # unambiguous ones: "GPC" means Georgia Power in SERTP but Gulf Power in FRCC.
     "DEF": "Duke Energy Florida",
     "FPL": "Florida Power & Light",
+    "FRP": "Florida Renewable Partners",
+    "DESC": "Dominion Energy South Carolina",
     "GAPC": "Georgia Power",
     "GTC": "Georgia Transmission Corp",
     "MEAG": "MEAG Power",
@@ -69,6 +72,35 @@ PLANNING_ENTITY = {
     "Alabama Power": "Southern Company",
     "Mississippi Power": "Southern Company",
 }
+
+# Corporate ownership is broader than a shared transmission planning entity. Keep
+# this separate from PLANNING_ENTITY, which also scopes substation geocoding overrides.
+# Sources and the matching policy are documented in source_docs/company_ownership.md.
+# Keys use canonical_utility's capitalization, including "Nextera" from EIA names.
+CORPORATE_PARENT = {
+    **PLANNING_ENTITY,
+    "Southern Power": "Southern Company",
+    "Florida Power & Light": "NextEra Energy",
+    "Florida Renewable Partners": "NextEra Energy",
+    "Florida Renewable Partners Holdings": "NextEra Energy",
+    "Nextera Energy": "NextEra Energy",
+    "Nextera Energy Resources": "NextEra Energy",
+    "Nextera Energy Resources - Ercot": "NextEra Energy",
+    "Nextera Energy Capital Holdings": "NextEra Energy",
+    "Duke Energy": "Duke Energy",
+    "Duke Energy Carolinas": "Duke Energy",
+    "Duke Energy Progress": "Duke Energy",
+    "Duke Energy Florida": "Duke Energy",
+    "Duke Energy Ohio": "Duke Energy",
+    "Duke Energy Indiana": "Duke Energy",
+    "Dominion Energy": "Dominion Energy",
+    "Dominion Energy South Carolina": "Dominion Energy",
+    "Scana": "Dominion Energy",
+}
+
+# FRP solar project LLCs appear as individual EIA utilities. Restrict the rule to
+# solar entities rather than treating every business starting with "FRP" as NextEra.
+_FRP_SOLAR = re.compile(r"FRP .+ SOLAR(?: [IVX\d]+)?$")
 
 _UNKNOWN = {"", "NOT AVAILABLE", "UNKNOWN", "N/A", "NA"}
 _SUFFIX = re.compile(r"\b(INC|LLC|L L C|CO|CORP|CORPORATION|COMPANY|THE)\b")
@@ -114,3 +146,27 @@ def canonical_utility(raw: str | None) -> str | None:
     if not key:
         return None
     return ALIASES.get(key, _title(key))
+
+
+@lru_cache(maxsize=4096)
+def corporate_entities(utility: str) -> frozenset[str]:
+    """Normalized owners/parents, retaining every owner of a joint project.
+
+    Unmapped names keep their canonical identity; ownership is never inferred from
+    a shared state, balancing authority, or an arbitrary similar name.
+    """
+    name = canonical_utility(utility)
+    if name is None:
+        return frozenset()
+    entities = set()
+    for owner in name.split(" / "):
+        parent = ("NextEra Energy" if _FRP_SOLAR.fullmatch(_key(owner))
+                  else CORPORATE_PARENT.get(owner, owner))
+        entities.add(parent.casefold())
+    return frozenset(entities)
+
+
+def different_companies(utility_a: str, utility_b: str) -> bool:
+    """Only flag identifiable companies with no shared known corporate owner."""
+    a, b = corporate_entities(utility_a), corporate_entities(utility_b)
+    return bool(a and b and a.isdisjoint(b))

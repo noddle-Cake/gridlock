@@ -73,6 +73,11 @@ the rest of the demo loop works offline.
    (Sperry bonus), side-by-side projects with source-page links, and a forwardable brief.
 5. Export CSV/PDF downloads the pairs on screen (utility focus and distance bands).
 
+Collision flags exclude the same company, known sister companies, and projects with
+a shared corporate owner, including FRP solar LLCs and FPL under NextEra. Dominion SC
+and Georgia Power remain eligible because their parents differ. See the
+[ownership policy and sources](source_docs/company_ownership.md) for coverage.
+
 ### Whole stack in Docker (any OS)
 
 The production stack runs the same way on Windows, macOS and Linux. Build the single image
