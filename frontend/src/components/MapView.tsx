@@ -1,13 +1,13 @@
 import 'leaflet/dist/leaflet.css'
 
-import type {
-  CircleMarker as LeafletCircleMarker,
-  LatLngBoundsExpression,
-  LatLngExpression,
-  Map as LeafletMap,
-  Polyline as LeafletPolyline,
+import L, {
+  type CircleMarker as LeafletCircleMarker,
+  type LatLngBoundsExpression,
+  type LatLngExpression,
+  type Map as LeafletMap,
+  type Polyline as LeafletPolyline,
 } from 'leaflet'
-import { memo, type Ref, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, type Ref, type RefObject, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CircleMarker,
   MapContainer,
@@ -24,6 +24,7 @@ import {
   COLOR_BY_OPTIONS,
   type ColorBy,
   type LegendEntry,
+  highlightSize,
   markerScale,
   markerStyle,
 } from '../lib/mapStyle'
@@ -35,6 +36,18 @@ import { BaseMap } from './BaseMap'
 import { PowerGridLayer } from './PowerGridLayer'
 
 const FIT_MAX_ZOOM = 11
+
+/**
+ * Canvas for project markers and connectors that redraws on every frame of a zoom. Leaflet's
+ * stock canvas just stretches its last frame until the zoom ends, so flying to a pair blew
+ * the dots up to many times their size and then snapped them back on arrival.
+ */
+const LiveZoomCanvas = L.Canvas.extend({
+  _onZoom(this: { _onZoomEnd(): void; _update(): void }) {
+    this._onZoomEnd() // reproject every path at the in-flight zoom
+    this._update() // resize, clear and redraw
+  },
+})
 
 /**
  * Fit options that keep framed projects clear of the legend stack in the top-right corner
@@ -156,6 +169,21 @@ function SmoothWheelZoom() {
   return null
 }
 
+/**
+ * Size for a highlighted circle, kept current on every frame of a zoom while `active` rather
+ * than at the zoomend re-render, so the pair's dots resize smoothly during a fly.
+ */
+function useHighlightSize(ref: RefObject<LeafletCircleMarker | null>, active: boolean) {
+  const map = useMap()
+  useEffect(() => {
+    if (!active) return
+    const resize = () => ref.current?.setStyle(highlightSize(map.getZoom()))
+    map.on('zoom', resize)
+    return () => void map.off('zoom', resize)
+  }, [map, ref, active])
+  return highlightSize(map.getZoom())
+}
+
 function projectTooltip(p: Project): string {
   const when = rangeLabel(p.start_date, p.end_date, p.start_precision, p.end_precision)
   const parts = [
@@ -193,7 +221,9 @@ const ProjectMarker = memo(function ProjectMarker({
   onHover?: (p: Project | null) => void
 }) {
   const ref = useRef<LeafletCircleMarker>(null)
-  const style = markerStyle(p, color, { paired, selected: highlighted }, scale)
+  const zoom = useMap().getZoom()
+  useHighlightSize(ref, highlighted)
+  const style = markerStyle(p, color, { paired, selected: highlighted }, scale, zoom)
   useEffect(() => {
     const m = ref.current
     if (!m) return
@@ -249,6 +279,7 @@ const PairLine = memo(function PairLine({
   const [from, to] = pairEnds(pair)
   const touching = Math.abs(from[0] - to[0]) < SAME_POINT && Math.abs(from[1] - to[1]) < SAME_POINT
   const active = selected || hovered
+  const ring = useHighlightSize(ref as RefObject<LeafletCircleMarker | null>, touching && active)
   useEffect(() => {
     const l = ref.current
     if (!l) return
@@ -269,10 +300,10 @@ const PairLine = memo(function PairLine({
       <CircleMarker
         ref={ref as Ref<LeafletCircleMarker>}
         center={from}
-        radius={active ? 10 : 6}
+        radius={active ? ring.radius : 6}
         pathOptions={{
           color: ink,
-          weight: active ? 3 : 1.5,
+          weight: active ? ring.weight : 1.5,
           opacity: active ? 0.95 : 0.5,
           fill: false,
         }}
@@ -344,6 +375,7 @@ export function MapView({
   })
   const [map, setMap] = useState<LeafletMap | null>(null)
   const [zoom, setZoom] = useState(9)
+  const renderer = useMemo(() => new LiveZoomCanvas(), [])
   const wrap = useRef<HTMLDivElement>(null)
 
   // Leaflet only watches the window; the split layout resizes the map on its own
@@ -407,8 +439,8 @@ export function MapView({
         minZoom={3}
         zoomSnap={0}
         scrollWheelZoom={false}
-        // Thousands of markers and connectors: one canvas per pane instead of an SVG node each.
-        preferCanvas
+        // Thousands of markers and connectors: one canvas instead of an SVG node each.
+        renderer={renderer}
         className="map"
       >
         <SmoothWheelZoom />

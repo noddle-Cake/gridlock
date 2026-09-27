@@ -17,11 +17,13 @@ export function markerStyle(
   color: string,
   s: MarkerState,
   scale = 1,
+  zoom = Infinity,
 ): PathOptions & { radius: number } {
+  const hl = highlightSize(zoom)
   return {
-    radius: s.selected ? 11 : Math.max(2, (s.paired ? 7 : 4) * scale),
+    radius: s.selected ? hl.radius : Math.max(2, (s.paired ? 7 : 4) * scale),
     color: s.selected ? '#111' : color,
-    weight: s.selected ? 3 : s.paired ? (scale < 1 ? 1.25 : 2) : 0.75,
+    weight: s.selected ? hl.weight : s.paired ? (scale < 1 ? 1.25 : 2) : 0.75,
     opacity: s.paired || s.selected ? 1 : 0.6,
     fillColor: color,
     fillOpacity: p.approximate ? 0.08 : s.paired || s.selected ? 0.85 : 0.3,
@@ -35,6 +37,16 @@ export function markerStyle(
  */
 export function markerScale(zoom: number): number {
   return zoom < 5 ? 0.5 : zoom < 7 ? 0.75 : 1
+}
+
+/**
+ * Size of an opened or hovered pair's markers. Continuous in zoom, unlike markerScale: only
+ * these few restyle every frame of a fly, so they can shrink with the view (never dwarfing
+ * their neighbours when zoomed out) and grow smoothly as the map closes in.
+ */
+export function highlightSize(zoom: number): { radius: number; weight: number } {
+  const radius = Math.min(11, Math.max(6, 6 + (zoom - 4) * 1.5))
+  return { radius, weight: (radius * 3) / 11 }
 }
 
 export type ColorBy ='type' | 'utility' | 'year'
