@@ -1583,6 +1583,10 @@ a {
   gap: 12px;
 }
 
+.cards > li {
+  min-width: 0;
+}
+
 .pair-card {
   width: 100%;
   height: 100%;
@@ -1781,6 +1785,7 @@ a {
 .card-project-name {
   font-weight: 600;
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
 .card-project-meta {
@@ -2329,8 +2334,15 @@ details summary {
     padding-right: 16px;
   }
 
+  /* minmax(0, 1fr), not 1fr: a bare 1fr track can't shrink below its cards'
+     min-content width, and the nowrap meta lines would widen the page. */
   .cards {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card-top,
+  .card-foot {
+    flex-wrap: wrap;
   }
 
   .side-by-side,
