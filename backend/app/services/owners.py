@@ -185,9 +185,66 @@ def corporate_entities(utility: str) -> frozenset[str]:
     return frozenset((_parent(owner) or owner).casefold() for owner in name.split(" / "))
 
 
+def _withheld(utility: str) -> bool:
+    """An owner the ownership audit looked at and couldn't place (status `review`)."""
+    name = canonical_utility(utility)
+    return name is not None and any(
+        (row := ownership_registry().get(owner)) is not None and row["status"] != "verified"
+        for owner in name.split(" / "))
+
+
+# Words that name a phase or technology of one development, not its developer:
+# "Atlas Solar IV" / "Atlas BESS IV", "Lazy U Solar 1" / "Lazy U ESS 2".
+_FAMILY_NOISE = {
+    "solar", "pv", "photovoltaic", "bess", "ess", "storage", "battery", "energy", "wind",
+    "hybrid", "project", "projects", "farm", "park", "center", "facility", "plant", "station",
+    "generating", "power", "phase", "llc", "lp", "inc", "co", "company", "the", "and", "of",
+    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+}
+# Leading words shared by unrelated developments, so not a developer's name on their own.
+_GENERIC_LEAD = {
+    "big", "little", "north", "south", "east", "west", "new", "old", "upper", "lower", "lake",
+    "river", "creek", "valley", "mountain", "hill", "prairie", "mesa", "rock", "green", "blue",
+    "red", "white", "black", "sun", "sunny", "grand", "high", "pine", "oak", "cedar", "city",
+    "county", "town", "st", "saint", "fort", "mount", "twin", "long", "clear", "sand", "silver",
+}
+_ROMAN = re.compile(r"^(?=[ivx]+$)x{0,3}(ix|iv|v?i{0,3})$")
+
+
+def _family_stem(utility: str) -> tuple[str, ...]:
+    words = re.findall(r"[a-z]+|\d+", utility.casefold())
+    return tuple(w for w in words
+                 if not w.isdigit() and w not in _FAMILY_NOISE and not _ROMAN.match(w))
+
+
+def same_project_family(utility_a: str, utility_b: str) -> bool:
+    """Names that read as one developer's projects, so likely one owner, once phase,
+    technology and numbering words are dropped: one a leading part of the other
+    ("Bridgewater Solar" / "Bridgewater Solar 2"), or the same distinctive first word, as
+    developers prefix their project companies ("Evergy Kansas Central" / "Evergy Missouri
+    West", "Cve Us Pa Dayton 404" / "Cve Us Pa Kittanning 406"). Names with nothing left to
+    compare ("Solar 1" / "Solar 2") count as one family too."""
+    a, b = _family_stem(utility_a), _family_stem(utility_b)
+    short, long_ = sorted((a, b), key=len)
+    if not short or long_[: len(short)] == short:
+        return True
+    return a[0] == b[0] and a[0] not in _GENERIC_LEAD
+
+
 def different_companies(utility_a: str, utility_b: str) -> bool:
-    """Only flag reviewed corporate families with no common owner, including joint owners."""
-    if ownership_review_required(utility_a) or ownership_review_required(utility_b):
-        return False
+    """Whether two projects' companies may be flagged as a cross-company match.
+
+    Never for missing names, a common known owner (including a joint owner), or an owner
+    the audit withheld pending evidence (status `review`). Companies with a verified
+    corporate family match on those grounds alone. Companies not in the registry yet
+    (most of EIA's nationwide project companies) match unless their names read as one
+    development's phases (`same_project_family`); such pairs carry
+    `ownership_review_required` on the unverified project so the UI can say so.
+    """
     a, b = corporate_entities(utility_a), corporate_entities(utility_b)
-    return bool(a and b and a.isdisjoint(b))
+    if not (a and b and a.isdisjoint(b)) or _withheld(utility_a) or _withheld(utility_b):
+        return False
+    if not (ownership_review_required(utility_a) or ownership_review_required(utility_b)):
+        return True
+    return not same_project_family(canonical_utility(utility_a) or "",
+                                   canonical_utility(utility_b) or "")

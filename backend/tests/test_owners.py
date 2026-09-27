@@ -8,7 +8,7 @@ import pytest
 from app.db import repository as repo
 from app.models.dto import ProjectDTO
 from app.services import matching
-from app.services.owners import different_companies
+from app.services.owners import different_companies, ownership_review_required
 
 
 @pytest.mark.parametrize(("a", "b"), [
@@ -36,9 +36,17 @@ from app.services.owners import different_companies
     ("Juniper Solar", "B & K Solar"),
     ("Kingstree East 230", "Kingstree West 115"),
     ("Placid Solar", "Placid Solar II"),
-    ("FRP Holdings", "FPL"),
-    ("FRPower Solar", "FPL"),
     ("", "FPL"),
+    # Withheld by the ownership audit (status review), whoever the other company is.
+    ("Alligator Creek Solar", "Georgia Power"),
+    # Unreviewed names that read as one developer's projects.
+    ("Atlas Solar IV", "Atlas BESS IV"),
+    ("Lazy U Solar 1", "Lazy U ESS 2"),
+    ("Bridgewater Solar", "Bridgewater Solar 2"),
+    ("Cp Tully Four", "Cp Tully Five"),
+    ("Evergy Kansas Central", "Evergy Missouri West"),
+    ("Cve Us Pa Dayton 404", "Cve Us Pa Kittanning 406"),
+    ("Solar 1", "Solar 2"),
 ])
 def test_related_or_unknown_companies_do_not_match(a, b):
     assert not different_companies(a, b)
@@ -58,12 +66,25 @@ def test_different_companies_remain_eligible(a, b):
     assert different_companies(b, a)
 
 
+@pytest.mark.parametrize(("a", "b"), [
+    ("FRP Holdings", "FPL"),  # not NextEra's FRP solar LLCs
+    ("FRPower Solar", "FPL"),
+    ("Pivot Energy", "Prologis Logistics Services Incorporated"),
+    ("Big Creek Solar", "Big Sky Wind"),  # a generic first word isn't a developer
+    ("Unreviewed project LLC", "JEA"),
+])
+def test_unreviewed_companies_match_but_stay_flagged(a, b):
+    assert different_companies(a, b)
+    assert different_companies(b, a)
+    assert ownership_review_required(a) or ownership_review_required(b)
+
+
 @pytest.mark.parametrize("entry", ["overlaps", "find_pair", "pairs_for_project", "rematch_project"])
 @pytest.mark.parametrize(("owner", "eligible"), [
     ("FRP Forest Trail Solar, LLC", False),
     ("Florida Power & Light", False),
     ("JEA", True),
-    ("Unreviewed project LLC", False),
+    ("Unreviewed project LLC", True),  # shown, labelled ownership unverified
 ])
 async def test_matching_entry_points_filter_stored_company_names(
     monkeypatch, entry, owner, eligible,

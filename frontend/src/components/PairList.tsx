@@ -138,6 +138,7 @@ export function PairList({
           const band = scoreBand(pair.scores.composite)
           const tier = pair.tier != null ? TIERS[pair.tier] : undefined
           const approximate = a.approximate || b.approximate
+          const unverified = a.ownership_review_required || b.ownership_review_required
           return (
             <li key={pair.id}>
               <button
@@ -189,6 +190,11 @@ export function PairList({
                       : ''}
                   </span>
                   {approximate ? <span className="badge badge-approx">approx. location</span> : null}
+                  {unverified ? (
+                    <span className="badge badge-warn" title="Corporate ownership not verified: the two companies could share an owner.">
+                      ownership unverified
+                    </span>
+                  ) : null}
                 </span>
               </button>
             </li>

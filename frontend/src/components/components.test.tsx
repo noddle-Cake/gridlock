@@ -26,6 +26,20 @@ describe('PairList', () => {
     expect(container.querySelectorAll('.cards > li')).toHaveLength(PAGE_SIZE + 7)
     expect(screen.queryByRole('button', { name: /more of/ })).toBeNull()
   })
+
+  it('labels opportunities whose corporate ownership is unverified', () => {
+    const verified = pair({ id: 'v' })
+    const unverified = pair({
+      id: 'u',
+      project_b: { ...pair().project_b, ownership_review_required: true },
+    })
+    render(
+      <PairList pairs={[verified, unverified]} selectedId={null} loading={false} onSelect={vi.fn()} />,
+    )
+    const [first, second] = screen.getAllByRole('listitem')
+    expect(within(first).queryByText('ownership unverified')).toBeNull()
+    expect(within(second).getByText('ownership unverified')).toBeInTheDocument()
+  })
 })
 
 describe('WhyFlaggedPanel (Req 11)', () => {

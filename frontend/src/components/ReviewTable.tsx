@@ -134,7 +134,7 @@ export function ReviewTable({ projects, threshold, colors, onPatch }: Props) {
                       <span className="badge badge-warn">no location</span>
                     ) : null}
                     {p.ownership_review_required ? (
-                      <span className="badge badge-warn" title="Matches withheld until corporate ownership is verified.">
+                      <span className="badge badge-warn" title="Corporate owner not verified: its opportunities are labelled unverified, or withheld if the ownership audit could not place it.">
                         ownership unverified
                       </span>
                     ) : null}
