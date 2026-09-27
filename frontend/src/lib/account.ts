@@ -18,6 +18,28 @@ export function shortName(company: string): string {
   return SHORT_NAMES[company] ?? company
 }
 
+// Whether the list shows only the planner's own company's pairs or everyone's. Remembered on
+// this device so a demo left on "All companies" stays there across reloads; per-viewer
+// convenience only, so with storage unavailable it falls back to the company's own pairs.
+const SCOPE_KEY = 'gridmerge:pair-scope'
+
+export function loadOnlyOwn(): boolean {
+  try {
+    return localStorage.getItem(SCOPE_KEY) !== 'all'
+  } catch {
+    return true
+  }
+}
+
+export function saveOnlyOwn(on: boolean): void {
+  try {
+    if (on) localStorage.removeItem(SCOPE_KEY)
+    else localStorage.setItem(SCOPE_KEY, 'all')
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 /** The account's company, if its email domain is known and the company has projects loaded. */
 export function accountCompany(
   username: string | null | undefined,

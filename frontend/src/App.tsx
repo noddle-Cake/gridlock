@@ -21,7 +21,14 @@ import { ThresholdControls } from './components/ThresholdControls'
 import { UploadPanel } from './components/UploadPanel'
 import { UtilityFilter } from './components/UtilityFilter'
 import { WhyFlaggedPanel } from './components/WhyFlaggedPanel'
-import { accountCompany, involves, pairPartners, shortName } from './lib/account'
+import {
+  accountCompany,
+  involves,
+  loadOnlyOwn,
+  pairPartners,
+  saveOnlyOwn,
+  shortName,
+} from './lib/account'
 import { ALL_BANDS, MAX_RADIUS_MILES, type BandId } from './lib/distanceBands'
 import { PALETTE, num, utilityColors } from './lib/format'
 import { type ColorBy, colorLegend, projectColor } from './lib/mapStyle'
@@ -175,7 +182,11 @@ export default function App({ account = null }: { account?: Account | null }) {
     [search.result],
   )
   // A signed-in planner starts from their own company's opportunities (map and list).
-  const [onlyOwn, setOnlyOwn] = useState(true)
+  const [onlyOwn, setOnlyOwnState] = useState(loadOnlyOwn)
+  const setOnlyOwn = useCallback((on: boolean) => {
+    setOnlyOwnState(on)
+    saveOnlyOwn(on)
+  }, [])
   const ownOnly = onlyOwn && ownCompany != null
   const shownPairs = useMemo(() => {
     const filtered = filterPairs(pairs, { query, hiddenUtilities, matchIds })

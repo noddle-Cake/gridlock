@@ -54,22 +54,30 @@ describe('PairList', () => {
     expect(within(second).getByText('ownership unverified')).toBeInTheDocument()
   })
 
-  it("offers an \"only my company's\" toggle to a signed-in planner, and explains an empty list", async () => {
+  it('lets a signed-in planner switch between their company and all companies', async () => {
     const onOnlyOwn = vi.fn()
-    render(
+    const { rerender } = render(
       <PairList pairs={[]} selectedId={null} loading={false} onSelect={vi.fn()}
         ownCompany="FPL" onlyOwn onOnlyOwn={onOnlyOwn} />,
     )
-    const toggle = screen.getByLabelText('Only FPL’s opportunities')
-    expect(toggle).toBeChecked()
+    const switcher = screen.getByRole('group', { name: 'Whose opportunities' })
+    const own = within(switcher).getByRole('button', { name: 'FPL' })
+    const all = within(switcher).getByRole('button', { name: 'All companies' })
+    expect(own).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText(/No FPL projects here/)).toBeInTheDocument()
-    await userEvent.click(toggle)
+    await userEvent.click(all)
     expect(onOnlyOwn).toHaveBeenCalledWith(false)
+    rerender(
+      <PairList pairs={[]} selectedId={null} loading={false} onSelect={vi.fn()}
+        ownCompany="FPL" onlyOwn={false} onOnlyOwn={onOnlyOwn} />,
+    )
+    expect(all).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByText(/No FPL projects here/)).toBeNull()
   })
 
-  it('has no company toggle for guests', () => {
+  it('has no company switch for guests', () => {
     render(<PairList pairs={[]} selectedId={null} loading={false} onSelect={vi.fn()} />)
-    expect(screen.queryByLabelText(/^Only .*’s opportunities$/)).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Whose opportunities' })).toBeNull()
   })
 })
 
