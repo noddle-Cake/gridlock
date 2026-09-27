@@ -37,9 +37,6 @@ export function markerScale(zoom: number): number {
   return zoom < 5 ? 0.5 : zoom < 7 ? 0.75 : 1
 }
 
-/** Below this zoom pair connectors (all under ~40 km) are specks; only the active pair draws. */
-export const PAIR_LINE_MIN_ZOOM = 6
-
 export type ColorBy ='type' | 'utility' | 'year'
 export const COLOR_BY_OPTIONS: [ColorBy, string][] = [
   ['type', 'Type'],

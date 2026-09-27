@@ -24,7 +24,6 @@ import {
   COLOR_BY_OPTIONS,
   type ColorBy,
   type LegendEntry,
-  PAIR_LINE_MIN_ZOOM,
   markerScale,
   markerStyle,
 } from '../lib/mapStyle'
@@ -450,14 +449,7 @@ export function MapView({
               </Polyline>
             )
           })}
-        {placedPairs
-          .filter(
-            (pair) =>
-              zoom >= PAIR_LINE_MIN_ZOOM ||
-              pair.id === selectedPair?.id ||
-              pair.id === hoveredPair?.id,
-          )
-          .map((pair) => (
+        {placedPairs.map((pair) => (
           <PairLine
             key={pair.id}
             pair={pair}
@@ -466,7 +458,7 @@ export function MapView({
             scheme={scheme}
             onSelect={onSelectPair}
           />
-          ))}
+        ))}
         {ordered.map((p) => (
           <ProjectMarker
             key={p.id}
