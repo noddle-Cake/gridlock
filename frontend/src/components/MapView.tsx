@@ -447,8 +447,8 @@ export function MapView({
         ref={setMap}
         center={[39.8, -77.1]}
         zoom={9}
-        // Far enough out to frame projects from Hawaii to Maine; the power grid draws down to
-        // this floor too (POWER_MIN_ZOOM).
+        // Far enough out to frame projects from Hawaii to Maine. The power grid only appears
+        // from POWER_MIN_ZOOM in; projects and pairs show at every zoom.
         minZoom={3}
         zoomSnap={0}
         scrollWheelZoom={false}
@@ -596,7 +596,7 @@ export function MapView({
           </div>
           {layers.grid ? (
             <div className="map-legend grid-legend" aria-label="Power grid legend">
-              <span>Power grid (kV):</span>
+              <span>Power grid (kV){far ? ', shown when zoomed in' : ''}:</span>
               {[...VOLTAGE_SCALE].reverse().map(([kv, c]) => (
                 <span key={kv} className="legend-item">
                   <span className="swatch swatch-line" style={{ background: c }} />

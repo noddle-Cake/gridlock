@@ -8,10 +8,11 @@ export const POWER_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
   '<a href="https://openinframap.org/copyright">OpenInfraMap</a>'
 /**
- * The map's own zoom floor, so the grid never switches off. Below zoom 5 OpenInfraMap already
- * thins its tiles to the 132 kV+ backbone (~300 KB each), so national views stay light.
+ * The grid is reference detail for a region: below this zoom it isn't fetched or drawn, so the
+ * national view shows only projects and their pairs. Leaflet rounds to the tile zoom, so it
+ * appears from zoom 5.5, a few states across.
  */
-export const POWER_MIN_ZOOM = 3
+export const POWER_MIN_ZOOM = 6
 export const POWER_MAX_NATIVE_ZOOM = 17
 
 /** Line colour by voltage band (kV lower bound), matching Open Infrastructure Map's scale. */
@@ -47,11 +48,11 @@ export function lineWidth(kv: number | null, zoom: number): number {
 }
 
 /**
- * Line opacity by zoom: faint at national scale, where the grid would otherwise outweigh the
+ * Line opacity by zoom: lighter where the grid first appears, so it doesn't outweigh the
  * project markers drawn above it, reaching full strength by zoom 8.
  */
 export function gridAlpha(zoom: number): number {
-  return Math.min(0.85, Math.max(0.4, 0.4 + (zoom - 5) * 0.15))
+  return Math.min(0.85, Math.max(0.5, 0.5 + (zoom - POWER_MIN_ZOOM) * 0.175))
 }
 
 /** Substation and plant symbols start here; farther out they are only speckle. */
