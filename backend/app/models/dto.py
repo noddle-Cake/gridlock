@@ -220,7 +220,7 @@ class SearchResponse(BaseModel):
     projects: list[SearchHitDTO]  # the first `limit` matches
     project_ids: list[int]  # every match, for filtering the map and pair list
     total: int
-    bounds: list[float] | None = None  # [south, west, north, east], including a searched ZIP
+    bounds: list[float] | None = None  # [south, west, north, east], centred on a searched ZIP
     suggest_ai: bool = False  # reads like a question: offer "Ask GridMerge" first
 
 
