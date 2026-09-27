@@ -68,7 +68,7 @@ the rest of the demo loop works offline.
 4. Open a pair to see why it was flagged: the closest-point connector on the map, both
    build windows on one time axis (shared stretch hatched), the rough coordination value
    (Sperry bonus), side-by-side projects with source-page links, and a forwardable brief.
-5. Export CSV/PDF downloads the pairs on screen (utility focus and distance bands).
+5. Export CSV/PDF downloads the pairs on screen (utility focus and opportunity types).
 
 Collision flags exclude the same company, known sister companies, and projects with
 a shared corporate owner, including FRP solar LLCs and FPL under NextEra. Companies the

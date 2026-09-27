@@ -27,6 +27,19 @@ describe('PairList', () => {
     expect(screen.queryByRole('button', { name: /more of/ })).toBeNull()
   })
 
+  it('labels each card with what the projects could share instead of a score', () => {
+    const touching = pair({ id: 't', band: 'touching', tier: 0, miles: 0 })
+    render(
+      <PairList pairs={[touching, pair()]} selectedId={null} loading={false} onSelect={vi.fn()} />,
+    )
+    const [first, second] = screen.getAllByRole('listitem')
+    expect(within(first).getByText('Shared outage & crossing')).toHaveAttribute(
+      'title', 'Touching or crossing: one coordinated outage and crossing design',
+    )
+    expect(within(second).getByText('Shared crews & equipment')).toBeInTheDocument()
+    expect(within(second).queryByText('60%')).toBeNull() // the composite score
+  })
+
   it('labels opportunities whose corporate ownership is unverified', () => {
     const verified = pair({ id: 'v' })
     const unverified = pair({
@@ -45,6 +58,10 @@ describe('PairList', () => {
 describe('WhyFlaggedPanel (Req 11)', () => {
   it('shows both projects side by side with distance, overlap days, and every factor', () => {
     render(<WhyFlaggedPanel pair={pair()} colorOf={colorOf} onGenerateBrief={vi.fn()} />)
+    expect(screen.getByText('Shared crews & equipment')).toBeInTheDocument()
+    expect(
+      screen.getByText('Under 40 km: one mobilization of crews, cranes and contractors'),
+    ).toBeInTheDocument()
     expect(screen.getByText('Hanover breakers')).toBeInTheDocument()
     expect(screen.getByText('Westminster breakers')).toBeInTheDocument()
     expect(screen.getByTestId('km')).toHaveTextContent('25.1') // 15.62 mi
@@ -203,33 +220,37 @@ describe('ThresholdControls (Req 10.1, 10.2)', () => {
     expect(screen.queryByText(/Build window/)).toBeNull()
   })
 
-  it('toggles non-overlapping distance bands from the dropdown', async () => {
+  it('filters by what the two projects could share, not by distance', async () => {
     const onBands = vi.fn()
     render(
       <ThresholdControls
-        bands={['touching', '8', '40']}
+        bands={['touching', '8']}
         confidenceThreshold={0.7}
         onBands={onBands}
         onConfidenceThreshold={vi.fn()}
       />,
     )
-    expect(screen.getByText(/Distance apart:/).parentElement).toHaveTextContent(
-      'Touching / crossing, 1.6–8 km, 25–40 km',
+    expect(screen.getByText(/Opportunity type:/).parentElement).toHaveTextContent(
+      'Shared outage & crossing, Shared laydown yard',
     )
-    await userEvent.click(screen.getByText(/Distance apart:/))
-    const options = screen.getAllByRole('checkbox').map((c) => c.parentElement?.textContent)
-    expect(options).toEqual([
-      'Touching / crossing',
-      'Under 1.6 km',
-      '1.6–8 km',
-      '8–25 km',
-      '25–40 km',
+    await userEvent.click(screen.getByText(/Opportunity type:/))
+    const boxes = screen.getAllByRole('checkbox')
+    expect(boxes.map((c) => c.parentElement?.textContent)).toEqual([
+      'Shared outage & crossing',
+      'Shared land & permits',
+      'Shared laydown yard',
+      'Shared crews & equipment',
     ])
+    expect(boxes.map((c) => (c as HTMLInputElement).checked)).toEqual([true, false, true, false])
+    expect(screen.getByRole('checkbox', { name: 'Shared land & permits' })).toHaveAccessibleDescription(
+      'Under 1.6 km: right-of-way, access roads and permits',
+    )
 
-    await userEvent.click(screen.getByRole('checkbox', { name: '8–25 km' }))
+    // Crews & equipment is both of the API's outer bands (8-25 and 25-40 km).
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Shared crews & equipment' }))
     expect(onBands).toHaveBeenLastCalledWith(['touching', '8', '25', '40'])
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Touching / crossing' }))
-    expect(onBands).toHaveBeenLastCalledWith(['8', '40'])
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Shared outage & crossing' }))
+    expect(onBands).toHaveBeenLastCalledWith(['8'])
   })
 })
 

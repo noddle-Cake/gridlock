@@ -1,4 +1,10 @@
-import { ALL_BANDS, bandSummary, DISTANCE_BANDS, type BandId } from '../lib/distanceBands'
+import {
+  type BandId,
+  OPPORTUNITY_TYPES,
+  selectedTypes,
+  toggleType,
+  typeSummary,
+} from '../lib/distanceBands'
 import { DEFAULT_CONFIDENCE_THRESHOLD } from '../lib/review'
 import { FilterMenu } from './FilterMenu'
 
@@ -11,35 +17,36 @@ interface Props {
 
 /** Matching thresholds as filter-bar chips, each opening its own control. */
 export function ThresholdControls(props: Props) {
-  function toggle(id: BandId, on: boolean) {
-    // Keep the canonical band order so queries and the summary are stable.
-    props.onBands(
-      DISTANCE_BANDS.map((b) => b.id).filter((b) => (b === id ? on : props.bands.includes(b))),
-    )
-  }
-
+  const on = new Set(selectedTypes(props.bands).map((t) => t.tier))
   return (
     <>
       <FilterMenu
         label={
           <span className="chip-text">
-            <span className="sr-only">Distance apart: </span>
-            {bandSummary(props.bands)}
+            <span className="sr-only">Opportunity type: </span>
+            {typeSummary(props.bands)}
           </span>
         }
-        active={props.bands.length !== ALL_BANDS.length}
+        active={on.size !== OPPORTUNITY_TYPES.length}
       >
-        <fieldset className="check-list">
-          <legend>Show pairs this far apart</legend>
-          {DISTANCE_BANDS.map((b) => (
-            <label key={b.id}>
-              <input
-                type="checkbox"
-                checked={props.bands.includes(b.id)}
-                onChange={(e) => toggle(b.id, e.target.checked)}
-              />
-              {b.label}
-            </label>
+        <fieldset className="check-list type-list">
+          <legend>Show opportunities to share</legend>
+          {OPPORTUNITY_TYPES.map((t) => (
+            <div key={t.tier} className="type-option">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={on.has(t.tier)}
+                  aria-describedby={`type-detail-${t.tier}`}
+                  onChange={(e) => props.onBands(toggleType(props.bands, t, e.target.checked))}
+                />
+                <span className={`type-dot type-${t.tier}`} aria-hidden />
+                {t.label}
+              </label>
+              <span className="type-detail" id={`type-detail-${t.tier}`}>
+                {t.detail}
+              </span>
+            </div>
           ))}
         </fieldset>
       </FilterMenu>
