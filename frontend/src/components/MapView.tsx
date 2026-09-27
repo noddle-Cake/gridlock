@@ -8,7 +8,7 @@ import type {
   PathOptions,
   Polyline as LeafletPolyline,
 } from 'leaflet'
-import { memo, type Ref, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, type Ref, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { CircleMarker, MapContainer, Polyline, ScaleControl, Tooltip, useMap } from 'react-leaflet'
 
 import { milesToKm } from '../lib/distanceBands'
@@ -21,6 +21,7 @@ import {
   markerStyle,
 } from '../lib/mapStyle'
 import { LiveZoomCanvas, type ZoomStyle } from '../lib/liveCanvas'
+import { legendStartsOpen } from '../lib/legendLayout'
 import { type ViewBounds, pairEnds } from '../lib/pairs'
 import { LOW_VOLTAGE_COLOR, VOLTAGE_SCALE } from '../lib/powerGrid'
 import { enableSmoothWheelZoom } from '../lib/smoothWheelZoom'
@@ -390,6 +391,17 @@ export function MapView({
     [pairs],
   )
 
+  // On a small map (stacked tablet layout, squeezed split) the open colour card hides the
+  // Southeast, where most projects are: start it collapsed there. Runs once, before the
+  // first fit and paint; after that the planner's own toggles stand.
+  const colorCard = useRef<HTMLDetailsElement>(null)
+  useLayoutEffect(() => {
+    const el = wrap.current
+    if (el && colorCard.current && !legendStartsOpen(el.clientWidth, el.clientHeight)) {
+      colorCard.current.open = false
+    }
+  }, [])
+
   return (
     <div className="map-wrap" ref={wrap}>
       <MapContainer
@@ -481,7 +493,7 @@ export function MapView({
             Fit all
           </button>
         ) : null}
-        <details className="legend-card color-card" open>
+        <details className="legend-card color-card" open ref={colorCard}>
           <summary>
             Color by {COLOR_BY_OPTIONS.find(([k]) => k === colorBy)?.[1].toLowerCase()}
           </summary>
