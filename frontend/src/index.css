@@ -1426,8 +1426,14 @@ a {
   color: var(--accent);
 }
 
+/* Matches pairLineStyle: a chain of round dots on a light halo. */
 .swatch-pair-line {
-  background: repeating-linear-gradient(90deg, var(--ink-2) 0 3px, transparent 3px 6px);
+  height: 7px;
+  border-radius: 4px;
+  background:
+    radial-gradient(circle, var(--ink) 0 1.6px, transparent 2px) 0 50% / 6.5px 7px repeat-x,
+    var(--surface);
+  box-shadow: 0 0 0 1px var(--line);
 }
 
 .timeline .vis-timeline {

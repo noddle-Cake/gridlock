@@ -21,6 +21,8 @@ import {
   highlightSize,
   markerScale,
   markerStyle,
+  pairInk,
+  pairLineStyle,
 } from '../lib/mapStyle'
 import { LiveZoomCanvas, type ZoomStyle } from '../lib/liveCanvas'
 import { legendStartsOpen } from '../lib/legendLayout'
@@ -221,7 +223,6 @@ const ProjectMarker = memo(function ProjectMarker({
 /** The --map-land colours: paired dots are ringed in the land they sit on. */
 const MARKER_HALO = { light: '#fbfbf9', dark: '#1b242d' }
 
-const PAIR_INK = { light: { idle: '#3d4852', active: '#111' }, dark: { idle: '#c3ccd4', active: '#fff' } }
 
 /** Ends this close (degrees, ~1 m) are one point: the projects touch or cross there. */
 const SAME_POINT = 1e-5
@@ -241,6 +242,7 @@ const idleRing: ZoomStyle = (z) => {
 /**
  * The connector between a pair's two projects, neutral so it never reads as a project colour.
  * It spans the gap the distance measures; projects that touch get a ring at the touch point.
+ * See `pairLineStyle` for how it stays distinct from county, state and power-grid lines.
  */
 const PairLine = memo(function PairLine({
   pair,
@@ -259,6 +261,7 @@ const PairLine = memo(function PairLine({
   onSelect?: (pair: CoordinationPair) => void
 }) {
   const ref = useRef<LeafletPolyline | LeafletCircleMarker>(null)
+  const haloRef = useRef<LeafletPolyline>(null)
   const [from, to] = pairEnds(pair)
   const touching = Math.abs(from[0] - to[0]) < SAME_POINT && Math.abs(from[1] - to[1]) < SAME_POINT
   const active = selected || hovered
@@ -274,10 +277,12 @@ const PairLine = memo(function PairLine({
     return () => void l.unbindTooltip()
   }, [pair, touching])
   useEffect(() => {
-    if (active) ref.current?.bringToFront()
+    if (!active) return
+    haloRef.current?.bringToFront()
+    ref.current?.bringToFront()
   }, [active])
   const handlers = useMemo(() => (onSelect ? { click: () => onSelect(pair) } : {}), [pair, onSelect])
-  const ink = selected ? PAIR_INK[scheme].active : PAIR_INK[scheme].idle
+  const ink = pairInk(selected, scheme)
   if (touching) {
     // Radius goes in the path options too: restyling a circle falls back to its current,
     // zoom-sized radius otherwise.
@@ -299,18 +304,17 @@ const PairLine = memo(function PairLine({
       />
     )
   }
+  const style = pairLineStyle({ active, selected, far, scheme })
   return (
-    <Polyline
-      ref={ref as Ref<LeafletPolyline>}
-      positions={[from, to]}
-      pathOptions={{
-        color: ink,
-        weight: active ? 4.5 : far ? 1 : 1.8,
-        opacity: active ? 0.95 : far ? 0.15 : 0.5,
-        dashArray: active || far ? undefined : '3 5',
-      }}
-      eventHandlers={handlers}
-    />
+    <>
+      <Polyline ref={haloRef} positions={[from, to]} pathOptions={style.halo} />
+      <Polyline
+        ref={ref as Ref<LeafletPolyline>}
+        positions={[from, to]}
+        pathOptions={style.line}
+        eventHandlers={handlers}
+      />
+    </>
   )
 })
 
