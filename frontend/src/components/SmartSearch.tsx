@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react'
 
+import { num, plural } from '../lib/format'
 import type {
   CompanySuggestion,
   LocationSuggestion,
@@ -86,7 +87,7 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 function Count({ n }: { n: number }) {
   return (
     <span className="ss-count">
-      {n.toLocaleString()} project{n === 1 ? '' : 's'}
+      {plural(n, 'project')}
     </span>
   )
 }
@@ -324,8 +325,8 @@ export function SmartSearch({
               ? renderOption(
                   all,
                   <span className="ss-main">
-                    Show all {result!.total.toLocaleString()} matching project
-                    {result!.total === 1 ? '' : 's'} on the map
+                    Show all {num(result!.total)} matching{' '}
+                    {result!.total === 1 ? 'project' : 'projects'} on the map
                   </span>,
                 )
               : null}

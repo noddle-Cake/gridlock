@@ -22,7 +22,7 @@ import { UploadPanel } from './components/UploadPanel'
 import { UtilityFilter } from './components/UtilityFilter'
 import { WhyFlaggedPanel } from './components/WhyFlaggedPanel'
 import { ALL_BANDS, MAX_RADIUS_MILES, type BandId } from './lib/distanceBands'
-import { PALETTE, utilityColors } from './lib/format'
+import { PALETTE, num, utilityColors } from './lib/format'
 import { type ColorBy, colorLegend, projectColor } from './lib/mapStyle'
 import {
   type SortKey,
@@ -411,7 +411,7 @@ export default function App({ account = null }: { account?: Account | null }) {
             aria-pressed={tab === 'review'}
             onClick={() => setTab('review')}
           >
-            Review <span className="pill">{reviewCount}</span>
+            Review <span className="pill">{num(reviewCount)}</span>
           </button>
         </nav>
         <JobTray jobs={aiJobs} onOpen={openJob} onDismiss={(j) => ai.markSeen(j.id)} />
@@ -539,7 +539,7 @@ export default function App({ account = null }: { account?: Account | null }) {
                         ‹
                       </button>
                       <span className="count">
-                        {index + 1} of {listPairs.length}
+                        {num(index + 1)} of {num(listPairs.length)}
                       </span>
                       <button
                         type="button"

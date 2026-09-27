@@ -12,7 +12,7 @@ import { memo, type Ref, useEffect, useMemo, useRef, useState } from 'react'
 import { CircleMarker, MapContainer, Polyline, ScaleControl, Tooltip, useMap } from 'react-leaflet'
 
 import { milesToKm } from '../lib/distanceBands'
-import { bothBuildingLabel, durationLabel, escapeHtml as esc, rangeLabel } from '../lib/format'
+import { bothBuildingLabel, durationLabel, escapeHtml as esc, num, plural, rangeLabel } from '../lib/format'
 import {
   COLOR_BY_OPTIONS,
   type ColorBy,
@@ -467,7 +467,8 @@ export function MapView({
       <div className="map-notes">
         {projects.length > placed.length ? (
           <p className="map-note">
-            {projects.length - placed.length} project(s) have no location yet — see Review.
+            {plural(projects.length - placed.length, 'project')}{' '}
+            {projects.length - placed.length === 1 ? 'has' : 'have'} no location yet — see Review.
           </p>
         ) : null}
       </div>
@@ -505,7 +506,7 @@ export function MapView({
                 <span className="color-legend-label" title={r.label}>
                   {r.label}
                 </span>
-                <span className="color-legend-count">{r.count.toLocaleString()}</span>
+                <span className="color-legend-count">{num(r.count)}</span>
               </li>
             ))}
           </ul>
