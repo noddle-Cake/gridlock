@@ -364,8 +364,10 @@ export function MapView({
   focus = null,
   homeCompany = null,
 }: Props) {
+  // The power grid is reference detail: off until a planner turns it on under "Layers &
+  // legend", so the map opens on projects and pairs alone.
   const [layers, setLayers] = useState<Record<MapLayer, boolean>>({
-    grid: true,
+    grid: false,
     counties: true,
     labels: true,
   })
@@ -592,19 +594,7 @@ export function MapView({
           </ul>
         </details>
         <details className="legend-card">
-          <summary>Layers &amp; legend</summary>
-          <div className="map-legend layer-toggles" aria-label="Map layers">
-            {MAP_LAYERS.map(([key, label]) => (
-              <label key={key} className="legend-item">
-                <input
-                  type="checkbox"
-                  checked={layers[key]}
-                  onChange={(e) => setLayers((l) => ({ ...l, [key]: e.target.checked }))}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
+          <summary>Legend</summary>
           <div className="map-legend" aria-label="Marker legend">
             <span className="legend-item">
               <span className="swatch swatch-paired" /> in a potential coordination opportunity
@@ -647,6 +637,19 @@ export function MapView({
             </div>
           ) : null}
         </details>
+      </div>
+      {/* Always in reach in the bottom-right corner, above the map credits. */}
+      <div className="map-layers" role="group" aria-label="Map layers">
+        {MAP_LAYERS.map(([key, label]) => (
+          <label key={key}>
+            <input
+              type="checkbox"
+              checked={layers[key]}
+              onChange={(e) => setLayers((l) => ({ ...l, [key]: e.target.checked }))}
+            />
+            {label}
+          </label>
+        ))}
       </div>
     </div>
   )
