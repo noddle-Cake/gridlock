@@ -38,7 +38,6 @@ import { useColorScheme } from './lib/useColorScheme'
 import { useSearch } from './lib/useSearch'
 import type {
   CoordinationPair,
-  LineCollection,
   MatchRules,
   PairProject,
   Project,
@@ -69,8 +68,6 @@ export default function App({ account = null }: { account?: Account | null }) {
   const [tab, setTab] = useState<Tab>('radar')
   const [loadingPairs, setLoadingPairs] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [lines, setLines] = useState<LineCollection | null>(null)
-  const [linesFailed, setLinesFailed] = useState(false)
   const [version, setVersion] = useState(0)
   // Company first: the point of the view is telling two utilities' plans apart.
   const [colorBy, setColorBy] = useState<ColorBy>('utility')
@@ -97,15 +94,6 @@ export default function App({ account = null }: { account?: Account | null }) {
       .catch((e) => setError(describe(e)))
       .finally(() => setProjectsLoaded(true))
   }, [version])
-
-  // Existing transmission lines are a static backdrop: fetch once. A failure only hides
-  // the layer (with a note on the map); it never blocks the planning views.
-  useEffect(() => {
-    api
-      .lines()
-      .then(setLines)
-      .catch(() => setLinesFailed(true))
-  }, [])
 
   const utilities = useMemo(
     () => [...new Set(projects.map((p) => p.utility))].sort((a, b) => a.localeCompare(b)),
@@ -444,8 +432,6 @@ export default function App({ account = null }: { account?: Account | null }) {
               onColorBy={setColorBy}
               legend={legend}
               scheme={scheme}
-              lines={lines}
-              linesFailed={linesFailed}
               onSelectProject={selectProject}
               onSelectPair={selectPair}
               onHoverProject={hoverProject}

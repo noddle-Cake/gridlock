@@ -1,4 +1,4 @@
-import type { Feature, FeatureCollection, GeoJsonObject, MultiLineString } from 'geojson'
+import type { FeatureCollection, GeoJsonObject } from 'geojson'
 import L from 'leaflet'
 import { useEffect, useMemo, useState } from 'react'
 import { useMap, useMapEvents } from 'react-leaflet'
@@ -10,7 +10,6 @@ import {
   BASEMAP_URL,
   COUNTY_LABEL_MIN_ZOOM,
   COUNTY_MIN_ZOOM,
-  HIGHWAY_MIN_ZOOM,
   MAJOR_CITY,
   type LabelCandidate,
   type LabelData,
@@ -21,14 +20,13 @@ import {
   minPlacePopulation,
   nationalOutlines,
   placeTier,
-  signPoints,
   stateBorders,
   textWidth,
 } from '../lib/basemap'
 import { useColorScheme } from '../lib/useColorScheme'
 
-// Outlines and roads sit under the power-grid tiles (tilePane is 200); names sit above the grid
-// and existing-lines pane (350) but under project markers (overlayPane, 400).
+// Outlines sit under the power-grid tiles (tilePane is 200); names sit above the grid
+// but under project markers (overlayPane, 400).
 const SHAPES_PANE = 'basemap-shapes'
 const LABELS_PANE = 'basemap-labels'
 
@@ -70,8 +68,6 @@ function palette() {
     outline: v('--map-outline'),
     border: v('--map-border'),
     county: v('--map-county'),
-    road: v('--map-road'),
-    roadCasing: v('--map-road-casing'),
   }
 }
 
@@ -85,20 +81,18 @@ const topoFeatures = (topo: Topology, name: string) =>
   feature(topo, topo.objects[name] as GeometryCollection) as FeatureCollection
 
 interface Props {
-  highways: boolean
   counties: boolean
   labels: boolean
 }
 
-/** Reference base map: land and water, state/national/county lines, highways, place names. */
-export function BaseMap({ highways, counties, labels }: Props) {
+/** Reference base map: land and water, state/national/county lines and place names. */
+export function BaseMap({ counties, labels }: Props) {
   const map = useMap()
   const scheme = useColorScheme()
   const [zoom, setZoom] = useState(() => map.getZoom())
   useMapEvents({ zoomend: () => setZoom(map.getZoom()) })
 
   const showCounties = counties && zoom >= COUNTY_MIN_ZOOM
-  const showHighways = highways && zoom >= HIGHWAY_MIN_ZOOM
   const land = useBasemapFile<Topology>('land.json', true)
   const labelData = useBasemapFile<LabelData>('labels.json', labels)
   const countyTopo = useBasemapFile<Topology>('counties.json', showCounties)
@@ -106,7 +100,6 @@ export function BaseMap({ highways, counties, labels }: Props) {
     'county-labels.json',
     counties && labels && zoom >= COUNTY_LABEL_MIN_ZOOM,
   )
-  const roads = useBasemapFile<Topology>('highways.json', showHighways)
 
   const renderer = useMemo(() => {
     for (const [name, z] of [
@@ -160,32 +153,6 @@ export function BaseMap({ highways, counties, labels }: Props) {
     return () => void layer.remove()
   }, [map, renderer, countyTopo, showCounties, scheme])
 
-  const roadFeatures = useMemo(() => (roads ? topoFeatures(roads, 'roads') : null), [roads])
-  useEffect(() => {
-    if (!roadFeatures || !showHighways) return
-    const c = palette()
-    const major = (f?: Feature) => String(f?.properties?.ref ?? '').startsWith('I-')
-    const group = L.layerGroup([
-      shapes(roadFeatures, renderer, (f) => ({
-        color: c.roadCasing,
-        weight: major(f) ? 3.4 : 2.4,
-      })),
-      shapes(roadFeatures, renderer, (f) => ({ color: c.road, weight: major(f) ? 2 : 1.2 })),
-    ]).addTo(map)
-    return () => void group.remove()
-  }, [map, renderer, roadFeatures, showHighways, scheme])
-
-  // Highway signs: points spaced along each numbered route; the layout drops repeats.
-  const signs = useMemo(() => {
-    if (!roadFeatures) return []
-    return roadFeatures.features.flatMap((f) => {
-      const ref = String(f.properties?.ref ?? '')
-      if (!ref) return []
-      const lines = (f.geometry as MultiLineString).coordinates as [number, number][][]
-      return signPoints(lines, 0.2).map(([lat, lng]) => ({ ref, lat, lng }))
-    })
-  }, [roadFeatures])
-
   useEffect(() => {
     if (!labels) return
     const layer = L.layerGroup().addTo(map)
@@ -237,7 +204,7 @@ export function BaseMap({ highways, counties, labels }: Props) {
           )
         }
       }
-      // Priority: big cities, then state names, then smaller towns, highway signs, counties.
+      // Priority: big cities, then state names, then smaller towns, counties.
       const min = minPlacePopulation(z)
       addPlaces(Math.max(min, MAJOR_CITY), Infinity)
       if (labelData && z >= 4 && z <= STATE_LABEL_MAX_ZOOM) {
@@ -257,24 +224,6 @@ export function BaseMap({ highways, counties, labels }: Props) {
         }
       }
       addPlaces(min, MAJOR_CITY)
-      if (highways && z >= HIGHWAY_MIN_ZOOM + 1) {
-        for (const { ref, lat, lng } of signs) {
-          const w = textWidth(ref, 10) + 8
-          const cls = ref.startsWith('I-')
-            ? 'map-label-sign map-label-interstate'
-            : 'map-label-sign'
-          add(
-            `h:${ref}:${lat}:${lng}`,
-            lat,
-            lng,
-            ref,
-            cls,
-            centred(w, 14),
-            `<span>${esc(ref)}</span>`,
-            260,
-          )
-        }
-      }
       if (countyNames && counties && z >= COUNTY_LABEL_MIN_ZOOM) {
         for (const [name, lat, lng] of countyNames) {
           const w = textWidth(name, 11)
@@ -317,7 +266,7 @@ export function BaseMap({ highways, counties, labels }: Props) {
       map.off('moveend zoomend', place)
       layer.remove()
     }
-  }, [map, labels, labelData, countyNames, counties, highways, signs])
+  }, [map, labels, labelData, countyNames, counties])
 
   return null
 }

@@ -142,11 +142,14 @@ Errors always look like `{"error": {"code", "message", "field?", "fields?", "det
 
 ## Existing transmission lines (HIFLD)
 
-The map draws existing transmission lines from HIFLD *Electric Power Transmission Lines*
-(the dataset behind the Felt "US Electric Power Transmission Lines" map) beneath the
-planned projects, colored by owner with the same color as that utility's projects. They
-are a **reference layer only**, kept in their own `transmission_lines` table and never
-matched as planned projects.
+The planning UI uses the tiled Power grid layer for infrastructure context. The regional
+Highways and Existing lines (HIFLD) overlays are removed so a small reference snapshot
+does not imply nationwide coverage. Planned projects and coordination matches remain
+the focus of the map.
+
+HIFLD *Electric Power Transmission Lines* data remains available through the API and
+demo tooling. These are **reference data only**, kept in their own `transmission_lines`
+table and never matched as planned projects.
 
 - **Snapshot, not a live dependency.** DHS retired the public HIFLD portal in 2025; the
   ArcGIS service still answers but may disappear. `backend/app/data/hifld_lines.geojson.gz`
