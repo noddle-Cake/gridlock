@@ -7,15 +7,19 @@ import json
 import re
 from datetime import date
 
+import httpx
 import pytest
 
+from app.core.config import get_settings
 from app.core.errors import AskTimeoutError, AskUnavailableError
 from app.db import repository as repo
 from app.models.enums import DatePrecision, ProjectType
+from app.services import search as search_service
 from app.services.ask import AskService
 from app.services.llm import AgentTurn, ToolCall, UnconfiguredClient
 from app.services.search import (
     CompanyIndex,
+    locate_zip,
     looks_like_question,
     parse_query,
     state_code,
@@ -103,6 +107,64 @@ def test_zip_gazetteer():
     lat, lng = zip_centroid("33157")
     assert 25 < lat < 26 and -81 < lng < -80
     assert zip_centroid("99999") is None
+
+
+FLORIDA_CITY = (25.4439, -80.4904)  # OSM's 33034; the Census point is in the Everglades
+
+
+@pytest.fixture
+def live_zips(monkeypatch):
+    """Live lookups on, served by a fake Nominatim; returns the ZIPs it was asked for."""
+    asked: list[str] = []
+    answers: dict[str, tuple[float, float] | None | Exception] = {}
+
+    async def fake_fetch(zip_code):
+        asked.append(zip_code)
+        answer = answers.get(zip_code)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    monkeypatch.setenv("GEOCODER", "nominatim")
+    get_settings.cache_clear()
+    monkeypatch.setattr(search_service, "fetch_osm_zip", fake_fetch)
+    monkeypatch.setattr(search_service, "_zip_osm_live", {})
+    yield answers, asked
+    get_settings.cache_clear()
+
+
+def test_zip_prefers_the_committed_osm_point():
+    assert asyncio.run(locate_zip("33034")) == FLORIDA_CITY
+    assert asyncio.run(locate_zip("99999")) is None
+
+
+def test_zip_missing_from_the_table_is_looked_up_once(live_zips):
+    answers, asked = live_zips
+    answers["32303"] = (30.48, -84.32)
+    assert asyncio.run(locate_zip("32303")) == (30.48, -84.32)
+    assert asyncio.run(locate_zip("32303")) == (30.48, -84.32)
+    assert asyncio.run(locate_zip("33034")) == FLORIDA_CITY
+    assert asyncio.run(locate_zip("99999")) is None
+    assert asked == ["32303"]
+
+
+def test_zip_falls_back_to_census(live_zips):
+    answers, asked = live_zips
+    answers["32303"] = None  # OSM has no such postcode
+    answers["32304"] = (40.0, -75.0)  # hundreds of miles off: a different place
+    answers["32305"] = httpx.ConnectTimeout("slow")
+    for z in ("32303", "32304", "32305"):
+        assert asyncio.run(locate_zip(z)) == zip_centroid(z)
+    asyncio.run(locate_zip("32305"))
+    assert asked.count("32305") == 2  # a failed lookup isn't remembered
+
+
+def test_zip_lookup_off_uses_census(monkeypatch):
+    monkeypatch.setenv("GEOCODER", "none")
+    get_settings.cache_clear()
+    monkeypatch.setattr(search_service, "fetch_osm_zip", None)  # would fail if called
+    assert asyncio.run(locate_zip("32303")) == zip_centroid("32303")
+    get_settings.cache_clear()
 
 
 def test_state_ref_pattern_reads_location_suffixes():
@@ -197,7 +259,7 @@ def test_33034_finds_nearby_projects_and_frames_the_zip(api_client, query):
     assert body["interpretation"]["zip_found"] is True
     assert body["project_ids"] == [ids["fpl_miami"]]
     assert body["projects"][0]["miles"] <= body["interpretation"]["radius_miles"]
-    lat, lng = zip_centroid("33034")
+    lat, lng = FLORIDA_CITY
     south, west, north, east = body["bounds"]
     assert south <= lat <= north and west <= lng <= east
     assert (south + north) / 2 == pytest.approx(lat)
@@ -211,7 +273,7 @@ def test_zip_with_no_projects_still_has_a_map_destination(api_client):
     assert body["total"] == 0
     assert body["project_ids"] == []
     assert body["interpretation"]["radius_miles"] == 100
-    lat, lng = zip_centroid("33034")
+    lat, lng = FLORIDA_CITY
     assert body["bounds"] == [lat, lng, lat, lng]
 
 
@@ -224,7 +286,7 @@ def test_33034_stays_centered_in_south_florida_when_matches_are_farther_north(ap
     assert body["project_ids"] == ids
     assert body["interpretation"]["radius_miles"] == 100
     south, west, north, east = body["bounds"]
-    lat, lng = zip_centroid("33034")
+    lat, lng = FLORIDA_CITY
     assert (south + north) / 2 == pytest.approx(lat)
     assert (west + east) / 2 == pytest.approx(lng)
     assert south <= 26.7 <= north and west <= -80.9 <= east

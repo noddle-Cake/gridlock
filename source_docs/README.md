@@ -134,6 +134,16 @@ The placement trail for every project is in `extracted/sertp_2026_preliminary_pr
 A planned line whose two endpoints both match OSM substations also gets a `route` (a
 straight segment between them); matching measures closest points on it.
 
+### ZIP search
+
+- A ZIP is placed at its OpenStreetMap point (Nominatim `postalcode` search: the middle of
+  the OSM addresses that carry it), from `app/data/zip_osm_points.csv`
+  (`scripts/build_zip_cache.py`) or, failing that, a live lookup remembered per process.
+- The Census ZCTA table (`app/data/zip_centroids.csv`) decides which ZIPs exist and is the
+  fallback. Its internal points only have to fall inside the ZIP, so a big rural ZIP can
+  land far from anyone: 33034's is in the Everglades, 18 miles west of Florida City. An OSM
+  point more than 50 miles from the Census one is ignored as a different place.
+
 ### DESC and Georgia Power (the Sperry challenge pair)
 
 - `app/sources/desc.py`: one project per page. Endpoints come from the title before the

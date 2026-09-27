@@ -290,7 +290,7 @@ class AskService:
             t = ProjectType.coerce(kind)
             if t:
                 parsed.types = [t]
-        f, point = search.to_filter(parsed)
+        f, point = await search.to_filter(parsed)
         if f.empty:
             raise ValueError("give at least one of company, state, zip, type, or query")
         limit = int(_clamp(args.get("limit"), 1, 25, 15))
