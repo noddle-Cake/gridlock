@@ -13,6 +13,7 @@ import { CircleMarker, MapContainer, Polyline, ScaleControl, Tooltip, useMap } f
 
 import { milesToKm } from '../lib/distanceBands'
 import { bothBuildingLabel, durationLabel, escapeHtml as esc, rangeLabel } from '../lib/format'
+import { type LatLng, homePoints } from '../lib/homeView'
 import {
   COLOR_BY_OPTIONS,
   type ColorBy,
@@ -47,7 +48,7 @@ function fitOptions(map: LeafletMap) {
 }
 
 /**
- * Frames all projects on load and glides to a pair when one is selected. Leaving the
+ * Frames the home view (lower-48 projects) on load and glides to a pair when one is selected. Leaving the
  * pair returns to wherever the planner was looking before, like closing a listing.
  */
 function ViewController({
@@ -359,11 +360,13 @@ export function MapView({
     [selectedPair, hoveredPair].flatMap((p) => (p ? [p.project_a.id, p.project_b.id] : [])),
   )
 
-  const allBounds = useMemo<LatLngBoundsExpression | null>(() => {
-    const pts = placed.map((p) => [p.lat!, p.lng!] as [number, number])
+  const allBounds = useMemo<LatLng[] | null>(() => {
+    const pts = placed.map((p) => [p.lat!, p.lng!] as LatLng)
     return pts.length ? pts : null
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placed.length])
+  // Opens on the lower 48; "Fit all" still frames Alaska, Hawaii and the territories too.
+  const homeBounds = useMemo(() => allBounds && homePoints(allBounds), [allBounds])
 
   // Keyed on coordinates, not the pair object, so a data refresh doesn't re-trigger the fly.
   const a = selectedPair?.project_a
@@ -409,7 +412,7 @@ export function MapView({
         <ScaleControl position="bottomleft" imperial={false} metric />
         <BaseMap counties={layers.counties} labels={layers.labels} />
         {layers.grid ? <PowerGridLayer /> : null}
-        <ViewController allBounds={allBounds} pairBounds={pairBounds} />
+        <ViewController allBounds={homeBounds} pairBounds={pairBounds} />
         <FocusController focus={focus} />
         <ReportBounds onChange={onBoundsChange} />
         {/* Planned lines: a straight segment between the endpoint substations. */}
