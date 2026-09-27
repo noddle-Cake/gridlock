@@ -1008,7 +1008,7 @@ a {
   font-family: inherit;
 }
 
-/* Top-right stack: "Fit all" over the collapsible layers & legend card. */
+/* Keep both disclosure cards the same width and anchored at the top right in every state. */
 .map-tools {
   position: absolute;
   top: 12px;
@@ -1016,13 +1016,15 @@ a {
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 8px;
-  max-width: min(380px, calc(100% - 24px));
+  width: min(260px, calc(100% - 24px));
   max-height: calc(100% - 40px);
 }
 
 .map-fit {
+  align-self: flex-end;
+  flex-shrink: 0;
   font-weight: 600;
   font-size: 12.5px;
   box-shadow: var(--shadow);
@@ -1053,6 +1055,8 @@ a {
 }
 
 .legend-card {
+  width: 100%;
+  min-width: 0;
   min-height: 0;
   overflow: auto;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
@@ -1060,6 +1064,10 @@ a {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   font-size: 12px;
+}
+
+.legend-card:not([open]) {
+  flex-shrink: 0;
 }
 
 .legend-card > summary {
@@ -1163,11 +1171,6 @@ a {
 }
 
 /* Colour-by card: the encoding switch over a short legend with project counts. */
-.color-card {
-  width: 230px;
-  flex: none;
-}
-
 .color-by {
   display: flex;
   margin: 0 10px 8px;
@@ -2130,10 +2133,6 @@ details summary {
 
   .panel {
     overflow: visible;
-  }
-
-  .legend-card:not([open]) {
-    max-width: none;
   }
 }
 
