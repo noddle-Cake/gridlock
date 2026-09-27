@@ -2,7 +2,9 @@ import type { VectorTileFeature } from '@mapbox/vector-tile'
 import { describe, expect, it } from 'vitest'
 
 import {
+  GRID_POINT_MIN_ZOOM,
   LOW_VOLTAGE_COLOR,
+  POWER_MIN_ZOOM,
   drawPowerTile,
   featureVoltage,
   gridAlpha,
@@ -38,9 +40,18 @@ describe('featureVoltage', () => {
 })
 
 describe('gridAlpha', () => {
-  it('fades the grid at national scale and restores it zoomed in', () => {
-    expect(gridAlpha(4)).toBeLessThan(gridAlpha(7))
-    expect(gridAlpha(9)).toBe(0.85)
+  it('starts lighter where the grid appears and reaches full strength zoomed in', () => {
+    expect(gridAlpha(POWER_MIN_ZOOM)).toBe(0.5)
+    expect(gridAlpha(POWER_MIN_ZOOM)).toBeLessThan(gridAlpha(7))
+    expect(gridAlpha(8)).toBe(0.85)
+    expect(gridAlpha(12)).toBe(0.85)
+  })
+})
+
+describe('POWER_MIN_ZOOM', () => {
+  it('keeps the grid off the national view (lower 48 opens around zoom 4)', () => {
+    expect(POWER_MIN_ZOOM).toBeGreaterThan(5)
+    expect(POWER_MIN_ZOOM).toBeLessThanOrEqual(GRID_POINT_MIN_ZOOM)
   })
 })
 
