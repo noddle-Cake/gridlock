@@ -4,7 +4,7 @@ The parser is deterministic and cheap, so the client can call GET /search as the
 types. It never calls the LLM: natural-language questions go to POST /ask
 (services/ask.py), whose tools run the same `ProjectFilter` queries.
 
-    "33157"                 -> projects within 25 miles of the ZIP's centroid
+    "33157"                 -> projects within 25 miles of the ZIP (its OSM point)
     "Florida" / "FL"        -> state
     "FPL"                   -> company, by acronym ("Florida Power & Light")
     "Florida Power & Light" -> company (a full name beats the state it contains)
@@ -14,6 +14,7 @@ types. It never calls the LLM: natural-language questions go to POST /ask
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import difflib
 import math
@@ -23,6 +24,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import asyncpg
+import httpx
 
 from app.core.config import get_settings
 from app.db import repository as repo
@@ -34,9 +36,14 @@ from app.models.dto import (
     SearchResponse,
 )
 from app.models.enums import ProjectType
-from app.services.geocoding import STATE_NAMES, Candidate, _gazetteer
+from app.services.geocoding import STATE_NAMES, Candidate, NominatimGeocoder, _gazetteer
 
 ZIP_PATH = Path(__file__).resolve().parent.parent / "data" / "zip_centroids.csv"
+ZIP_OSM_PATH = ZIP_PATH.with_name("zip_osm_points.csv")
+# An OSM point farther than this from the Census one is a different place, not a better
+# centre for the same ZIP.
+ZIP_MAX_SHIFT_MILES = 50.0
+ZIP_LOOKUP_TIMEOUT_S = 3.0
 MAX_QUERY_CHARS = 200
 MAX_WINDOW = 6  # longest company name, in words, tried as one phrase
 ZIP_WIDER_RADII = (50.0, 100.0)  # tried in turn when nothing is near a ZIP
@@ -202,6 +209,69 @@ def zip_centroid(zip_code: str) -> tuple[float, float] | None:
     return _zip_table().get(zip_code)
 
 
+@lru_cache
+def _zip_osm_table() -> dict[str, tuple[float, float]]:
+    """OSM points looked up ahead of time (scripts/build_zip_cache.py)."""
+    if not ZIP_OSM_PATH.exists():
+        return {}
+    with ZIP_OSM_PATH.open(encoding="utf-8") as f:
+        return {row["zip"]: (float(row["lat"]), float(row["lng"])) for row in csv.DictReader(f)}
+
+
+_zip_osm_live: dict[str, tuple[float, float] | None] = {}
+
+
+async def fetch_osm_zip(zip_code: str) -> tuple[float, float] | None:
+    """Nominatim's point for a US postcode: the middle of the OSM addresses that carry it.
+
+    Shares the geocoder's lock and holds it for a second after the request (the usage
+    policy's 1 req/s) without making this search wait out that second.
+    """
+    lock = NominatimGeocoder._lock
+    await lock.acquire()
+    try:
+        headers = {"User-Agent": get_settings().geocoder_user_agent}
+        async with httpx.AsyncClient(headers=headers, timeout=ZIP_LOOKUP_TIMEOUT_S) as c:
+            resp = await c.get(NominatimGeocoder.URL, params={
+                "postalcode": zip_code, "country": "us", "format": "jsonv2", "limit": 1,
+            })
+    finally:
+        asyncio.get_running_loop().call_later(1.0, lock.release)
+    resp.raise_for_status()
+    hits = [r for r in resp.json() if r.get("addresstype") == "postcode"]
+    return (float(hits[0]["lat"]), float(hits[0]["lon"])) if hits else None
+
+
+def _miles_apart(a: tuple[float, float], b: tuple[float, float]) -> float:
+    k = math.cos(math.radians((a[0] + b[0]) / 2))
+    return 69.0 * math.hypot(a[0] - b[0], (a[1] - b[1]) * k)
+
+
+async def locate_zip(zip_code: str) -> tuple[float, float] | None:
+    """Where a five-digit ZIP is on the map, or None if it isn't a real ZCTA.
+
+    A Census ZCTA internal point only has to fall inside the ZIP's polygon, which for a big
+    rural ZIP can be nowhere near anyone: 33034's is in the Everglades, 18 miles west of
+    Florida City. OpenStreetMap puts the ZIP where its addresses are, so its point wins
+    when it has one (committed table, else a live Nominatim lookup, remembered per process).
+    The Census table still decides which ZIPs are real, and is the fallback.
+    """
+    census = zip_centroid(zip_code)
+    if census is None:
+        return None
+    osm = _zip_osm_table().get(zip_code)
+    if osm is None and get_settings().geocoder == "nominatim":
+        if zip_code not in _zip_osm_live:
+            try:
+                _zip_osm_live[zip_code] = await fetch_osm_zip(zip_code)
+            except (httpx.HTTPError, ValueError, KeyError):
+                return census  # not remembered: a later search tries again
+        osm = _zip_osm_live[zip_code]
+    if osm and _miles_apart(osm, census) <= ZIP_MAX_SHIFT_MILES:
+        return osm
+    return census
+
+
 def nearest_county(lat: float, lng: float) -> Candidate | None:
     best, best_d = None, math.inf
     k = math.cos(math.radians(lat))
@@ -319,15 +389,17 @@ def _ahead():
     return get_settings().planning_cutoff
 
 
-def to_filter(parsed: ParsedQuery) -> tuple[repo.ProjectFilter, tuple[float, float] | None]:
-    """The project filter for a parsed query, and the ZIP centroid it searched around."""
+async def to_filter(
+    parsed: ParsedQuery,
+) -> tuple[repo.ProjectFilter, tuple[float, float] | None]:
+    """The project filter for a parsed query, and the ZIP point it searched around."""
     radius = get_settings().search_zip_radius_miles
     f = repo.ProjectFilter(
         utilities=list(parsed.utilities), states=list(parsed.states),
         types=[t.value for t in parsed.types], terms=list(parsed.terms), radius_miles=radius,
         ahead_of=_ahead(),
     )
-    point = zip_centroid(parsed.zip) if parsed.zip else None
+    point = await locate_zip(parsed.zip) if parsed.zip else None
     if point:
         f.near = point
     elif parsed.zip:
@@ -380,7 +452,7 @@ def _state_suggestions(parsed: ParsedQuery) -> list[str]:
 async def run_search(conn: asyncpg.Connection, q: str, *, limit: int) -> SearchResponse:
     companies = await load_companies(conn)
     parsed = parse_query(q, companies)
-    f, point = to_filter(parsed)
+    f, point = await to_filter(parsed)
     interpretation = SearchInterpretationDTO(
         zip=parsed.zip, zip_found=point is not None, states=parsed.states,
         utilities=parsed.utilities, types=parsed.types, terms=parsed.terms,

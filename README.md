@@ -99,7 +99,7 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | `GEMINI_API_KEY` | — | Extraction, briefs, Ask GridMerge |
 | `GEMINI_MODEL` | `gemini-3.8-flash` | `gemini-2.5-flash` is closed to new keys |
 | `GEMINI_RPM` | `5` | requests/minute across the app (free tier: 5); `0` = unpaced |
-| `GEOCODER` | `nominatim` | `none` = offline county gazetteer only |
+| `GEOCODER` | `nominatim` | `none` = offline county gazetteer only, and ZIP searches use only committed OSM points or Census ZCTA points |
 | `CORS_ORIGINS` | `http://localhost:5173` | comma-separated |
 | `HIFLD_LINES_URL` | HIFLD ArcGIS FeatureServer layer | only used by `load_hifld --fetch` |
 | `HIFLD_BBOX` | `-86.0,29.8,-80.8,31.6` | FL–GA region fetched by `load_hifld --fetch` |
@@ -107,7 +107,7 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | `PLANNING_FROM` | today | matches need both projects in service on or after this date; earlier work is finished and left out (`/projects?include_past=true` still lists it) |
 | `MIN_OVERLAP_DAYS` | `30` | matches need both projects building at the same time for at least this many days |
 | `COMPRESS_RESPONSES` | `true` | gzip API responses; the deploy stack sets `false` because Caddy compresses (zstd) |
-| `SEARCH_ZIP_RADIUS_MILES` | `25` | a ZIP search matches projects this close to the ZIP (widens to 50, then 100, when empty) |
+| `SEARCH_ZIP_RADIUS_MILES` | `25` | a ZIP search matches projects this close to the ZIP's OpenStreetMap point (widens to 50, then 100, when empty) |
 | `AUTH_USERNAME`, `AUTH_PASSWORD` | — | the one sign-in account; both set = sign-in required, either empty = open app |
 | `AUTH_SECRET` | random per process | signs session cookies; set it so restarts and redeploys keep people signed in |
 | `AUTH_SESSION_HOURS` | `12` | how long a sign-in lasts |
