@@ -5,6 +5,7 @@ import {
   LOW_VOLTAGE_COLOR,
   drawPowerTile,
   featureVoltage,
+  gridAlpha,
   lineWidth,
   voltageColor,
 } from './powerGrid'
@@ -33,6 +34,13 @@ describe('featureVoltage', () => {
   it('ignores missing and non-numeric values', () => {
     expect(featureVoltage({ voltage: 'unknown' })).toBeNull()
     expect(featureVoltage({})).toBeNull()
+  })
+})
+
+describe('gridAlpha', () => {
+  it('fades the grid at national scale and restores it zoomed in', () => {
+    expect(gridAlpha(4)).toBeLessThan(gridAlpha(7))
+    expect(gridAlpha(9)).toBe(0.85)
   })
 })
 
@@ -112,6 +120,16 @@ describe('drawPowerTile', () => {
     const sub = feature({}, [[2048, 1024]])
     drawPowerTile(ctx as never, tile({ power_line: [line(69)], power_substation_point: [sub] }), 9, 256)
     expect(ctx.moves[0]).toEqual([0, 0])
+  })
+
+  it('leaves out substation symbols at national scale', () => {
+    const sub = feature({ voltage: 230 }, [[2048, 1024]])
+    const far = recorder()
+    drawPowerTile(far.ctx as never, tile({ power_substation_point: [sub] }), 5, 256)
+    expect(far.strokes).toHaveLength(0)
+    const near = recorder()
+    drawPowerTile(near.ctx as never, tile({ power_substation_point: [sub] }), 9, 256)
+    expect(near.strokes).toHaveLength(1)
   })
 
   it('hides substation busbars until zoomed in', () => {

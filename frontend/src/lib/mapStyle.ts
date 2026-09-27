@@ -6,6 +6,8 @@ import { OTHER_COLOR, topUtilities } from './format'
 export interface MarkerState {
   paired: boolean
   selected: boolean
+  /** Outline for paired dots in the map's land colour, keeping clustered ones apart. */
+  halo?: string
 }
 
 /**
@@ -21,10 +23,16 @@ export function markerStyle(
 ): PathOptions & { radius: number; weight: number } {
   const hl = highlightSize(zoom)
   const scale = markerScale(zoom)
+  // Approximate dots are drawn by their dashed outline, so they keep their colour.
+  const halo = s.paired && !p.approximate ? s.halo : undefined
   return {
     radius: s.selected ? hl.radius : Math.max(2, (s.paired ? 9 : 4) * scale),
-    color: s.selected ? '#111' : color,
-    weight: s.selected ? hl.weight : s.paired ? Math.max(1.5, 2.5 * scale) : 0.75,
+    color: s.selected ? '#111' : (halo ?? color),
+    weight: s.selected
+      ? hl.weight
+      : s.paired
+        ? Math.max(1, (halo ? 1.5 : 2.5) * scale)
+        : 0.75,
     opacity: s.paired || s.selected ? 1 : 0.6,
     fillColor: color,
     fillOpacity: p.approximate ? 0.08 : s.paired || s.selected ? 0.85 : 0.3,
@@ -33,11 +41,11 @@ export function markerStyle(
 }
 
 /**
- * Marker size by zoom, half size at national scale (full-size dots merge into blobs there)
- * growing smoothly to full size by zoom 7.
+ * Marker size by zoom, about a third at national scale (larger dots merge into blobs over the
+ * hundreds of paired projects there) growing smoothly to full size by zoom 7.5.
  */
 export function markerScale(zoom: number): number {
-  return Math.min(1, Math.max(0.5, 0.5 + (zoom - 4.5) * 0.2))
+  return Math.min(1, Math.max(0.35, 0.35 + (zoom - 4) * 0.19))
 }
 
 /**

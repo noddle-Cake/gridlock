@@ -101,6 +101,7 @@ def test_locate_line_between_two_osm_substations_is_exact(fake_osm):
     got = locate_mod.locate(["DOYLE", "WINDER PRIMARY"], ["GA"], FakePlaces({}))
     assert (got.lat, got.lng, got.approximate) == (33.95, -83.8, False)
     assert "midpoint" in got.how
+    assert got.states == ["GA"]
 
 
 def test_locate_falls_back_to_county_centre_marked_approximate(fake_osm, monkeypatch):
@@ -115,6 +116,37 @@ def test_locate_falls_back_to_county_centre_marked_approximate(fake_osm, monkeyp
 def test_locate_unresolved_needs_review(fake_osm):
     got = locate_mod.locate(["NOWHERE"], ["GA"], FakePlaces({}))
     assert got.lat is None and got.requires_review
+
+
+def test_sertp_place_stays_in_the_county_state_its_text_names():
+    """TVA's Hampton 500 kV station serves Montgomery County, TN and Todd County, KY. The
+    same-named town in Henry County, GA is inside TVA's footprint but must not win: it
+    made false 0 km pairs with Georgia projects (e.g. McDonough - South Griffin)."""
+    from app.sources import snapshot
+    from app.sources.sertp import AREA_BOUNDS, SertpEntry, _owner, locate_entry
+
+    entry = SertpEntry(
+        page=112, area="TVA", year=2030, name="HAMPTON 500 KV STATION, CONSTRUCT",
+        description="Construct new 500/161 kV Hampton station. Loop in existing "
+                    "Montgomery - Wilson 500 kV transmission line.",
+        supporting="Additional thermal capacity and voltage support is needed in the "
+                   "Montgomery County, TN and Todd County, KY area under contingency.",
+    )
+    entry.owner, entry.states = _owner(entry)
+    assert entry.named_counties == [("Montgomery County", "TN"), ("Todd County", "KY")]
+    # Unrestricted, the committed place cache resolves "Hampton" to Georgia.
+    loose = locate_mod.locate(entry.endpoints, entry.states, locate_mod.PlaceCache(offline=True),
+                              operator=entry.owner, bounds=AREA_BOUNDS["TVA"])
+    assert loose.states == ["GA"]
+
+    got = locate_entry(entry, locate_mod.PlaceCache(offline=True))
+    assert got.states == ["TN"] and got.approximate and not got.requires_review
+    assert (got.lat, got.lng) == pytest.approx((36.5, -87.38), abs=0.05)
+    assert "Montgomery County, TN" in got.how
+
+    grid = snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.SERTP.export)
+    (row,) = [p for p in grid if p.name.lower().startswith("hampton 500 kv station")]
+    assert row.location_ref == "Hampton (TN)" and row.lat == pytest.approx(36.5, abs=0.05)
 
 
 def test_curated_overrides_pin_and_block_for_their_planning_entity(fake_osm, tmp_path,

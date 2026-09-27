@@ -65,8 +65,15 @@ describe('markerStyle (Req 9.1, 9.3, 9.4)', () => {
         prev = next
       }
     }
-    expect(markerScale(3)).toBe(0.5)
-    expect(markerScale(7)).toBe(1)
+    expect(markerScale(3)).toBe(0.35)
+    expect(markerScale(7.5)).toBe(1)
+  })
+
+  it('rings paired dots in the halo colour, except approximate ones drawn by their outline', () => {
+    const state = { paired: true, selected: false, halo: '#fff' }
+    expect(markerStyle(project(), '#f00', state).color).toBe('#fff')
+    expect(markerStyle(project({ approximate: true }), '#f00', state).color).toBe('#f00')
+    expect(markerStyle(project(), '#f00', { ...state, paired: false }).color).toBe('#f00')
   })
 })
 
