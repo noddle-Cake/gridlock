@@ -218,9 +218,9 @@ def test_committed_snapshots_read_back_with_citations():
 
     eia = snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.EIA860M.export)
     grid = snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.SERTP.export)
-    # The region (SC, GA, FL): 78 EIA plant/month sites, 189 of SERTP's 426 projects.
-    assert len(eia) == 78 and len(grid) == 189
-    assert {p.state for p in eia} <= set(region.REGION_STATES)
+    # Nationwide: 1,649 EIA plant/month sites (78 in SC/GA/FL) and all 426 SERTP projects.
+    assert len(eia) == 1649 and len(grid) == 426
+    assert sum(p.state in region.REGION_STATES for p in eia) == 78
     assert all(p.source_url and p.source_page and p.raw_excerpt for p in eia + grid)
     assert all(p.lat is not None for p in eia)
     assert all((p.lat is None) == p.requires_review for p in grid)

@@ -12,7 +12,7 @@ backend/    FastAPI + asyncpg + PostGIS, Gemini extraction/briefs, Hypothesis te
 frontend/   React + Vite + TypeScript, Leaflet map, vis-timeline, Vitest + fast-check
 sample_data/  generated demo plans for three fictional utilities (real towns/counties)
 deploy/     Lightsail stack (app + PostGIS + Caddy), CI deploy script, instance bootstrap
-source_docs/  public SC/GA/FL filings, their extracted citation CSVs, and the loaders' notes
+source_docs/  public filings (SC/GA/FL utilities, SERTP, EIA-860M), their extracted citation CSVs, and the loaders' notes
 ```
 
 Toolchain: Python 3.11+ (`backend/.python-version`), Node 22 (`.nvmrc`; Vite 8's
@@ -50,8 +50,9 @@ the rest of the demo loop works offline.
 
 ### Demo walkthrough (Sperry Gridlock challenge)
 
-1. The app opens on the **Southeast**: Dominion Energy South Carolina, Georgia Power and
-   their neighbours in SC and GA, plus Florida's utilities. A green banner states what makes
+1. The app opens on the **whole US**: every planned generator in EIA-860M nationwide,
+   SERTP's Southeast transmission plan, and the Dominion Energy South Carolina, Georgia
+   Power and Florida utilities' filings. A green banner states what makes
    a match: **future work only** (in service from today), **within 40 km**, and **building
    at the same time** for at least 30 days. Every card shows the shared build time ("7
    months building together", "Both building Jun 2026 – Dec 2026"). The list is ranked by
@@ -70,8 +71,11 @@ the rest of the demo loop works offline.
 5. Export CSV/PDF downloads the pairs on screen (utility focus and distance bands).
 
 Collision flags exclude the same company, known sister companies, and projects with
-a shared corporate owner, including FRP solar LLCs and FPL under NextEra. Unverified
-ownership is withheld pending review. Dominion SC
+a shared corporate owner, including FRP solar LLCs and FPL under NextEra. Companies the
+ownership audit could not place (`review`) are withheld. Companies not reviewed yet (most
+of EIA's nationwide project companies) still match unless their names read as one
+developer's projects (Atlas Solar IV / Atlas BESS IV, Evergy Kansas Central / Evergy
+Missouri West), and those pairs are labelled **ownership unverified**. Dominion SC
 and Georgia Power pass the ownership check because their parents differ; matches must
 also meet the future-work and shared-build-window rules above. See the
 [ownership policy and sources](source_docs/company_ownership.md) for coverage.
@@ -184,21 +188,21 @@ columns), canonicalized in `app/services/owners.py` to the same names as HIFLD o
 The FL–GA filing set, page ranges, and a one-shot upload script are in
 [`source_docs/`](source_docs/README.md).
 
-**Region: the Southeast (SC, GA) plus Florida** (`app/sources/region.py`). Six structured
+**Nationwide**, with the Sperry region (SC, GA, FL) covered in depth. Six structured
 sources load without Gemini (`cd backend && .venv/bin/python -m
 scripts.load_public_sources all`):
 
 - **Dominion Energy South Carolina**: SCRTP "Planned Transmission Projects $2M and above,
   2026-2030" (54 projects, with costs).
 - **Georgia Power**: 2025 IRP Vol 3, Table 2 "Georgia ITS 10 Year Plan" (138 projects).
-- **SERTP 2026 preliminary 10-year expansion plan**: the 189 of its 426 projects located in
-  SC, GA or FL (Southern Company, Georgia Transmission Corp, MEAG, Dalton, Duke Energy
-  Carolinas' SC work, ...).
+- **SERTP 2026 preliminary 10-year expansion plan**: all 426 projects (Southern Company,
+  Georgia Transmission Corp, Duke Energy Carolinas and Progress, TVA, MEAG, LG&E and KU,
+  ...); 189 are in SC, GA or FL.
 - **Florida utilities**: FRCC 2026 Load and Resource Plan, Form 13 "Proposed Transmission
   Lines" (Duke Energy Florida, FPL, Tampa Electric, Lakeland, Seminole, PowerSouth; 23
   lines) and the City of Tallahassee 2026 Ten Year Site Plan, Table 4.2 (2 lines).
-- **EIA-860M planned generators** (August 2026) in SC, GA and FL: 78 plant sites at EIA's
-  published coordinates (`--states ALL` loads the nationwide list).
+- **EIA-860M planned generators** (August 2026), nationwide: 1,649 plant sites at EIA's
+  published coordinates (78 in SC, GA and FL).
 
 Substations are placed from a cached OpenStreetMap lookup, with county centres
 (approximate) as fallback and `app/data/place_overrides.csv` for sourced corrections.
@@ -206,7 +210,7 @@ The raw originals of every source are committed in `source_docs/`, and each run 
 per-project citation table (file, page/sheet, excerpt) to `source_docs/extracted/`.
 Those CSVs ship in the Docker image, and on startup the app inserts any source whose
 plan is missing or was loaded from a different version of its CSV (SHA-256 kept on the
-plan), so the AWS Lightsail deploy gets all 474 projects with no manual step
+plan), so the AWS Lightsail deploy gets all 2,292 projects with no manual step
 (`AUTOLOAD_PUBLIC_SOURCES=false` turns it off). To refresh: re-run the loader, commit
 the CSVs, deploy; the new snapshot replaces the old rows on startup (briefs on replaced
 projects are dropped with them).

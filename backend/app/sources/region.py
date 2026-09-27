@@ -1,5 +1,8 @@
-"""The region GridMerge plans for: the Southeast around the Sperry challenge pair (Dominion
-Energy South Carolina, Georgia Power) plus Florida. Loaders keep only projects here.
+"""Which states a project is in, for loading only part of the country.
+
+The committed snapshots are nationwide. REGION_STATES is the Southeast around the Sperry
+challenge pair (Dominion Energy South Carolina, Georgia Power) plus Florida, which
+`load_public_sources --states SC GA FL` narrows the loaders to.
 """
 
 from __future__ import annotations
@@ -36,9 +39,14 @@ def state_at(lat: float, lng: float) -> str | None:
     return state if dist <= _MAX_KM else None
 
 
-def in_region(lat: float | None, lng: float | None, owner_states: list[str] | None = None) -> bool:
-    """A located project inside the region, or an unplaced one whose owner operates only in
-    region states (e.g. Georgia Transmission Corp)."""
+def in_region(
+    lat: float | None,
+    lng: float | None,
+    owner_states: list[str] | None = None,
+    states: tuple[str, ...] | list[str] = REGION_STATES,
+) -> bool:
+    """A located project inside `states`, or an unplaced one whose owner operates only in
+    those states (e.g. Georgia Transmission Corp)."""
     if lat is not None and lng is not None:
-        return state_at(lat, lng) in REGION_STATES
-    return bool(owner_states) and set(owner_states) <= set(REGION_STATES)
+        return state_at(lat, lng) in states
+    return bool(owner_states) and set(owner_states) <= set(states)

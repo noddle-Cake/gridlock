@@ -1,16 +1,17 @@
 """Load structured public sources straight into the projects table (no LLM needed).
 
-    python -m scripts.load_public_sources eia860m                 # region: SC, GA, FL
+    python -m scripts.load_public_sources eia860m                 # nationwide
     python -m scripts.load_public_sources eia860m --states GA AL TN
-    python -m scripts.load_public_sources sertp                   # SERTP rows in the region
+    python -m scripts.load_public_sources sertp                   # every SERTP project
     python -m scripts.load_public_sources sertp --areas SOUTHERN DUKE CAROLINAS
+    python -m scripts.load_public_sources all --states SC GA FL   # the Sperry region only
     python -m scripts.load_public_sources desc                    # DESC $2M+ projects
     python -m scripts.load_public_sources gpc                     # Georgia Power ITS list
     python -m scripts.load_public_sources all --dry-run          # parse + CSV only
 
-Only the planning region is kept (app/sources/region.py: SC, GA, FL): EIA-860M plants in
-those states and SERTP projects located there. Inputs default to the raw copies in
-source_docs/. Every run writes a citation table to
+Everything is kept by default. --states narrows EIA-860M to plants in those states and SERTP
+to projects located there (app/sources/region.py; the Sperry region is SC GA FL). Inputs
+default to the raw copies in source_docs/. Every run writes a citation table to
 source_docs/extracted/ (one row per project: source file, page/sheet, rows, excerpt) and,
 unless --dry-run, replaces that source's previous load in DATABASE_URL.
 
@@ -98,7 +99,9 @@ def eia_projects(path: Path, states: list[str] | None) -> list[repo.NewProject]:
 # ---------------------------------------------------------------- SERTP
 
 
-def sertp_projects(path: Path, areas: set[str] | None, *, offline: bool) -> list[repo.NewProject]:
+def sertp_projects(
+    path: Path, areas: set[str] | None, states: list[str] | None, *, offline: bool,
+) -> list[repo.NewProject]:
     entries = sertp.parse_report(path, areas=areas)
     places = PlaceCache(offline=offline, user_agent=get_settings().geocoder_user_agent)
     out = []
@@ -107,8 +110,8 @@ def sertp_projects(path: Path, areas: set[str] | None, *, offline: bool) -> list
         for i, e in enumerate(entries, start=1):
             where = locate(e.endpoints, e.states, places, operator=e.owner,
                            bounds=sertp.AREA_BOUNDS.get(e.area))
-            if not region.in_region(where.lat, where.lng, e.states):
-                stats["outside region"] += 1
+            if states and not region.in_region(where.lat, where.lng, e.states, states):
+                stats["outside --states"] += 1
                 continue
             stats["review" if where.requires_review else
                   "approximate" if where.approximate else "exact"] += 1
@@ -134,7 +137,7 @@ def sertp_projects(path: Path, areas: set[str] | None, *, offline: bool) -> list
             ))
     finally:
         places.save()
-    print(f"SERTP: {len(entries)} projects, {len(out)} in the region; location {dict(stats)}")
+    print(f"SERTP: {len(entries)} projects, {len(out)} kept; location {dict(stats)}")
     print("  by owner:", dict(Counter(p.utility for p in out).most_common()))
     return out
 
@@ -281,16 +284,18 @@ def main() -> None:
     ap.add_argument("--frcc-file", type=Path, default=DOCS / snapshot.FRCC.filename)
     ap.add_argument("--tallahassee-file", type=Path,
                     default=DOCS / snapshot.TALLAHASSEE.filename)
-    ap.add_argument("--states", nargs="+", default=list(region.REGION_STATES),
-                    help="EIA-860M plant states (default: the region; ALL = nationwide)")
+    ap.add_argument("--states", nargs="+", default=["ALL"],
+                    help="keep EIA-860M plants and SERTP projects in these states "
+                         "(default: ALL; the Sperry region is SC GA FL)")
     ap.add_argument("--areas", nargs="+", help=f"SERTP areas, default all: {list(sertp.AREAS)}")
     ap.add_argument("--offline", action="store_true",
                     help="no Nominatim calls when placing SERTP/DESC/GPC projects")
     ap.add_argument("--dry-run", action="store_true", help="parse + write CSV, skip the DB")
     args = ap.parse_args()
 
+    states = None if [s.upper() for s in args.states] == ["ALL"] else [
+        s.upper() for s in args.states]
     if args.source in ("eia860m", "all"):
-        states = None if [s.upper() for s in args.states] == ["ALL"] else args.states
         projects = eia_projects(args.eia_file, states)
         out = EXTRACTED / snapshot.EIA860M.export
         write_export(out, projects, args.eia_file.name)
@@ -299,7 +304,7 @@ def main() -> None:
 
     if args.source in ("sertp", "all"):
         areas = {a.upper() for a in args.areas} if args.areas else None
-        projects = sertp_projects(args.sertp_file, areas, offline=args.offline)
+        projects = sertp_projects(args.sertp_file, areas, states, offline=args.offline)
         out = EXTRACTED / snapshot.SERTP.export
         write_export(out, projects, args.sertp_file.name)
         if not args.dry_run:

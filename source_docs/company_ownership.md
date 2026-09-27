@@ -26,10 +26,17 @@ Project company names remain as filed. No data reload is necessary.
 - Joint owners are compared individually: DEF/SEC cannot match either DEF or SEC,
   or another joint owner combination sharing either company.
 - Missing/unknown company names cannot establish a different-company match.
-  Unmapped named companies also need ownership review before they can match.
-  Every company in the current snapshots has an explicit decision in
+  Every company in the Sperry region (SC, GA, FL) has an explicit decision in
   `backend/app/data/company_ownership.csv`. Rows marked `review` are withheld, including
-  joint owners if any member is unverified. Extraction review does not override this.
+  joint owners if any member is withheld. Extraction review does not override this.
+- Companies not in the registry (most of EIA-860M's nationwide project companies) may
+  match, and the project carries `ownership_review_required`, shown as **ownership
+  unverified** on the pair. Pairs whose names read as one developer's projects are not
+  flagged: equal once phase, technology and numbering words are dropped ("Atlas Solar IV" /
+  "Atlas BESS IV", "Lazy U Solar 1" / "Lazy U ESS 2"), one name leading the other
+  ("Bridgewater Solar" / "Bridgewater Solar 2"), or the same distinctive first word
+  ("Evergy Kansas Central" / "Evergy Missouri West"). Address-named LLCs of a larger
+  owner can still slip through until the registry covers them.
 - energyRe project companies, Silicon Ranch Bacon/Cordova/Georgetown companies, and
   Ingka Kingstree companies are grouped by their documented owners. The CSV carries
   evidence links. Buyers, balancing authorities, and common fund managers alone

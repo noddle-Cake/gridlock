@@ -91,6 +91,11 @@ function ProjectCard({ p, color }: { p: PairProject; color: string }) {
     <article className="project-card" style={{ borderTopColor: color }}>
       <p className="card-utility" style={{ color }}>
         {p.utility}
+        {p.ownership_review_required ? (
+          <span className="badge badge-warn" title="Corporate owner not verified yet.">
+            ownership unverified
+          </span>
+        ) : null}
       </p>
       <h3>{p.name || 'Unnamed project'}</h3>
       <dl>

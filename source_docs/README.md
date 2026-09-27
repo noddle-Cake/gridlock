@@ -28,8 +28,8 @@ general terms. GridMerge labels matches as *potential coordination opportunities
 
 | File | Source (retrieved 2026-09-26) | How it's loaded | Content |
 | --- | --- | --- | --- |
-| `eia860m_august_generator2026.xlsx` | [EIA-860M, August 2026](https://www.eia.gov/electricity/data/eia860m/xls/august_generator2026.xlsx) (newest edition that downloads; the Sep-Dec links on the EIA page return 503) | `load_public_sources eia860m` (no LLM) | "Planned" sheet: 2,312 generators planned but not yet operating, with plant lat/long and planned operation month. Default load is the region (SC, GA, FL): 86 generators at 78 plant / in-service-month sites (`--states ALL` loads the nationwide 1,649). Puerto Rico (`Planned_PR` sheet) is not loaded. |
-| `sertp_2026_preliminary_expansion_plan.pdf` | [SERTP 2026 Preliminary Expansion Plan Report (Non-CEII)](https://www.southeasternrtp.com/docs/general/2026/2026_SERTP_Preliminary_Expansion_Plan_Report_(Non-CEII).pdf), dated 06/12/2026 | `load_public_sources sertp` (pdfplumber, no LLM) | 426 projects, in-service 2027-2036, by balancing area: AECI p1 (3), Duke Carolinas p2-16 (56), Duke Progress East p17-22 (17), Duke Progress West p23 (1), LG&E/KU p24-26 (10), Southern p27-102 (288: SOCO 204, GTC 67, MEAG 12, PowerSouth 4, Dalton 1), TVA p103-115 (51). The 189 located in SC, GA or FL are loaded (Southern Company 92, GTC 67, Duke Energy Carolinas 14, MEAG 12, ...). |
+| `eia860m_august_generator2026.xlsx` | [EIA-860M, August 2026](https://www.eia.gov/electricity/data/eia860m/xls/august_generator2026.xlsx) (newest edition that downloads; the Sep-Dec links on the EIA page return 503) | `load_public_sources eia860m` (no LLM) | "Planned" sheet: 2,312 generators planned but not yet operating, with plant lat/long and planned operation month. All are loaded: 2,311 generators at 1,649 plant / in-service-month sites, 78 of them in SC, GA or FL (`--states SC GA FL` loads only those). Puerto Rico (`Planned_PR` sheet) is not loaded. |
+| `sertp_2026_preliminary_expansion_plan.pdf` | [SERTP 2026 Preliminary Expansion Plan Report (Non-CEII)](https://www.southeasternrtp.com/docs/general/2026/2026_SERTP_Preliminary_Expansion_Plan_Report_(Non-CEII).pdf), dated 06/12/2026 | `load_public_sources sertp` (pdfplumber, no LLM) | 426 projects, in-service 2027-2036, by balancing area: AECI p1 (3), Duke Carolinas p2-16 (56), Duke Progress East p17-22 (17), Duke Progress West p23 (1), LG&E/KU p24-26 (10), Southern p27-102 (288: SOCO 204, GTC 67, MEAG 12, PowerSouth 4, Dalton 1), TVA p103-115 (51). All 426 are loaded; 189 are located in SC, GA or FL (Southern Company 92, GTC 67, Duke Energy Carolinas 14, MEAG 12, ...). |
 | `desc_2024-2028_projects_2m_and_above.pdf` | [DESC Planned Transmission Projects $2M and above, 2024-2028](https://www.scrtp.com/assets/pdfs/home/2024-2028-2million-and-above-project-descriptions.pdf) (SCRTP; also in the Sperry Tech challenge kit) | Archived reference; not loaded at startup | 44 Dominion Energy South Carolina projects, one per page: title, project ID, description, need, status, planned in-service date and estimated cost by year. |
 | `desc_2026-2030_projects_2m_and_above.pdf` | [DESC 2026–2030 projects](https://www.scrtp.com/assets/pdfs/home/2026-2030-2million-and-above-project-descriptions.pdf) | `load_public_sources desc` (pdfplumber, no LLM) | 54 projects; supersedes the 2024–2028 loader edition. |
 | `georgia_power_2025_irp_vol3_public.pdf` | Georgia Power 2025 IRP, Volume 3 (public disclosure), [Georgia PSC Docket #56002](https://psc.ga.gov/search/facts-docket/?docketId=56002); from the Sperry Tech challenge kit | `load_public_sources gpc` (pdfplumber, no LLM), pages 177-190 | Table 2 "Georgia ITS 10 Year Plan Project List": 208 rows. The 138 Georgia Power rows (sponsor GPC or SAV) are loaded; GTC/MEAG/DU rows are other utilities already listed in SERTP. |
@@ -57,9 +57,9 @@ fe01df4ed0691d55fd565784a7510ddfe4682316ff63fb70b963b934c5974f24  sperry_referen
 ```bash
 cd backend
 # Structured sources, straight into DATABASE_URL (re-runnable: replaces its own last load)
-.venv/bin/python -m scripts.load_public_sources all          # region: SC, GA, FL
+.venv/bin/python -m scripts.load_public_sources all                          # nationwide
+.venv/bin/python -m scripts.load_public_sources all --states SC GA FL        # the Sperry region
 .venv/bin/python -m scripts.load_public_sources sertp --areas SOUTHERN       # a subset
-.venv/bin/python -m scripts.load_public_sources eia860m --states ALL         # nationwide
 .venv/bin/python -m scripts.load_public_sources desc                         # DESC PDF
 .venv/bin/python -m scripts.load_public_sources gpc                          # Georgia Power
 .venv/bin/python -m scripts.load_public_sources frcc                         # Florida, Form 13
@@ -81,10 +81,11 @@ uploaded again once the quota resets.
 
 ## Region and timing
 
-Only the region is loaded (`app/sources/region.py`: SC, GA, FL). EIA-860M is cut by plant
-state; SERTP by the state of each located project (nearest county centre), keeping an
-unplaced project only when its owner operates in region states alone (GTC, MEAG). The
-utilities' own filings (DESC, Georgia Power, Florida) are the region by definition.
+Everything is loaded by default. `load_public_sources --states SC GA FL` narrows to the
+Sperry region (`app/sources/region.py`): EIA-860M is cut by plant state; SERTP by the state
+of each located project (nearest county centre), keeping an unplaced project only when its
+owner operates in those states alone (GTC, MEAG). The utilities' own filings (DESC, Georgia
+Power, Florida) are the region by definition.
 
 Matching then keeps only future work that builds at the same time: both projects in
 service on or after `PLANNING_FROM` (default today) and building together for at least

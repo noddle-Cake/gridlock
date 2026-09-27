@@ -85,7 +85,7 @@ export default function App({ account = null }: { account?: Account | null }) {
   const refresh = useCallback(() => setVersion((v) => v + 1), [])
 
   useEffect(() => {
-    // Opens on every loaded utility (the Southeast). "Only Dominion SC ↔ Georgia Power" is
+    // Opens on every loaded utility (nationwide). "Only Dominion SC ↔ Georgia Power" is
     // in the utility menu; opening on it showed an empty list once matches had to overlap in
     // time, as none of their future work does.
     api

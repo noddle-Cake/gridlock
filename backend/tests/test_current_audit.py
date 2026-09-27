@@ -10,13 +10,24 @@ from app.models.enums import DatePrecision
 from app.services import matching
 from app.services.owners import canonical_utility, ownership_registry, ownership_review_required
 from app.services.project_status import OPERATING_EVIDENCE
-from app.sources import desc, snapshot
+from app.sources import desc, region, snapshot
 from tests.conftest import requires_db, run_db
 
 
-def test_every_snapshot_company_has_an_explicit_ownership_decision():
+def test_every_region_company_has_an_explicit_ownership_decision():
+    """The audit covered the Sperry region (SC, GA, FL); nationwide EIA-860M companies may be
+    unreviewed, and then match only with an "ownership unverified" label."""
+    def in_region(s: snapshot.Source, p) -> bool:
+        if s is snapshot.EIA860M:
+            return p.state in region.REGION_STATES
+        if s is snapshot.SERTP:  # "... (GA/AL)": the owner's states when unplaced
+            owner_states = p.location_ref.rsplit("(", 1)[-1].rstrip(")").split("/")
+            return region.in_region(p.lat, p.lng, owner_states)
+        return True  # the utilities' own filings are the region
+
     owners = {canonical_utility(p.utility) for s in snapshot.SOURCES
-              for p in snapshot.read_export(snapshot.EXTRACTED_DIR / s.export)}
+              for p in snapshot.read_export(snapshot.EXTRACTED_DIR / s.export)
+              if in_region(s, p)}
     assert owners <= ownership_registry().keys()
     assert ownership_review_required("Unresearched Solar LLC")
     assert not ownership_review_required("DEF/SEC")
