@@ -143,7 +143,7 @@ def test_sperry_reference_overlaps_are_in_range_but_not_current_matches():
     assert len(reference) == 6
 
     projects = [
-        *snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.DESC.export),
+        *snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.DESC_LEGACY.export),
         *snapshot.read_export(snapshot.EXTRACTED_DIR / snapshot.GPC_ITS.export),
     ]
     radius = 40 / matching.KM_PER_MILE

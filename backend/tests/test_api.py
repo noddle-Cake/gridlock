@@ -181,7 +181,7 @@ def test_matches_need_future_overlapping_build_windows(api_client):
         other("PPL", date(2034, 12, 31), date(2034, 12, 31)),      # 3: in service 8.5 years on
         other("PECO", None, None),                                 # 4: undated
         other("Pepco", date(2025, 1, 1), date(2025, 12, 31)),      # 5: finished before 2026
-        other("Delmarva", date(2026, 6, 10), date(2026, 12, 31)),  # 6: 21 days with 1
+        other("JEA", date(2026, 6, 10), date(2026, 12, 31)),  # 6: 21 days with 1
     ])
     body = api_client.get("/overlaps").json()
     assert (body["planning_from"], body["min_overlap_days"]) == ("2026-01-01", 30)

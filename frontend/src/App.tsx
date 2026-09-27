@@ -186,7 +186,8 @@ export default function App({ account = null }: { account?: Account | null }) {
     [projects, query, hiddenUtilities, matchIds],
   )
   const reviewCount = reviewProjects.filter(
-    (p) => !p.reviewed && (needsReview(p.confidence, confidenceThreshold) || p.requires_review),
+    (p) => p.ownership_review_required ||
+      (!p.reviewed && (needsReview(p.confidence, confidenceThreshold) || p.requires_review)),
   ).length
 
   // Prev/next in the detail view walks the list as it was when the pair was opened. The

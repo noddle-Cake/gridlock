@@ -25,9 +25,10 @@ export function ReviewTable({ projects, threshold, colors, onPatch }: Props) {
   )
   const [saving, setSaving] = useState(false)
 
-  const flagged = (p: Project) => needsReview(p.confidence, threshold) || p.requires_review
-  const pending = projects.filter((p) => flagged(p) && !p.reviewed)
-  const rows = onlyReview ? projects.filter((p) => flagged(p) && !p.reviewed) : projects
+  const flagged = (p: Project) => Boolean(p.ownership_review_required) ||
+    (!p.reviewed && (needsReview(p.confidence, threshold) || p.requires_review))
+  const pending = projects.filter((p) => flagged(p))
+  const rows = onlyReview ? projects.filter((p) => flagged(p)) : projects
 
   function startEdit(p: Project) {
     setEditing(p.id)
@@ -132,7 +133,12 @@ export function ReviewTable({ projects, threshold, colors, onPatch }: Props) {
                     {p.requires_review ? (
                       <span className="badge badge-warn">no location</span>
                     ) : null}
-                    {!low && !p.requires_review ? <span className="badge badge-ok">ok</span> : null}
+                    {p.ownership_review_required ? (
+                      <span className="badge badge-warn" title="Matches withheld until corporate ownership is verified.">
+                        ownership unverified
+                      </span>
+                    ) : null}
+                    {!low && !p.requires_review && !p.ownership_review_required ? <span className="badge badge-ok">ok</span> : null}
                   </td>
                   <td>
                     <span className="swatch" style={{ background: colors[p.utility] ?? OTHER_COLOR }} />

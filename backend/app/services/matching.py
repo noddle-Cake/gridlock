@@ -129,20 +129,24 @@ def is_past(p: ProjectDTO, cutoff: date) -> bool:
     """In service before `cutoff` (its whole in-service period is behind it): finished work,
     nothing left to coordinate. Undated projects are not known to be past."""
     w = _window(p)
-    return w is not None and w.end < cutoff
+    return ((p.operating_as_of is not None and p.operating_as_of <= cutoff)
+            or (w is not None and w.end < cutoff))
 
 
 def _ahead(p: ProjectDTO, rules: Rules) -> bool:
     """Dated and not past: only such projects can be shown to build at the same time."""
     w = _window(p)
-    return w is not None and w.end >= rules.planning_from
+    return w is not None and not is_past(p, rules.planning_from)
 
 
 def qualifies(pair: CoordinationPairDTO, rules: Rules) -> bool:
     """Close in time as well as space: both projects still ahead and their build windows
-    sharing at least `min_overlap_days`. Years apart, finished, or undated -> not a match."""
+    sharing at least `min_overlap_days` on or after the cutoff.
+    Years apart, finished, or undated -> not a match."""
     return (_ahead(pair.project_a, rules) and _ahead(pair.project_b, rules)
-            and pair.overlap_days >= rules.min_overlap_days)
+            and pair.window_start is not None and pair.window_end is not None
+            and (pair.window_end - max(pair.window_start, rules.planning_from)).days + 1
+            >= rules.min_overlap_days)
 
 
 def _current(

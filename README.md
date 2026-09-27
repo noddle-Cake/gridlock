@@ -56,25 +56,22 @@ the rest of the demo loop works offline.
    at the same time** for at least 30 days. Every card shows the shared build time ("7
    months building together", "Both building Jun 2026 – Dec 2026"). The list is ranked by
    Sperry's tiers (touching → under 1.6 km → under 8 km → under 40 km), then by score.
-2. Sperry's six reference overlaps (`source_docs/sperry_reference_overlaps.xlsx`) are all
-   found within range (`tests/test_desc_gpc.py`), but none is a match any more. Every one
-   involves a DESC project already in service (DESC's public list is a 2024–2028 budget; all
-   five reference projects were due by 2025) or build windows years apart (Hooks – Thurmond
-   2024 vs Evans – Thurmond 2033). "Only Dominion SC ↔ Georgia Power" in the utility menu
-   shows that today no future DESC and Georgia Power work overlaps in time.
-3. Current matches include:
-   - DESC's Williams – Summerville 230 kV upgrade ($19.3M, May 2027) and the Pinopolis BESS
-     (300 MW, Sep 2027): 27.7 km apart, both building Sep 2026 – May 2027.
-   - Duke Energy Florida's Bartow BESS line and Tampa Electric's South Shore – Manatee
-     230 kV line: both in service Dec 2027.
-   - FPL solar sites and PowerSouth's Panhandle 115 kV lines.
+2. The six historical reference overlaps are tested against the archived 2024–2028
+   DESC filing. Startup now loads DESC's **2026–2030** filing and retires the obsolete
+   loader edition. As of September 27, 2026, the refreshed data yields **eight**
+   Dominion SC ↔ Georgia Power candidate matches within 40 km.
+3. For example, DESC's Jasper–Okatie #2 (December 1, 2026) and Georgia Power's
+   Goshen–McIntosh rebuild (June 1, 2027) are about **4.9 km** apart. Their estimated
+   build windows retain 66 shared days from the audit cutoff. Dates and source pages
+   are listed in the [current collision audit](source_docs/current_collision_audit.md).
 4. Open a pair to see why it was flagged: the closest-point connector on the map, both
    build windows on one time axis (shared stretch hatched), the rough coordination value
    (Sperry bonus), side-by-side projects with source-page links, and a forwardable brief.
 5. Export CSV/PDF downloads the pairs on screen (utility focus and distance bands).
 
 Collision flags exclude the same company, known sister companies, and projects with
-a shared corporate owner, including FRP solar LLCs and FPL under NextEra. Dominion SC
+a shared corporate owner, including FRP solar LLCs and FPL under NextEra. Unverified
+ownership is withheld pending review. Dominion SC
 and Georgia Power pass the ownership check because their parents differ; matches must
 also meet the future-work and shared-build-window rules above. See the
 [ownership policy and sources](source_docs/company_ownership.md) for coverage.
@@ -192,7 +189,7 @@ sources load without Gemini (`cd backend && .venv/bin/python -m
 scripts.load_public_sources all`):
 
 - **Dominion Energy South Carolina**: SCRTP "Planned Transmission Projects $2M and above,
-  2024-2028" (44 projects, with costs).
+  2026-2030" (54 projects, with costs).
 - **Georgia Power**: 2025 IRP Vol 3, Table 2 "Georgia ITS 10 Year Plan" (138 projects).
 - **SERTP 2026 preliminary 10-year expansion plan**: the 189 of its 426 projects located in
   SC, GA or FL (Southern Company, Georgia Transmission Corp, MEAG, Dalton, Duke Energy
@@ -286,10 +283,8 @@ Every match now builds at the same time, so crew, yard and outage sharing always
 These figures are placeholders to start a conversation, not benchmarks: edit the constants
 in `impact.py`.
 
-Example: DESC's Williams – Summerville 230 kV upgrade ($19.3M, in service May 2027) and the
-Pinopolis BESS (300 MW, Sep 2027) are 27.7 km apart and both building Sep 2026 – May 2027,
-so the estimate is about $193k–$579k from one shared crew and equipment mobilization (1–3%
-of DESC's published cost).
+Estimates use the costs from the current filing; check each source before treating
+these coordination opportunities as confirmed construction schedules.
 
 ## Design notes and deviations
 
@@ -300,12 +295,13 @@ of DESC's published cost).
   selects the candidates (within 40 km), and timing is required as well:
   - both projects must still be ahead (in service on or after `PLANNING_FROM`, default
     today), because finished work has nothing left to coordinate;
-  - both must be building at the same time for at least `MIN_OVERLAP_DAYS` (30).
+  - both must have at least `MIN_OVERLAP_DAYS` (30) of shared build time remaining
+    on or after the cutoff; confirmed operating projects are excluded.
 
   Pairs years apart or undated are not matches. This reverses PR #8, which flagged on
   distance alone so that Sperry's reference overlaps (time gaps 152–3,074 days, DESC
-  projects due 2023–2025) would all appear. They are still found within range, but none is
-  a match.
+  projects due 2023–2025) would all appear. The archived reference dates still fail timing; refreshed filings may
+  establish new future matches.
 - **Timing is scored from each project's build window, with no date padding**
   (`app/services/timing.py`). A plan's start–end range is used as given; a project with
   only an in-service date is assumed to build for the 12 months before its in-service

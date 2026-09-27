@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from app.models.enums import DatePrecision, PlanStatus, ProjectType
 
@@ -31,6 +31,29 @@ class ProjectDTO(BaseModel):
     reviewed: bool = False
     approximate: bool = False
     requires_review: bool = False
+
+    @computed_field
+    @property
+    def ownership_review_required(self) -> bool:
+        from app.services.owners import ownership_review_required
+
+        return ownership_review_required(self.utility)
+
+    @computed_field
+    @property
+    def operating_as_of(self) -> date | None:
+        from app.services.project_status import operating_evidence
+
+        evidence = operating_evidence(self.source_url, self.name)
+        return evidence.as_of if evidence else None
+
+    @computed_field
+    @property
+    def operating_source_url(self) -> str | None:
+        from app.services.project_status import operating_evidence
+
+        evidence = operating_evidence(self.source_url, self.name)
+        return evidence.source_url if evidence else None
 
 
 class ProjectPatch(BaseModel):

@@ -5,8 +5,9 @@ Dominion Energy South Carolina (Dominion Energy) and Georgia Power (Southern
 Company): they do not share a parent. Sister companies under one parent are
 excluded, even when they are separate LLCs or regulated operating companies.
 Passing the ownership check still requires meeting the distance and timing rules.
-The historical SC/Georgia reference overlaps are excluded by the current timing
-rules because their work is already finished or their build windows do not overlap.
+The archived 2024–2028 reference dates fail current timing rules. The refreshed
+2026–2030 DESC filing produces eight future matches with Georgia Power as of
+September 27, 2026. See [the audit](current_collision_audit.md).
 
 `backend/app/services/owners.py` applies this policy when pairs are read, including
 existing data, exports, project details, brief requests, and rematching after edits.
@@ -25,9 +26,18 @@ Project company names remain as filed. No data reload is necessary.
 - Joint owners are compared individually: DEF/SEC cannot match either DEF or SEC,
   or another joint owner combination sharing either company.
 - Missing/unknown company names cannot establish a different-company match.
-  Unmapped named companies use their canonical name. This is a curated ownership
-  registry, not exhaustive ownership verification for all EIA project LLCs; add
-  documented relationships here and to the registry when new ones are identified.
+  Unmapped named companies also need ownership review before they can match.
+  Every company in the current snapshots has an explicit decision in
+  `backend/app/data/company_ownership.csv`. Rows marked `review` are withheld, including
+  joint owners if any member is unverified. Extraction review does not override this.
+- energyRe project companies, Silicon Ranch Bacon/Cordova/Georgetown companies, and
+  Ingka Kingstree companies are grouped by their documented owners. The CSV carries
+  evidence links. Buyers, balancing authorities, and common fund managers alone
+  do not establish common ownership.
+- Cooperative membership alone does not establish a common controlling parent.
+  Georgia Transmission and Oglethorpe remain separate from Southern Company.
+- The review table displays `ownership unverified`; to resolve it, add a sourced
+  corporate family to the registry and redeploy. New uploads are subject to the same rule.
 
 Ownership references (checked September 26, 2026):
 

@@ -31,6 +31,13 @@ from app.services.owners import different_companies
     ("FPL / JEA", "FRP Miller Solar"),
     ("Example Utility, L.L.C.", "example utility"),
     ("UNKNOWN", "Georgia Power"),
+    ("Utility A", "Utility B"),
+    ("SR Bacon LLC", "SR Bacon III LLC"),
+    ("Juniper Solar", "B & K Solar"),
+    ("Kingstree East 230", "Kingstree West 115"),
+    ("Placid Solar", "Placid Solar II"),
+    ("FRP Holdings", "FPL"),
+    ("FRPower Solar", "FPL"),
     ("", "FPL"),
 ])
 def test_related_or_unknown_companies_do_not_match(a, b):
@@ -45,9 +52,6 @@ def test_related_or_unknown_companies_do_not_match(a, b):
     ("FRP Forest Trail Solar", "JEA"),
     ("FRP", "Seminole Electric Cooperative"),  # power purchases aren't ownership
     ("DEF/SEC", "FPL"),
-    ("FRP Holdings", "FPL"),  # unrelated names must not be grouped by a loose prefix
-    ("FRPower Solar", "FPL"),
-    ("Utility A", "Utility B"),
 ])
 def test_different_companies_remain_eligible(a, b):
     assert different_companies(a, b)
@@ -59,6 +63,7 @@ def test_different_companies_remain_eligible(a, b):
     ("FRP Forest Trail Solar, LLC", False),
     ("Florida Power & Light", False),
     ("JEA", True),
+    ("Unreviewed project LLC", False),
 ])
 async def test_matching_entry_points_filter_stored_company_names(
     monkeypatch, entry, owner, eligible,
