@@ -5,7 +5,9 @@ import {
   OTHER_COLOR,
   bothBuildingLabel,
   durationLabel,
+  num,
   overlapPct,
+  plural,
   rulesLabel,
   usdRange,
 } from '../lib/format'
@@ -85,8 +87,8 @@ export function PairList({
           <span className="count" aria-live="polite">
             {loading
               ? 'updating…'
-              : `${pairs.length} ${pairs.length === 1 ? 'result' : 'results'}${
-                  offscreen > 0 ? ` · ${offscreen} outside map view` : ''
+              : `${plural(pairs.length, 'result')}${
+                  offscreen > 0 ? ` · ${num(offscreen)} outside map view` : ''
                 }`}
           </span>
         </div>
@@ -198,7 +200,7 @@ export function PairList({
       </ol>
       {more > 0 ? (
         <button type="button" className="show-more" onClick={() => setLimit((n) => n + PAGE_SIZE)}>
-          Show {Math.min(more, PAGE_SIZE)} more of {more.toLocaleString()}
+          Show {num(Math.min(more, PAGE_SIZE))} more of {num(more)}
         </button>
       ) : null}
     </section>

@@ -1,3 +1,4 @@
+import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 
 import { project } from '../test/fixtures'
@@ -9,6 +10,8 @@ import {
   dateLabel,
   durationLabel,
   gapLabel,
+  num,
+  plural,
   rangeLabel,
   rulesLabel,
   timingLabel,
@@ -103,6 +106,23 @@ describe('format helpers', () => {
     expect(gapLabel(3074)).toBe('8.4 years')
     expect(timingLabel({ overlap_ratio: 0, time_gap_days: 152 })).toBe('in service 5 months apart')
     expect(timingLabel({ overlap_ratio: null, time_gap_days: null })).toBe('schedule unknown')
+  })
+
+  it('separates thousands in counts and pluralizes their nouns', () => {
+    expect(num(0)).toBe('0')
+    expect(num(999)).toBe('999')
+    expect(num(1884)).toBe('1,884')
+    expect(num(1_234_567)).toBe('1,234,567')
+    expect(plural(1, 'project')).toBe('1 project')
+    expect(plural(0, 'project')).toBe('0 projects')
+    expect(plural(1706, 'result')).toBe('1,706 results')
+    expect(plural(2, 'utility', 'utilities')).toBe('2 utilities')
+    fc.assert(
+      fc.property(fc.nat(), (n) => {
+        expect(num(n).replaceAll(',', '')).toBe(String(n))
+        expect(num(n)).toMatch(/^\d{1,3}(,\d{3})*$/)
+      }),
+    )
   })
 
   it('says how long two projects build together, and when', () => {

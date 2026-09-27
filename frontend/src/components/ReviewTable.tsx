@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { ApiError } from '../api'
 import { type Draft, toDraft, diffDraft } from '../lib/draft'
-import { OTHER_COLOR, pct, rangeLabel } from '../lib/format'
+import { OTHER_COLOR, num, pct, rangeLabel } from '../lib/format'
 import { needsReview } from '../lib/review'
 import type { Project, ProjectPatch, ProjectType } from '../types'
 import { SourceLink } from './SourceLink'
@@ -93,7 +93,7 @@ export function ReviewTable({
     <section className="review" aria-label="Review extracted projects">
       <header className="panel-head">
         <h2>Review extracted projects</h2>
-        <span className="count">{pending.length} need review</span>
+        <span className="count">{num(pending.length)} need review</span>
         <label className="toggle">
           <input
             type="checkbox"

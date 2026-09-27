@@ -100,6 +100,18 @@ export function usdRange(low: number, high: number): string {
   return low === high ? usd(low) : `${usd(low)}–${usd(high)}`
 }
 
+const INT = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
+
+/** A whole-number count with thousands separators: "1,884". */
+export function num(n: number): string {
+  return INT.format(n)
+}
+
+/** "1 project", "1,884 projects": a separated count with its noun agreeing in number. */
+export function plural(n: number, singular: string, pluralForm = `${singular}s`): string {
+  return `${num(n)} ${n === 1 ? singular : pluralForm}`
+}
+
 export function pct(x: number): string {
   return `${Math.round(x * 100)}%`
 }

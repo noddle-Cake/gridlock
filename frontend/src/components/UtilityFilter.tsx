@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import { CHALLENGE_LABEL, CHALLENGE_UTILITIES, focusHidden } from '../lib/focus'
-import { OTHER_COLOR } from '../lib/format'
+import { OTHER_COLOR, num } from '../lib/format'
 import { FilterMenu } from './FilterMenu'
 
 /** Rows rendered at once; with ~1,000 developers the search narrows the rest. */
@@ -27,7 +27,7 @@ export function UtilityFilter({ utilities, counts, hidden, colors, onChange }: P
       ? 'All utilities'
       : onlyChallenge
         ? CHALLENGE_LABEL
-        : `${shown} of ${utilities.length} utilities`
+        : `${num(shown)} of ${num(utilities.length)} utilities`
 
   const sorted = useMemo(
     () =>
@@ -55,7 +55,7 @@ export function UtilityFilter({ utilities, counts, hidden, colors, onChange }: P
           <input
             type="search"
             className="check-list-search"
-            placeholder={`Search ${utilities.length} companies`}
+            placeholder={`Search ${num(utilities.length)} companies`}
             aria-label="Search companies"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -81,7 +81,7 @@ export function UtilityFilter({ utilities, counts, hidden, colors, onChange }: P
                 onChange(new Set(utilities.filter((u) => !keep.has(u))))
               }}
             >
-              Only {matches.length === 1 ? 'this one' : `these ${matches.length}`}
+              Only {matches.length === 1 ? 'this one' : `these ${num(matches.length)}`}
             </button>
           ) : null}
         </div>

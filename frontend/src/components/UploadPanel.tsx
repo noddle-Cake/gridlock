@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 
 import { ApiError, api } from '../api'
+import { plural } from '../lib/format'
 import type { Plan } from '../types'
 
 interface Props {
@@ -117,7 +118,7 @@ export function UploadPanel({ onPlanComplete }: Props) {
               {p.status === 'processing'
                 ? 'extracting…'
                 : p.status === 'complete'
-                  ? `${p.project_count} projects extracted`
+                  ? `${plural(p.project_count, 'project')} extracted`
                   : `failed: ${p.error}`}
             </li>
           ))}
