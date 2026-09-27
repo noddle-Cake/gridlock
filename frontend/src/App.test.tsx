@@ -4,9 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { pair, project } from './test/fixtures'
 import type { SearchResponse } from './types'
+import type { MapFocus } from './components/MapView'
 
 // Leaflet needs a real layout engine; stub the map.
-vi.mock('./components/MapView', () => ({ MapView: () => <div data-testid="map" /> }))
+vi.mock('./components/MapView', () => ({
+  MapView: ({ focus }: { focus?: MapFocus | null }) => (
+    <div data-testid="map" data-focus={JSON.stringify(focus?.bounds ?? null)} />
+  ),
+}))
 
 import App from './App'
 
@@ -168,6 +173,51 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
       .toHaveTextContent('1 project')
     expect(screen.getByRole('option', { name: /Westminster breakers/ })).toHaveTextContent('1.2 mi')
     expect(screen.getByRole('button', { name: /Hanover breakers/ })).toBeInTheDocument()
+    expect(screen.getByTestId('map')).toHaveAttribute(
+      'data-focus', JSON.stringify([[39.58, -77], [39.58, -77]]),
+    )
+  })
+
+  it('locates 33034 automatically even when no planned projects are nearby', async () => {
+    const inner = fetchMock.getMockImplementation() as (url: string, init?: RequestInit) => unknown
+    fetchMock.mockImplementation((url: string, init?: RequestInit) =>
+      url.startsWith('/api/search?q=33034')
+        ? jsonResponse({
+            ...zipSearch,
+            query: '33034',
+            interpretation: {
+              ...zipSearch.interpretation, zip: '33034',
+              zip_label: 'ZIP 33034', radius_miles: 100,
+            },
+            locations: [{ kind: 'zip', code: '33034', label: 'ZIP 33034 · 100 mi', project_count: 0 }],
+            projects: [], project_ids: [], total: 0,
+            bounds: [25.4722, -80.7733, 25.4722, -80.7733],
+          })
+        : inner(url, init),
+    )
+    render(<App />)
+    await screen.findByRole('button', { name: /Hanover breakers/ })
+    await userEvent.type(screen.getByLabelText('Search GridMerge'), '33034')
+    expect(await screen.findByText('No matching planned projects within 100 mi of ZIP 33034.'))
+      .toBeInTheDocument()
+    expect(screen.getByTestId('map')).toHaveAttribute(
+      'data-focus', JSON.stringify([[25.4722, -80.7733], [25.4722, -80.7733]]),
+    )
+  })
+
+  it('reports a failed ZIP lookup and clears the error when another lookup succeeds', async () => {
+    render(<App />)
+    await screen.findByRole('button', { name: /Hanover breakers/ })
+    await userEvent.type(screen.getByLabelText('Search GridMerge'), '33034{Enter}')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Search is unavailable')
+    expect(screen.getByTestId('map')).toHaveAttribute('data-focus', 'null')
+    await userEvent.clear(screen.getByLabelText('Search GridMerge'))
+    await userEvent.type(screen.getByLabelText('Search GridMerge'), '21157')
+    await screen.findByRole('option', { name: /ZIP 21157 · near Carroll County/ })
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByTestId('map')).toHaveAttribute(
+      'data-focus', JSON.stringify([[39.58, -77], [39.58, -77]]),
+    )
   })
 
   it('answers with Ask GridMerge and links cited projects to their pair', async () => {

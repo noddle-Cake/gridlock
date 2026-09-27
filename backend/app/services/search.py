@@ -424,8 +424,17 @@ async def run_search(conn: asyncpg.Connection, q: str, *, limit: int) -> SearchR
         )
     result, fuzzy = await search_with_fallback(conn, f, limit=limit)
     interpretation.fuzzy = fuzzy
+    bounds = list(result.bounds) if result.bounds else None
     if point:
         interpretation.radius_miles = f.radius_miles
+        # A ZIP is a destination even when no loaded projects match. Include its
+        # location when matches are farther away after widening the search, too.
+        lat, lng = point
+        bounds = (
+            [min(bounds[0], lat), min(bounds[1], lng),
+             max(bounds[2], lat), max(bounds[3], lng)]
+            if bounds else [lat, lng, lat, lng]
+        )
     return SearchResponse(
         query=parsed.raw,
         interpretation=interpretation,
@@ -438,6 +447,6 @@ async def run_search(conn: asyncpg.Connection, q: str, *, limit: int) -> SearchR
         ],
         project_ids=result.ids,
         total=result.total,
-        bounds=list(result.bounds) if result.bounds else None,
+        bounds=bounds,
         suggest_ai=parsed.is_question,
     )

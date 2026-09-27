@@ -189,6 +189,30 @@ def test_search_by_zip_code(api_client):
     assert south <= 25.70 <= north and west <= -80.40 <= east
 
 
+@pytest.mark.parametrize("query", ["33034", "33034-1234"])
+def test_33034_finds_nearby_projects_and_frames_the_zip(api_client, query):
+    ids = seed_region()
+    body = search(api_client, query)
+    assert body["interpretation"]["zip"] == "33034"
+    assert body["interpretation"]["zip_found"] is True
+    assert body["project_ids"] == [ids["fpl_miami"]]
+    assert body["projects"][0]["miles"] <= body["interpretation"]["radius_miles"]
+    lat, lng = zip_centroid("33034")
+    south, west, north, east = body["bounds"]
+    assert south <= lat <= north and west <= lng <= east
+    assert south <= 25.70 <= north and west <= -80.40 <= east
+
+
+def test_zip_with_no_projects_still_has_a_map_destination(api_client):
+    body = search(api_client, "33034")
+    assert body["interpretation"]["zip_found"] is True
+    assert body["total"] == 0
+    assert body["project_ids"] == []
+    assert body["interpretation"]["radius_miles"] == 100
+    lat, lng = zip_centroid("33034")
+    assert body["bounds"] == [lat, lng, lat, lng]
+
+
 def test_search_company_and_zip(api_client):
     ids = seed_region()
     assert search(api_client, "FPL 32301")["project_ids"] == [ids["fpl_tally"]]
@@ -209,6 +233,7 @@ def test_unknown_zip_is_reported_not_guessed(api_client):
     body = search(api_client, "99999")
     assert body["interpretation"]["zip_found"] is False
     assert body["total"] == 0
+    assert body["bounds"] is None
 
 
 def test_typo_falls_back_to_trigram_match(api_client):
