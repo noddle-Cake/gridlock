@@ -8,6 +8,7 @@ import {
   drawPowerTile,
   featureVoltage,
   gridAlpha,
+  gridVisible,
   lineWidth,
   voltageColor,
 } from './powerGrid'
@@ -49,8 +50,11 @@ describe('gridAlpha', () => {
 })
 
 describe('POWER_MIN_ZOOM', () => {
-  it('keeps the grid off the national view (lower 48 opens around zoom 4)', () => {
-    expect(POWER_MIN_ZOOM).toBeGreaterThan(5)
+  it('shows the grid from state level but not on the national view (about zoom 4)', () => {
+    expect(POWER_MIN_ZOOM).toBe(5)
+    expect(gridVisible(4.4)).toBe(false)
+    expect(gridVisible(4.9)).toBe(false)
+    expect(gridVisible(5)).toBe(true)
     expect(POWER_MIN_ZOOM).toBeLessThanOrEqual(GRID_POINT_MIN_ZOOM)
   })
 })

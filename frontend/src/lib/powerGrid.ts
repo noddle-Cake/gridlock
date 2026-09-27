@@ -8,11 +8,18 @@ export const POWER_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
   '<a href="https://openinframap.org/copyright">OpenInfraMap</a>'
 /**
- * The grid is reference detail for a region: below this zoom it isn't fetched or drawn, so the
- * national view shows only projects and their pairs. Leaflet rounds to the tile zoom, so it
- * appears from zoom 5.5, a few states across.
+ * The grid is reference detail for a state or region: below this zoom it isn't drawn, so the
+ * national view shows only projects and their pairs. Zoom 5 is about one state across.
  */
-export const POWER_MIN_ZOOM = 6
+export const POWER_MIN_ZOOM = 5
+
+/**
+ * Whether the grid shows at this (fractional) zoom. Leaflet rounds to the tile zoom, so it
+ * would load zoom-5 tiles from 4.5; the layer stays hidden until the map is really at 5.
+ */
+export function gridVisible(zoom: number): boolean {
+  return zoom >= POWER_MIN_ZOOM
+}
 export const POWER_MAX_NATIVE_ZOOM = 17
 
 /** Line colour by voltage band (kV lower bound), matching Open Infrastructure Map's scale. */
@@ -49,7 +56,7 @@ export function lineWidth(kv: number | null, zoom: number): number {
 
 /**
  * Line opacity by zoom: lighter where the grid first appears, so it doesn't outweigh the
- * project markers drawn above it, reaching full strength by zoom 8.
+ * project markers drawn above it, reaching full strength two zoom levels in.
  */
 export function gridAlpha(zoom: number): number {
   return Math.min(0.85, Math.max(0.5, 0.5 + (zoom - POWER_MIN_ZOOM) * 0.175))
