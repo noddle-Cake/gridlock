@@ -1,8 +1,11 @@
 """Sign-in: one account from the environment, a signed session cookie, and a login limiter.
 
 Set AUTH_USERNAME and AUTH_PASSWORD to turn protection on; with either unset the app is
-open (local development and tests). Every API route then needs the session cookie except
-the ones in PUBLIC_PATHS; the frontend shows its sign-in screen on a 401.
+open (local development and tests). Visitors without a session may then browse as guests
+(AUTH_ALLOW_GUESTS, on by default): read-only requests work, while anything that runs AI
+(Ask, briefs, plan extraction) or changes data answers 401 `sign_in_required`. With guests
+off, every route except PUBLIC_PATHS answers 401 `unauthenticated`, and the frontend shows
+its sign-in screen.
 
 The cookie holds "username|expiry" signed with HMAC-SHA256 under AUTH_SECRET (a random
 per-process key when unset, so restarts sign everyone out).
@@ -29,6 +32,9 @@ log = logging.getLogger(__name__)
 COOKIE_NAME = "gridmerge_session"
 # Reachable without a session: the deploy smoke test and the sign-in flow itself.
 PUBLIC_PATHS = {"/health", "/auth/login", "/auth/logout", "/auth/session"}
+# What a guest may do: read. Every AI feature is a POST (/ask, /overlaps/{id}/brief,
+# /ingest), as is every edit (PATCH /projects/{id}).
+GUEST_METHODS = {"GET", "HEAD", "OPTIONS"}
 MAX_FAILURES = 5  # failed logins per client ...
 FAILURE_WINDOW_S = 15 * 60  # ... within this window, before it is locked out
 
@@ -38,6 +44,7 @@ class Auth:
         self.username = settings.auth_username.strip()
         self._password = settings.auth_password
         self.enabled = bool(self.username and self._password)
+        self.allow_guests = settings.auth_allow_guests
         self._key = (settings.auth_secret or secrets.token_hex(32)).encode()
         self._ttl = settings.auth_session_hours * 3600
         self._clock = clock
@@ -129,10 +136,17 @@ def install_auth(app: FastAPI, auth: Auth) -> None:
     async def require_session(request: Request, call_next):
         if request.method == "OPTIONS" or _route_path(request) in PUBLIC_PATHS:
             return await call_next(request)
-        if auth.verify(request.cookies.get(COOKIE_NAME)) is None:
+        if auth.verify(request.cookies.get(COOKIE_NAME)) is not None:
+            return await call_next(request)
+        if auth.allow_guests:
+            if request.method in GUEST_METHODS:
+                return await call_next(request)
             return JSONResponse(
                 status_code=401,
-                content={"error": {"code": "unauthenticated",
-                                   "message": "Sign in to use GridMerge."}},
+                content={"error": {"code": "sign_in_required",
+                                   "message": "Sign in to use AI features and make changes."}},
             )
-        return await call_next(request)
+        return JSONResponse(
+            status_code=401,
+            content={"error": {"code": "unauthenticated", "message": "Sign in to use GridMerge."}},
+        )

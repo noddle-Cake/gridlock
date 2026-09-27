@@ -31,6 +31,8 @@ interface Props {
   onPickLocation: (l: LocationSuggestion) => void
   onPickProject: (p: SearchHit) => void
   onAsk: (question: string) => void
+  /** Guests can see Ask GridMerge but must sign in to use it (onAsk then signs in). */
+  aiLocked?: boolean
 }
 
 type Option =
@@ -104,6 +106,7 @@ export function SmartSearch({
   onPickLocation,
   onPickProject,
   onAsk,
+  aiLocked = false,
 }: Props) {
   const [open, setOpen] = useState(false)
   // Tracked by key, so the highlight survives a fresh answer that still offers it.
@@ -201,6 +204,7 @@ export function SmartSearch({
           <span className="ss-main">
             Ask GridMerge <span className="ss-quote">“{q}”</span>
           </span>
+          {aiLocked ? <span className="ss-lock">Sign in</span> : null}
         </>,
       )
     : null
@@ -239,7 +243,11 @@ export function SmartSearch({
           type="button"
           className="ss-ask-button"
           aria-label="Ask GridMerge"
-          title="Ask GridMerge (AI answer from GridMerge data)"
+          title={
+            aiLocked
+              ? 'Sign in to ask GridMerge (AI answer from GridMerge data)'
+              : 'Ask GridMerge (AI answer from GridMerge data)'
+          }
           disabled={!q}
           onClick={() => {
             setOpen(false)

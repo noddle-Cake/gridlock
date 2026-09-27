@@ -256,6 +256,7 @@ class SessionDTO(BaseModel):
     required: bool  # sign-in is configured on this server
     authenticated: bool
     username: str | None = None
+    guests: bool = False  # visitors without a session may browse, without AI or edits
 
 
 class AskRequest(BaseModel):

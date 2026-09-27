@@ -35,6 +35,7 @@ services:
       AUTH_USERNAME: ${AUTH_USERNAME:-}
       AUTH_PASSWORD: ${AUTH_PASSWORD:-}
       AUTH_SECRET: ${AUTH_SECRET:-}
+      AUTH_ALLOW_GUESTS: ${AUTH_ALLOW_GUESTS:-true}
       GEOCODER: nominatim
       # Demo-seed source links, served by the API mounted at /api.
       SAMPLE_BASE_URL: /api/samples

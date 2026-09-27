@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     auth_password: str = ""
     auth_secret: str = ""
     auth_session_hours: float = 12.0
+    # With sign-in on, visitors without a session may still browse (GET requests) as guests;
+    # AI features and edits need a session. False = every route needs one.
+    auth_allow_guests: bool = True
     # gzip JSON responses (the pair list runs to megabytes). The deploy stack turns this
     # off because Caddy already compresses, with zstd where the browser takes it.
     compress_responses: bool = True

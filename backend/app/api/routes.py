@@ -72,7 +72,8 @@ async def session(request: Request) -> SessionDTO:
     if not auth.enabled:
         return SessionDTO(required=False, authenticated=True)
     user = auth.verify(request.cookies.get(COOKIE_NAME))
-    return SessionDTO(required=True, authenticated=user is not None, username=user)
+    return SessionDTO(required=True, authenticated=user is not None, username=user,
+                      guests=auth.allow_guests)
 
 
 @router.post("/auth/login", response_model=SessionDTO)
@@ -88,14 +89,16 @@ async def login(body: LoginRequest, request: Request, response: Response) -> Ses
         raise InvalidCredentialsError("Wrong username or password.", fields=["password"])
     auth.clear_failures(client)
     _set_session(request, response, auth.issue())
-    return SessionDTO(required=True, authenticated=True, username=auth.username)
+    return SessionDTO(required=True, authenticated=True, username=auth.username,
+                      guests=auth.allow_guests)
 
 
 @router.post("/auth/logout", response_model=SessionDTO)
 async def logout(request: Request, response: Response) -> SessionDTO:
     auth = _state(request).auth
     _set_session(request, response, None)
-    return SessionDTO(required=auth.enabled, authenticated=not auth.enabled)
+    return SessionDTO(required=auth.enabled, authenticated=not auth.enabled,
+                      guests=auth.enabled and auth.allow_guests)
 
 
 # ---------------------------------------------------------------- ingestion (Req 1)

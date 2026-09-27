@@ -115,12 +115,19 @@ docker compose -p gridmerge-local -f deploy/docker-compose.yml --env-file deploy
 | `AUTH_USERNAME`, `AUTH_PASSWORD` | — | the one sign-in account; both set = sign-in required, either empty = open app |
 | `AUTH_SECRET` | random per process | signs session cookies; set it so restarts and redeploys keep people signed in |
 | `AUTH_SESSION_HOURS` | `12` | how long a sign-in lasts |
+| `AUTH_ALLOW_GUESTS` | `true` | with sign-in on, visitors may browse read-only as guests (no AI answers, briefs, uploads or edits); `false` = every route needs a sign-in |
 
 ### Sign-in
 
-With `AUTH_USERNAME` and `AUTH_PASSWORD` set, the app opens on a sign-in screen and every
-API route (and `/samples`) returns `401 unauthenticated` without a session; `/health` and
-`/auth/*` stay public. Signing in sets an HttpOnly, SameSite=Lax cookie (Secure over
+With `AUTH_USERNAME` and `AUTH_PASSWORD` set, the app opens on a sign-in screen. By default
+(`AUTH_ALLOW_GUESTS=true`) it also offers **Continue as guest**: without a session, read
+requests (GET) work, so guests browse the map, opportunities, search and exports, while
+everything that runs AI or changes data (`POST /ask`, `POST /overlaps/{id}/brief`,
+`POST /ingest`, `PATCH /projects/{id}`) returns `401 sign_in_required`. The UI keeps those
+controls visible for guests and sends them to the sign-in screen instead; the choice to
+browse as a guest is remembered on that device. With `AUTH_ALLOW_GUESTS=false` every API
+route (and `/samples`) returns `401 unauthenticated` without a session. `/health` and
+`/auth/*` stay public either way. Signing in sets an HttpOnly, SameSite=Lax cookie (Secure over
 HTTPS) holding an HMAC-signed expiry. Five failed sign-ins from one address lock it out for
 15 minutes. In production the CI deploy writes the `AUTH_USERNAME`, `AUTH_PASSWORD`, and
 `AUTH_SECRET` repository secrets into the server's `.env`; with them unset the site stays

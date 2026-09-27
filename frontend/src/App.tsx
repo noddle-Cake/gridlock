@@ -285,9 +285,14 @@ export default function App({ account = null }: { account?: Account | null }) {
     for (const j of aiJobs) if (j.unseen && onScreen(j)) markSeen(j.id)
   }, [aiJobs, markSeen, onScreen, tab, selectedId, askJobId])
 
+  // Guests browse read-only: AI features and edits send them to sign in instead.
+  const guest = account?.guest ?? false
+  const signIn = account?.onSignIn
+
   function runAsk(question: string) {
     const q = question.trim()
     if (!q) return
+    if (guest) return signIn?.()
     const id: number = ai.start({ kind: 'ask', title: q, question: q }, () => api.ask(q), {
       onScreen: () => onScreen({ id, kind: 'ask' }),
       describe,
@@ -417,7 +422,16 @@ export default function App({ account = null }: { account?: Account | null }) {
           <a href={api.exportUrl('pdf', MAX_RADIUS_MILES, bands, scope)} download>
             Export PDF
           </a>
-          {account ? (
+          {account?.guest ? (
+            <>
+              <span className="guest-badge" title="Browsing without signing in: no AI or edits">
+                Guest
+              </span>
+              <button type="button" className="sign-out" onClick={account.onSignIn}>
+                Sign in
+              </button>
+            </>
+          ) : account ? (
             <button
               type="button"
               className="sign-out"
@@ -442,6 +456,7 @@ export default function App({ account = null }: { account?: Account | null }) {
           onPickLocation={(l) => applySearch(l.kind === 'zip' ? l.code : l.label)}
           onPickProject={openProject}
           onAsk={runAsk}
+          aiLocked={guest}
         />
         <div className="chips">
           <ThresholdControls
@@ -459,7 +474,16 @@ export default function App({ account = null }: { account?: Account | null }) {
           />
         </div>
         <FilterMenu label="Upload plan" align="right" className="upload-menu">
-          <UploadPanel onPlanComplete={refresh} />
+          {guest ? (
+            <div className="sign-in-prompt">
+              <p>Uploading a plan extracts its projects with AI, so it needs a sign-in.</p>
+              <button type="button" className="primary" onClick={signIn}>
+                Sign in to upload
+              </button>
+            </div>
+          ) : (
+            <UploadPanel onPlanComplete={refresh} />
+          )}
         </FilterMenu>
       </div>
 
@@ -532,7 +556,8 @@ export default function App({ account = null }: { account?: Account | null }) {
                   key={selectedPair.id}
                   pair={selectedPair}
                   colorOf={colorOf}
-                  onGenerateBrief={generateBrief}
+                  onGenerateBrief={guest ? () => signIn?.() : generateBrief}
+                  briefLocked={guest}
                   briefRunning={briefJob?.status === 'running'}
                   briefError={briefJob?.status === 'error' ? briefJob.error : undefined}
                 />
@@ -566,6 +591,8 @@ export default function App({ account = null }: { account?: Account | null }) {
             threshold={confidenceThreshold}
             colors={colors}
             onPatch={patchProject}
+            readOnly={guest}
+            onSignIn={signIn}
           />
         </main>
       )}

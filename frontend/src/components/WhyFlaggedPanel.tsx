@@ -87,6 +87,8 @@ interface Props {
   briefRunning?: boolean
   /** Why the last draft for this pair failed. */
   briefError?: string
+  /** Guests see the button as a sign-in prompt (onGenerateBrief then signs in). */
+  briefLocked?: boolean
 }
 
 function ProjectCard({ p, color }: { p: PairProject; color: string }) {
@@ -175,6 +177,7 @@ export function WhyFlaggedPanel({
   onGenerateBrief,
   briefRunning = false,
   briefError,
+  briefLocked = false,
 }: Props) {
   const [copied, setCopied] = useState(false)
 
@@ -330,7 +333,13 @@ export function WhyFlaggedPanel({
             onClick={() => onGenerateBrief(pair)}
             disabled={briefRunning}
           >
-            {briefRunning ? 'Drafting…' : pair.brief ? 'Regenerate brief' : 'Generate brief'}
+            {briefLocked
+              ? 'Sign in to generate a brief'
+              : briefRunning
+                ? 'Drafting…'
+                : pair.brief
+                  ? 'Regenerate brief'
+                  : 'Generate brief'}
           </button>
           {pair.brief ? (
             <button type="button" onClick={copy}>
