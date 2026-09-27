@@ -26,7 +26,10 @@ export class ApiError extends Error {
   }
 }
 
-/** Fired when the server rejects the session (missing or expired); the sign-in gate listens. */
+/**
+ * Fired when the server wants a session: none at all (`unauthenticated`), or none for AI and
+ * edits (`sign_in_required`, e.g. an expired one). The sign-in gate listens.
+ */
 export const UNAUTHENTICATED_EVENT = 'gridmerge:unauthenticated'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -40,7 +43,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* non-JSON error body */
     }
-    if (res.status === 401 && body.code === 'unauthenticated') {
+    if (res.status === 401 && (body.code === 'unauthenticated' || body.code === 'sign_in_required')) {
       window.dispatchEvent(new Event(UNAUTHENTICATED_EVENT))
     }
     throw new ApiError(res.status, body)

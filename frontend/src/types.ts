@@ -251,4 +251,6 @@ export interface Session {
   required: boolean
   authenticated: boolean
   username: string | null
+  /** Visitors without a session may browse read-only (no AI features or edits). */
+  guests?: boolean
 }

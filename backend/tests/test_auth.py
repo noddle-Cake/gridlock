@@ -1,4 +1,4 @@
-"""Sign-in: session cookie, protected routes, and the failed-login limiter."""
+"""Sign-in: session cookie, protected routes, guest browsing, and the failed-login limiter."""
 
 from __future__ import annotations
 
@@ -21,16 +21,36 @@ class FakePool:
         pass
 
 
-@pytest.fixture
-def client(monkeypatch):
+def _client(monkeypatch, *, guests: bool):
     monkeypatch.setenv("AUTH_USERNAME", USER)
     monkeypatch.setenv("AUTH_PASSWORD", PASSWORD)
     monkeypatch.setenv("AUTH_SECRET", "test-secret")
+    monkeypatch.setenv("AUTH_ALLOW_GUESTS", str(guests).lower())
     get_settings.cache_clear()
     app = create_app(pool=FakePool(), llm=FakeLLM(), geocoder=FakeGeocoder())  # type: ignore[arg-type]
     with TestClient(app, base_url="https://testserver") as c:
         yield c
     get_settings.cache_clear()
+
+
+@pytest.fixture
+def client(monkeypatch):
+    """Guests off: every route needs a session."""
+    yield from _client(monkeypatch, guests=False)
+
+
+@pytest.fixture
+def guest_client(monkeypatch):
+    """The default: visitors without a session browse read-only."""
+    yield from _client(monkeypatch, guests=True)
+
+
+def past_auth(call) -> bool:
+    """The request got past the sign-in check (FakePool then fails the route itself)."""
+    try:
+        return call().status_code != 401
+    except AttributeError:
+        return True
 
 
 def login(client, username=USER, password=PASSWORD):
@@ -46,14 +66,14 @@ def test_routes_need_a_session(client):
     assert client.get("/samples/plan.pdf").status_code == 401  # source documents too
     assert client.get("/health").status_code == 200  # the deploy smoke test
     assert client.get("/auth/session").json() == {
-        "required": True, "authenticated": False, "username": None,
+        "required": True, "authenticated": False, "username": None, "guests": False,
     }
 
 
 def test_login_sets_a_secure_http_only_cookie(client):
     r = login(client, username="  Planner@Example.com ")  # case and spaces don't matter
     assert r.status_code == 200
-    assert r.json() == {"required": True, "authenticated": True, "username": USER}
+    assert r.json() == {"required": True, "authenticated": True, "username": USER, "guests": False}
     cookie = r.headers["set-cookie"]
     assert cookie.startswith(f"{COOKIE_NAME}=")
     for flag in ("HttpOnly", "Secure", "SameSite=lax", "Path=/", "Max-Age=43200"):
@@ -133,7 +153,7 @@ def test_open_when_credentials_are_not_configured(monkeypatch):
     app = create_app(pool=FakePool(), llm=FakeLLM(), geocoder=FakeGeocoder())  # type: ignore[arg-type]
     with TestClient(app) as c:
         assert c.get("/auth/session").json() == {
-            "required": False, "authenticated": True, "username": None,
+            "required": False, "authenticated": True, "username": None, "guests": False,
         }
         assert c.get("/samples/nope.pdf").status_code == 404  # reached the route: no gate
     get_settings.cache_clear()
@@ -151,3 +171,33 @@ def test_public_paths_work_when_mounted_under_api(client):
         r = c.post("/api/auth/login", json={"username": USER, "password": PASSWORD})
         assert r.status_code == 200
         assert c.get("/api/auth/session").json()["authenticated"] is True
+
+
+def test_guests_browse_but_need_to_sign_in_for_ai_and_edits(guest_client):
+    c = guest_client
+    assert c.get("/auth/session").json() == {
+        "required": True, "authenticated": False, "username": None, "guests": True,
+    }
+    assert past_auth(lambda: c.get("/projects"))
+    assert past_auth(lambda: c.get("/search", params={"q": "FPL"}))
+    assert past_auth(lambda: c.get("/overlaps"))
+    for call in (
+        lambda: c.post("/ask", json={"question": "hi"}),
+        lambda: c.post("/overlaps/1-2/brief"),
+        lambda: c.post("/ingest", data={"utility": "X"}),
+        lambda: c.patch("/projects/1", json={"name": "renamed"}),
+    ):
+        r = call()
+        assert r.status_code == 401
+        assert r.json()["error"] == {
+            "code": "sign_in_required", "message": "Sign in to use AI features and make changes.",
+        }
+
+
+def test_signing_in_unlocks_ai_for_a_guest(guest_client):
+    c = guest_client
+    assert login(c).json()["guests"] is True
+    assert past_auth(lambda: c.post("/ask", json={"question": "hi"}))
+    assert past_auth(lambda: c.post("/overlaps/1-2/brief"))
+    c.post("/auth/logout")
+    assert c.post("/ask", json={"question": "hi"}).json()["error"]["code"] == "sign_in_required"

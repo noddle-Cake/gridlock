@@ -14,9 +14,19 @@ interface Props {
   threshold: number
   colors: Record<string, string>
   onPatch: (id: number, patch: ProjectPatch) => Promise<Project>
+  /** Guests can look but not edit. */
+  readOnly?: boolean
+  onSignIn?: () => void
 }
 
-export function ReviewTable({ projects, threshold, colors, onPatch }: Props) {
+export function ReviewTable({
+  projects,
+  threshold,
+  colors,
+  onPatch,
+  readOnly = false,
+  onSignIn,
+}: Props) {
   const [onlyReview, setOnlyReview] = useState(true)
   const [editing, setEditing] = useState<number | null>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -93,6 +103,15 @@ export function ReviewTable({ projects, threshold, colors, onPatch }: Props) {
           Only show projects needing review
         </label>
       </header>
+      {readOnly ? (
+        <p className="sign-in-prompt inline">
+          You're browsing as a guest.{' '}
+          <button type="button" className="link-button" onClick={onSignIn}>
+            Sign in
+          </button>{' '}
+          to correct projects or mark them reviewed.
+        </p>
+      ) : null}
       <div className="table-scroll">
         <table>
           <thead>
@@ -211,7 +230,7 @@ export function ReviewTable({ projects, threshold, colors, onPatch }: Props) {
                       type="checkbox"
                       aria-label={`Mark ${p.name ?? p.id} reviewed`}
                       checked={p.reviewed}
-                      disabled={saving}
+                      disabled={saving || readOnly}
                       onChange={(e) => submit(p, { reviewed: e.target.checked })}
                     />
                   </td>
@@ -230,7 +249,7 @@ export function ReviewTable({ projects, threshold, colors, onPatch }: Props) {
                           Cancel
                         </button>
                       </>
-                    ) : (
+                    ) : readOnly ? null : (
                       <button type="button" onClick={() => startEdit(p)}>
                         Edit
                       </button>

@@ -30,7 +30,10 @@ describe('AuthGate', () => {
     vi.stubGlobal('fetch', fetchMock)
   })
 
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
 
   function renderGate() {
     render(
@@ -38,7 +41,11 @@ describe('AuthGate', () => {
         {(account) => (
           <div>
             <p>the app</p>
-            {account ? (
+            {account?.guest ? (
+              <button type="button" onClick={account.onSignIn}>
+                Guest: sign in
+              </button>
+            ) : account ? (
               <button type="button" onClick={account.onSignOut}>
                 Sign out {account.username}
               </button>
@@ -100,5 +107,34 @@ describe('AuthGate', () => {
     expect(await screen.findByLabelText('Password')).toBeInTheDocument()
     expect(screen.queryByText(/Your session ended/)).toBeNull()
     expect(fetchMock.mock.calls.some((c) => c[0] === '/api/auth/logout')).toBe(true)
+  })
+
+  it('lets visitors continue as guests when the server allows it, and remembers it', async () => {
+    fetchMock.mockImplementation((url: string) =>
+      url === '/api/auth/session' ? json({ ...signedOut, guests: true }) : json(signedOut),
+    )
+    renderGate()
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue as guest' }))
+    expect(screen.getByText('the app')).toBeInTheDocument()
+
+    // Choosing to sign in goes back to the form, with the guest option still there.
+    await userEvent.click(screen.getByRole('button', { name: 'Guest: sign in' }))
+    expect(await screen.findByLabelText('Username')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Continue as guest' }))
+    expect(await screen.findByRole('button', { name: 'Guest: sign in' })).toBeInTheDocument()
+  })
+
+  it('opens as a guest straight away on the next visit', async () => {
+    localStorage.setItem('gridmerge:guest', '1')
+    fetchMock.mockImplementation(() => json({ ...signedOut, guests: true }))
+    renderGate()
+    expect(await screen.findByRole('button', { name: 'Guest: sign in' })).toBeInTheDocument()
+  })
+
+  it('offers no guest option when the server requires signing in', async () => {
+    localStorage.setItem('gridmerge:guest', '1') // remembered, but the server has turned it off
+    renderGate()
+    expect(await screen.findByLabelText('Username')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Continue as guest' })).toBeNull()
   })
 })

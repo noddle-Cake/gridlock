@@ -351,6 +351,14 @@ a {
   font-size: 13px;
 }
 
+.guest-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .sign-out {
   padding: 3px 10px;
   border: 1px solid rgb(255 255 255 / 35%);
@@ -447,6 +455,31 @@ a {
 .auth-card button:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+/* "Continue as guest": secondary to signing in, below a divider. */
+.auth-guest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+
+.auth-card .auth-guest .link-button {
+  align-self: center;
+  padding: 2px 4px;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.auth-guest p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
 }
 
 .auth-error {
@@ -2281,4 +2314,44 @@ details summary {
   .facts {
     grid-template-columns: 1fr;
   }
+}
+
+/* Guests: AI features and edits point to signing in instead. */
+.ss-lock {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.sign-in-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 280px;
+}
+
+.sign-in-prompt p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.sign-in-prompt.inline {
+  display: block;
+  max-width: none;
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.sign-in-prompt.inline .link-button {
+  display: inline;
+  font-weight: 600;
 }

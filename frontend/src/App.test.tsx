@@ -298,6 +298,21 @@ describe('App (Req 10.3, 10.4, 11.1)', () => {
     expect(panel).toHaveTextContent('Yes: Hanover breakers')
   })
 
+  it('sends guests to sign in instead of running AI features', async () => {
+    const onSignIn = vi.fn()
+    render(<App account={{ username: null, guest: true, onSignOut: vi.fn(), onSignIn }} />)
+    await userEvent.click(await screen.findByRole('button', { name: /Hanover breakers/ }))
+    expect(screen.getByText('Guest')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in to generate a brief' }))
+    await userEvent.type(screen.getByLabelText('Search GridMerge'), 'Anything near Hanover?')
+    await userEvent.click(screen.getByRole('button', { name: 'Ask GridMerge' }))
+    expect(onSignIn).toHaveBeenCalledTimes(2)
+    const calls = fetchMock.mock.calls.map((c) => String(c[0]))
+    expect(calls.some((u) => u.startsWith('/api/ask') || u.endsWith('/brief'))).toBe(false)
+    expect(screen.queryByRole('region', { name: 'Ask GridMerge' })).toBeNull()
+  })
+
   it('lifts the utility focus when a search is applied', async () => {
     const desc = project({ id: 7, utility: 'Dominion Energy South Carolina', name: 'Jasper – Okatie' })
     const gpc = project({ id: 8, utility: 'Georgia Power', name: 'McIntosh reactors' })
