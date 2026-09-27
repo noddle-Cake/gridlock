@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
+from app.services.names import title_case
 from app.services.owners import canonical_utility
 
 FRCC_URL = ("https://www.floridapsc.com/pscfiles/website-files/PDF/Utilities/Electricgas/"
@@ -75,7 +76,7 @@ class LineEntry:
 
     @property
     def title(self) -> str:
-        a, b = (_EQUIPMENT.sub("", n).title() for n in self.endpoints)
+        a, b = (title_case(_EQUIPMENT.sub("", n)) for n in self.endpoints)
         return f"{a} - {b} {self.voltage_kv:g} kV Line"
 
     def excerpt(self) -> str:

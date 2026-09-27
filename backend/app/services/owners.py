@@ -12,6 +12,8 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
+from app.services.names import title_case
+
 # Keys are cleaned names (see _key): upper case, no punctuation or corporate suffixes.
 ALIASES = {
     "ALABAMA POWER": "Alabama Power",
@@ -50,6 +52,7 @@ ALIASES = {
     "PS": "PowerSouth",
     "PEC": "PowerSouth",  # FRCC Form 13: PowerSouth Energy Cooperative (Panhandle lines)
     "DU": "Dalton Utilities",
+    "POWERSOUTH": "PowerSouth",
     "POWERSOUTH ENERGY COOPERATIVE": "PowerSouth",
     "SOUTHERN": "Southern Company",  # "Southern Company" minus the stripped suffix
     # Other SERTP balancing areas, as named in SERTP headers and EIA-860M entity names.
@@ -78,17 +81,17 @@ PLANNING_ENTITY = {
 # Corporate ownership is broader than a shared transmission planning entity. Keep
 # this separate from PLANNING_ENTITY, which also scopes substation geocoding overrides.
 # Sources and the matching policy are documented in source_docs/company_ownership.md.
-# Keys use canonical_utility's capitalization, including "Nextera" from EIA names.
+# Keys use canonical_utility's capitalization (app/services/names.py).
 CORPORATE_PARENT = {
     **PLANNING_ENTITY,
     "Southern Power": "Southern Company",
     "Florida Power & Light": "NextEra Energy",
     "Florida Renewable Partners": "NextEra Energy",
     "Florida Renewable Partners Holdings": "NextEra Energy",
-    "Nextera Energy": "NextEra Energy",
-    "Nextera Energy Resources": "NextEra Energy",
-    "Nextera Energy Resources - Ercot": "NextEra Energy",
-    "Nextera Energy Capital Holdings": "NextEra Energy",
+    "NextEra Energy": "NextEra Energy",
+    "NextEra Energy Resources": "NextEra Energy",
+    "NextEra Energy Resources - ERCOT": "NextEra Energy",
+    "NextEra Energy Capital Holdings": "NextEra Energy",
     "Duke Energy": "Duke Energy",
     "Duke Energy Carolinas": "Duke Energy",
     "Duke Energy Progress": "Duke Energy",
@@ -97,7 +100,7 @@ CORPORATE_PARENT = {
     "Duke Energy Indiana": "Duke Energy",
     "Dominion Energy": "Dominion Energy",
     "Dominion Energy South Carolina": "Dominion Energy",
-    "Scana": "Dominion Energy",
+    "SCANA": "Dominion Energy",
 }
 
 # FRP solar project LLCs appear as individual EIA utilities. Restrict the rule to
@@ -106,24 +109,21 @@ _FRP_SOLAR = re.compile(r"FRP .+ SOLAR(?: [IVX\d]+)?$")
 
 _UNKNOWN = {"", "NOT AVAILABLE", "UNKNOWN", "N/A", "NA"}
 _SUFFIX = re.compile(r"\b(INC|LLC|L L C|CO|CORP|CORPORATION|COMPANY|THE)\b")
-_SMALL_WORDS = {"of", "and", "the", "de"}
 
 
 def _key(raw: str) -> str:
     text = re.sub(r"[,.]", " ", raw.upper())
-    text = _SUFFIX.sub(" ", text)
+    # Strip suffixes outside parentheses only: "SPRINGS - (CO)" is Colorado, not "Co".
+    text = re.sub(r"\([^)]*\)|[^(]+",
+                  lambda m: m[0] if m[0].startswith("(") else _SUFFIX.sub(" ", m[0]), text)
     return re.sub(r"\s+", " ", text).strip()
 
 
 def _title(key: str) -> str:
     """'CITY OF OCALA' -> 'City of Ocala'; a lone short word stays an acronym ('TVA')."""
-    words = key.split()
-    if len(words) == 1 and len(key) <= 4:
+    if " " not in key and len(key) <= 4:
         return key
-    return " ".join(
-        w.lower() if i and w.lower() in _SMALL_WORDS else w.capitalize()
-        for i, w in enumerate(words)
-    )
+    return title_case(key)
 
 
 def planning_entity(utility: str) -> str:
@@ -222,7 +222,7 @@ def same_project_family(utility_a: str, utility_b: str) -> bool:
     technology and numbering words are dropped: one a leading part of the other
     ("Bridgewater Solar" / "Bridgewater Solar 2"), or the same distinctive first word, as
     developers prefix their project companies ("Evergy Kansas Central" / "Evergy Missouri
-    West", "Cve Us Pa Dayton 404" / "Cve Us Pa Kittanning 406"). Names with nothing left to
+    West", "CVE US PA Dayton 404" / "CVE US PA Kittanning 406"). Names with nothing left to
     compare ("Solar 1" / "Solar 2") count as one family too."""
     a, b = _family_stem(utility_a), _family_stem(utility_b)
     short, long_ = sorted((a, b), key=len)

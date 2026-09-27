@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.services.geocoding import STATE_NAMES, county_centroid
+from app.services.names import title_case
 from app.services.owners import canonical_utility
 from app.sources.locate import Located, PlaceCache, locate
 
@@ -182,7 +183,7 @@ def _area(page) -> str:
 
 
 def _owner(entry: SertpEntry) -> tuple[str, list[str]]:
-    default_owner, states = AREAS.get(entry.area, (entry.area.title(), []))
+    default_owner, states = AREAS.get(entry.area, (title_case(entry.area), []))
     m = _PREFIX.match(entry.name)
     if entry.area == "SOUTHERN" and m:
         owner = canonical_utility(m.group(1)) or default_owner

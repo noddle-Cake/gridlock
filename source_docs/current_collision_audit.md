@@ -86,11 +86,11 @@ Dates below are remaining estimated shared build windows.
 
 | DESC project (page) | Georgia Power project (page) | km | Remaining shared window | Approximate location |
 | --- | --- | ---: | --- | --- |
-| Jasper – Okatie 230 kV #2: Construct (12) | Goshen (Sav) - Mcintosh 115Kv Line Rebuild (183) | 4.9 | 2026-09-27–2026-12-01 | No |
-| Okatie 230-115kV Substation, Jasper – Yemassee 230kV #1 Fold-in (11) | Goshen (Sav) - Mcintosh 115Kv Line Rebuild (183) | 13.61 | 2026-09-27–2026-12-31 | No |
-| Jasper – Okatie 230 kV #2: Construct (12) | Goshen (Sav) - Kraft 115Kv Line Rebuild (183) | 14.78 | 2026-09-27–2026-12-01 | No |
-| Okatie 230-115kV Substation, Jasper – Yemassee 230kV #1 Fold-in (11) | Goshen (Sav) - Kraft 115Kv Line Rebuild (183) | 19.15 | 2026-09-27–2026-12-31 | No |
-| Okatie – McIntosh 115kV Tie: Add Series Reactor (41) | Coleman - Dean Forest 115Kv Line Rebuild (184) | 27.5 | 2027-12-31–2028-06-01 | No |
-| Okatie – McIntosh 115kV Tie: Add Series Reactor (41) | Dean Forest - Little Ogeechee 230 Kv Rebuild (186) | 29.59 | 2028-06-01–2028-12-31 | No |
-| Okatie – McIntosh 115kV Tie: Add Series Reactor (41) | Boulevard - Magnolia 115 Kv Line Rebuild (186) | 33.67 | 2028-06-01–2028-12-31 | No |
-| Okatie – McIntosh 115kV Tie: Add Series Reactor (41) | Magnolia - Truman Parkway 115Kv Rebuild (184) | 34.83 | 2027-12-31–2028-06-01 | Yes |
+| Jasper – Okatie 230 kV #2: Construct (12) | Goshen (SAV) - McIntosh 115kV Line Rebuild (183) | 4.9 | 2026-09-27–2026-12-01 | No |
+| Okatie 230-115kV Substation, Jasper – Yemassee 230kV #1 Fold-in (11) | Goshen (SAV) - McIntosh 115kV Line Rebuild (183) | 13.61 | 2026-09-27–2026-12-31 | No |
+| Jasper – Okatie 230 kV #2: Construct (12) | Goshen (SAV) - Kraft 115kV Line Rebuild (183) | 14.78 | 2026-09-27–2026-12-01 | No |
+| Okatie 230-115kV Substation, Jasper – Yemassee 230kV #1 Fold-in (11) | Goshen (SAV) - Kraft 115kV Line Rebuild (183) | 19.15 | 2026-09-27–2026-12-31 | No |
+| Okatie – McIntosh 115kV Tie: Add Series Reactor (41) | Coleman - Dean Forest 115kV Line Rebuild (184) | 27.5 | 2027-12-31–2028-06-01 | No |
+| Okatie – McIntosh 115kV Tie: Add Series Reactor (41) | Dean Forest - Little Ogeechee 230 kV Rebuild (186) | 29.59 | 2028-06-01–2028-12-31 | No |
+| Okatie – McIntosh 115kV Tie: Add Series Reactor (41) | Boulevard - Magnolia 115 kV Line Rebuild (186) | 33.67 | 2028-06-01–2028-12-31 | No |
+| Okatie – McIntosh 115kV Tie: Add Series Reactor (41) | Magnolia - Truman Parkway 115kV Rebuild (184) | 34.83 | 2027-12-31–2028-06-01 | Yes |

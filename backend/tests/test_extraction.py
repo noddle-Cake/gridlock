@@ -171,7 +171,7 @@ def test_retries_transient_errors_only():
     ("DEF/SEC", "Duke Energy Florida / Seminole Electric Cooperative"),
     ("DEF-SEC", "Duke Energy Florida / Seminole Electric Cooperative"),
     ("LAK-TEC", "City of Lakeland / Tampa Electric"),
-    ("Wolverine Power Supply-Coop", "Wolverine Power Supply-coop"),
+    ("Wolverine Power Supply-Coop", "Wolverine Power Supply-Coop"),
 ])
 def test_owner_overrides_plan_utility(owner, expected):
     rec = normalize_record({"name": "X", "owner": owner}, utility="SERTP", page_count=3)
