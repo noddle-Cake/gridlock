@@ -1311,6 +1311,17 @@ a {
   font-weight: 600;
 }
 
+/* "FPL | All companies" in the pair list header (components/PairList.tsx). */
+.scope-switch {
+  margin: 0;
+}
+
+.scope-switch button {
+  flex: none;
+  padding: 4px 12px;
+  font-size: 12.5px;
+}
+
 .color-legend {
   list-style: none;
   margin: 0;

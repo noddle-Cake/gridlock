@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import type { CoordinationPair } from '../types'
-import { accountCompany, involves, pairPartners, shortName } from './account'
+import {
+  accountCompany,
+  involves,
+  loadOnlyOwn,
+  pairPartners,
+  saveOnlyOwn,
+  shortName,
+} from './account'
 
 const FPL = 'Florida Power & Light'
 
@@ -44,6 +51,17 @@ describe('pairPartners', () => {
     expect(involves(pair('JEA', FPL), FPL)).toBe(true)
     expect(involves(pair(`Seminole Electric Cooperative / ${FPL}`, 'JEA'), FPL)).toBe(true)
     expect(involves(pair('JEA', 'Tampa Electric'), FPL)).toBe(false)
+  })
+})
+
+describe('loadOnlyOwn / saveOnlyOwn', () => {
+  it("starts on the company's own pairs and remembers a switch to all companies", () => {
+    localStorage.clear()
+    expect(loadOnlyOwn()).toBe(true)
+    saveOnlyOwn(false)
+    expect(loadOnlyOwn()).toBe(false)
+    saveOnlyOwn(true)
+    expect(loadOnlyOwn()).toBe(true)
   })
 })
 

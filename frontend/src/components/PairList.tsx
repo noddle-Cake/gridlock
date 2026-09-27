@@ -101,14 +101,19 @@ export function PairList({
         </div>
         <div className="list-tools">
           {ownCompany && onOnlyOwn ? (
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={onlyOwn}
-                onChange={(e) => onOnlyOwn(e.target.checked)}
-              />
-              Only {ownCompany}&rsquo;s opportunities
-            </label>
+            <div className="color-by scope-switch" role="group" aria-label="Whose opportunities">
+              {([[true, ownCompany], [false, 'All companies']] as const).map(([own, label]) => (
+                <button
+                  key={label}
+                  type="button"
+                  className={onlyOwn === own ? 'active' : ''}
+                  aria-pressed={onlyOwn === own}
+                  onClick={() => onOnlyOwn(own)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           ) : null}
           {onLimitToView ? (
             <label className="toggle">
@@ -148,7 +153,7 @@ export function PairList({
             ? 'Nothing in this part of the map. Zoom out or turn off “Only pairs in map view”.'
             : ownCompany && onlyOwn
               ? `No ${ownCompany} projects here are close in both place and time to another ` +
-                `company's. Turn off “Only ${ownCompany}’s opportunities” to see everyone's.`
+                `company's. Switch to “All companies” to see everyone's.`
               : 'No projects here are close in both place and time. Try more opportunity types ' +
                 'or more utilities.'}
         </p>
