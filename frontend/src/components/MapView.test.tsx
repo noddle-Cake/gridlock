@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -55,7 +55,7 @@ vi.mock('react-leaflet', () => {
   }
 })
 vi.mock('./BaseMap', () => ({ BaseMap: () => null }))
-vi.mock('./PowerGridLayer', () => ({ PowerGridLayer: () => null }))
+vi.mock('./PowerGridLayer', () => ({ PowerGridLayer: () => <i data-testid="power-grid" /> }))
 vi.mock('../lib/smoothWheelZoom', () => ({ enableSmoothWheelZoom: () => () => {} }))
 
 import { MapView } from './MapView'
@@ -109,5 +109,32 @@ describe('map coordination markers across zoom levels', () => {
     expect(onSelectPair).toHaveBeenLastCalledWith(touching)
     fireEvent.click(circles[0])
     expect(onSelectProject).toHaveBeenLastCalledWith(separated.project_a)
+  })
+})
+
+describe('map layers', () => {
+  it('starts with the power grid off and toggles it from the always-visible layer switches', () => {
+    view.zoom = 9
+    render(
+      <MapView
+        projects={[project()]}
+        pairs={[]}
+        selectedPair={null}
+        colorOf={() => '#2a78d6'}
+        colorBy="utility"
+        onColorBy={vi.fn()}
+        legend={[]}
+        onSelectProject={vi.fn()}
+      />,
+    )
+    const layers = screen.getByRole('group', { name: 'Map layers' })
+    // Outside the collapsible legend, so it is always shown.
+    expect(layers.closest('details')).toBeNull()
+    expect(screen.queryByTestId('power-grid')).toBeNull()
+    const grid = within(layers).getByLabelText('Power grid')
+    expect(grid).not.toBeChecked()
+    expect(within(layers).getByLabelText('County lines')).toBeChecked()
+    fireEvent.click(grid)
+    expect(screen.getByTestId('power-grid')).toBeInTheDocument()
   })
 })

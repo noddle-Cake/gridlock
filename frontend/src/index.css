@@ -1176,9 +1176,44 @@ a {
   color: var(--ink);
 }
 
-.layer-toggles input {
+/* Layer switches, always visible in the map's bottom-right corner above the credits
+   (components/MapView.tsx). */
+.map-layers {
+  position: absolute;
+  right: 12px;
+  bottom: 26px;
+  z-index: 1000;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 12px;
+  max-width: calc(100% - 24px);
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+}
+
+.map-layers label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.map-layers input {
   margin: 0;
   accent-color: var(--accent);
+}
+
+/* The credits wrap to two lines on a phone. */
+@media (max-width: 640px) {
+  .map-layers {
+    bottom: 42px;
+  }
 }
 
 /* Power grid tiles fade out while a zoom stretches them past a level
