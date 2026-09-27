@@ -160,6 +160,8 @@ export function colorLegend(
   by: ColorBy,
   utilityColors: Record<string, string>,
   scheme: 'light' | 'dark' = 'light',
+  /** The signed-in user's company: listed first and marked, whatever its project count. */
+  own: string | null = null,
 ): LegendEntry[] {
   const count = (pred: (p: Project) => boolean) => projects.filter(pred).length
   let rows: LegendEntry[]
@@ -179,9 +181,12 @@ export function colorLegend(
     }))
     rest = { label: 'Undated', color: OTHER_COLOR, count: count((p) => yearBin(p) == null) }
   } else {
-    const named = topUtilities(projects.map((p) => p.utility)).filter((u) => utilityColors[u])
+    // Every coloured company on the map, busiest first; the user's own company leads.
+    const named = topUtilities(projects.map((p) => p.utility), Infinity)
+      .filter((u) => utilityColors[u])
+      .sort((a, b) => Number(b === own) - Number(a === own))
     rows = named.map((u) => ({
-      label: u,
+      label: u === own ? `${u} (your company)` : u,
       color: utilityColors[u],
       count: count((p) => p.utility === u),
     }))

@@ -21,6 +21,7 @@ import { ThresholdControls } from './components/ThresholdControls'
 import { UploadPanel } from './components/UploadPanel'
 import { UtilityFilter } from './components/UtilityFilter'
 import { WhyFlaggedPanel } from './components/WhyFlaggedPanel'
+import { accountCompany, pairPartners } from './lib/account'
 import { ALL_BANDS, MAX_RADIUS_MILES, type BandId } from './lib/distanceBands'
 import { PALETTE, num, utilityColors } from './lib/format'
 import { type ColorBy, colorLegend, projectColor } from './lib/mapStyle'
@@ -133,16 +134,24 @@ export default function App({ account = null }: { account?: Account | null }) {
     return () => clearTimeout(timer)
   }, [bands, version, scopeKey, projectsLoaded])
 
-  // Only the busiest companies get their own colour; the rest share a neutral "other". The
-  // utilities on screen take the most distinct colours when there are few enough of them.
+  // The signed-in planner's own company (e.g. FPL for an @fpl.com account), if known.
+  const ownCompany = useMemo(
+    () => accountCompany(account?.username, utilities),
+    [account?.username, utilities],
+  )
+  // Only a few companies get their own colour; the rest share a neutral "other". The
+  // user's company always has one, and the utilities on screen (when few enough are chosen)
+  // or else the companies it shares pairs with take the next, most distinct colours.
   const colors = useMemo(() => {
     const shown = utilities.filter((u) => !hiddenUtilities.has(u))
-    const first = hiddenUtilities.size > 0 && shown.length <= PALETTE.length ? shown : []
+    const filtered = hiddenUtilities.size > 0 && shown.length <= PALETTE.length
+    const first = filtered ? shown : ownCompany ? pairPartners(pairs, ownCompany) : []
     return utilityColors(
       projects.map((p) => p.utility),
       first,
+      ownCompany,
     )
-  }, [projects, utilities, hiddenUtilities])
+  }, [projects, utilities, hiddenUtilities, pairs, ownCompany])
   // Map markers and panel swatches share one encoding, so a card always matches its dot.
   const colorOf = useCallback(
     (p: PairProject) => projectColor(p, colorBy, colors, scheme),
@@ -178,8 +187,9 @@ export default function App({ account = null }: { account?: Account | null }) {
         colorBy,
         colors,
         scheme,
+        ownCompany,
       ),
-    [shownProjects, colorBy, colors, scheme],
+    [shownProjects, colorBy, colors, scheme, ownCompany],
   )
   const selectedPair = pairs.find((p) => p.id === selectedId) ?? null
   const hoveredPair = pairs.find((p) => p.id === hoveredId) ?? null
