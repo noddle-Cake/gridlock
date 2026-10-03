@@ -10,3 +10,8 @@
 www.{$SITE_ADDRESS} {
 	redir https://{$SITE_ADDRESS}{uri} permanent
 }
+
+# Other apps on this server (e.g. REEF) each add a site block as sites/<app>.caddy and put
+# their app container on the "edge" network, so this Caddy proxies to it by name and
+# manages its certificate. No files there = nothing extra served.
+import /etc/caddy/sites/*.caddy
