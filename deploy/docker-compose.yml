@@ -61,10 +61,21 @@ services:
       - "${HTTPS_PORT:-443}:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Site blocks for other apps hosted here (see the Caddyfile's import).
+      - ./sites:/etc/caddy/sites:ro
       - caddy_data:/data
       - caddy_config:/config
+    networks:
+      - default
+      - edge
     depends_on:
       - app
+
+networks:
+  # Shared with other apps' containers on this server (created by remote-deploy.sh).
+  edge:
+    name: edge
+    external: true
 
 volumes:
   pgdata:

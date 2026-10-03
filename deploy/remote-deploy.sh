@@ -7,6 +7,9 @@ cd "$(dirname "$0")"
 prev_tag=$(grep -s '^APP_TAG=' .env | cut -d= -f2- || true)
 mv .env.new .env
 chmod 600 .env
+# Other apps on this server plug into Caddy through sites/ and the edge network.
+mkdir -p sites
+docker network inspect edge >/dev/null 2>&1 || docker network create edge >/dev/null
 docker compose up -d --remove-orphans
 
 healthy() {
